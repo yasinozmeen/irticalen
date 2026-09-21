@@ -96,7 +96,7 @@ export const TopicReel = forwardRef<TopicReelHandle, Props>(function TopicReel(
               {Array.from({ length: FACE_COUNT }, (_, face) => {
                 const step = wheelFaceStep(face, FACE_COUNT, centerStep);
                 const text = topics[wrapIndex(safeStartIndex + step, topics.length)] ?? '';
-                const isCenterFace = face === 0;
+                const isCenterFace = face === wrapIndex(centerStep, FACE_COUNT);
                 const scale = textScale(text);
                 return (
                   <div

@@ -7,9 +7,11 @@ import {
   initialSession,
   isLocked,
   loadSettings,
-  planSpin,
+  planSpinTo,
+  drawFromBag,
+  loadSeen,
+  saveSeen,
   positionAt,
-  randomIndex,
   saveSettings,
   sessionReducer,
   stepAt,
@@ -155,19 +157,24 @@ function AppContent({ locale }: Props) {
     const category = getCategoryById(locale, categoryId);
     const list = category?.topics ?? [];
     if (list.length === 0) return;
-    const index = randomIndex(list.length);
-    dispatch({ type: 'SET_CATEGORY', categoryId, topicIndex: index, topic: list[index] });
+    // A new category starts empty, like a new mode: the topic only comes from a spin, so browsing
+    // the category list never uses up topics from the bag.
+    if (categoryId === state.categoryId) return;
+    dispatch({ type: 'SET_CATEGORY', categoryId, topicIndex: -1, topic: null });
   };
 
   const handleSpin = (): void => {
     if (isLocked(state) || topics.length === 0) return;
     soundRef.current.warmUp();
-    const plan = planSpin(state.topicIndex, topics.length);
+    const draw = drawFromBag(topics, loadSeen(locale, effectiveCategoryId), state.topicIndex);
+    const plan = planSpinTo(state.topicIndex, topics.length, draw.index);
     dispatch({ type: 'SPIN_START' });
 
     const finalize = (): void => {
       clearSpinTimers();
       const index = plan.landIndex;
+      // Marked as seen only once it is actually shown — an interrupted spin does not burn a topic.
+      saveSeen(locale, effectiveCategoryId, draw.seen);
       dispatch({ type: 'SPIN_LAND', index, topic: topics[index] });
       setLandKey((key) => key + 1);
       soundRef.current.land();
@@ -367,18 +374,27 @@ function AppContent({ locale }: Props) {
         </p>
 
         <div class="action-row">
-          <button type="button" class="btn btn-secondary" disabled={locked} onClick={handleSpin}>
-            {spinLabel}
-          </button>
-          <button
-            ref={startTriggerRef}
-            type="button"
-            class="btn btn-primary"
-            disabled={locked || state.topic === null}
-            onClick={handleStart}
-          >
-            {startLabel}
-          </button>
+          {/* Before the first topic there is nothing to start — the only action is to spin. */}
+          {state.topic === null ? (
+            <button type="button" class="btn btn-primary" disabled={locked} onClick={handleSpin}>
+              {spinLabel}
+            </button>
+          ) : (
+            <>
+              <button type="button" class="btn btn-secondary" disabled={locked} onClick={handleSpin}>
+                {spinLabel}
+              </button>
+              <button
+                ref={startTriggerRef}
+                type="button"
+                class="btn btn-primary"
+                disabled={locked}
+                onClick={handleStart}
+              >
+                {startLabel}
+              </button>
+            </>
+          )}
         </div>
       </div>
 

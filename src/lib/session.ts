@@ -12,7 +12,7 @@ export interface SessionState {
 
 export type SessionAction =
   | { type: 'SET_MODE'; mode: Mode }
-  | { type: 'SET_CATEGORY'; categoryId: string; topicIndex: number; topic: string }
+  | { type: 'SET_CATEGORY'; categoryId: string; topicIndex: number; topic: string | null }
   | { type: 'SPIN_START' }
   | { type: 'SPIN_TICK'; index: number }
   | { type: 'SPIN_LAND'; index: number; topic: string }

@@ -489,6 +489,11 @@ a {
   align-items: center;
 }
 
+/* Before the first topic the row holds a single button — it takes the whole line. */
+.action-row > .btn:only-child {
+  grid-column: 1 / -1;
+}
+
 .btn {
   padding: 0;
   white-space: nowrap;
@@ -575,11 +580,11 @@ a {
 
 .timer-topic {
   order: 1;
-  font-style: italic;
-  font-weight: 500;
-  font-size: 1.35rem;
-  color: var(--pencil);
-  line-height: 1.15;
+  font-weight: 700;
+  font-size: clamp(1.9rem, 1.2rem + 3.4vw, 3rem);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.05;
   max-width: 26ch;
   text-wrap: balance;
   overflow-wrap: anywhere;
@@ -898,11 +903,6 @@ input[type='range']::-moz-range-thumb {
   color: var(--ink);
 }
 
-.word-example {
-  margin-top: 0.5rem !important;
-  font-style: italic;
-  color: var(--pencil);
-}
 
 .about-coffee {
   display: inline-flex;
