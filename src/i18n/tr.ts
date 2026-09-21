@@ -42,6 +42,17 @@ export const tr = {
   },
   share: {
     text: '“{topic}” üzerine {min} dakika irticalen konuştum. Sıra sende:',
+    panelLabel: 'paylaş',
+    x: 'X’te paylaş',
+    whatsapp: 'WhatsApp',
+    copyLink: 'linki kopyala',
+    copyLinkDone: 'kopyalandı',
+    copyLinkFailed: 'kopyalanamadı — metni elle seç',
+    copyImage: 'görseli kopyala',
+    downloadImage: 'görseli indir',
+    more: 'diğer…',
+    back: 'geri',
+    imageAlt: 'konu önizleme görseli',
   },
   settings: {
     open: 'Ayarlar',
@@ -92,7 +103,7 @@ export const tr = {
     resultOk: 'Teşekkürler, ulaştı.',
     resultLimit: 'Bugünlük kutu doldu; yarın tekrar dener misin?',
     resultError: 'Gönderilemedi. İnternetini kontrol edip tekrar dene.',
-    privacyNote: 'Yazdığın metin dışında senden hiçbir bilgi alınmaz.',
+    privacyNote: 'Metninle birlikte yalnız dil, sayfa, cihaz türü ve ülke kodu kaydedilir. İsim ve IP adresi saklanmaz.',
   },
   about: {
     word: {

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildShareText, shareUrl, twitterIntentUrl } from '../share';
+import { shareText, shareUrl, topicPageUrl, xIntentUrl, whatsappUrl } from '../share';
 
-describe('buildShareText', () => {
+describe('shareText', () => {
   it('{topic} ve {min} yerlerini doldurur, konu olduğu gibi kalır', () => {
-    const text = buildShareText('“{topic}” üzerine {min} dakika irticalen konuştum. Sıra sende:', {
+    const text = shareText('“{topic}” üzerine {min} dakika irticalen konuştum. Sıra sende:', {
       topic: 'Bileşik Faiz',
       minutes: 3,
     });
@@ -11,7 +11,7 @@ describe('buildShareText', () => {
   });
 
   it('İngilizce şablonla da çalışır', () => {
-    const text = buildShareText('I just spoke off the cuff for {min} min about “{topic}”. Your turn:', {
+    const text = shareText('I just spoke off the cuff for {min} min about “{topic}”. Your turn:', {
       topic: 'Compound interest',
       minutes: 1,
     });
@@ -19,7 +19,7 @@ describe('buildShareText', () => {
   });
 
   it('tekrar eden placeholder olsa bile hepsini doldurur', () => {
-    const text = buildShareText('{topic} - {topic} ({min})', { topic: 'x', minutes: 2 });
+    const text = shareText('{topic} - {topic} ({min})', { topic: 'x', minutes: 2 });
     expect(text).toBe('x - x (2)');
   });
 });
@@ -34,9 +34,21 @@ describe('shareUrl', () => {
   });
 });
 
-describe('twitterIntentUrl', () => {
+describe('topicPageUrl', () => {
+  it('tr için /konu/<slug>/ döner', () => {
+    expect(topicPageUrl('tr', 'bilesik-faiz')).toBe('https://irticalen.yasinozmeen.me/konu/bilesik-faiz/');
+  });
+
+  it('en için /en/topic/<slug>/ döner', () => {
+    expect(topicPageUrl('en', 'compound-interest')).toBe(
+      'https://irticalen.yasinozmeen.me/en/topic/compound-interest/',
+    );
+  });
+});
+
+describe('xIntentUrl', () => {
   it('metin ve adresi kodlayarak intent url üretir', () => {
-    const url = twitterIntentUrl('a b “c”', 'https://irticalen.yasinozmeen.me/');
+    const url = xIntentUrl('a b “c”', 'https://irticalen.yasinozmeen.me/');
     expect(url).toBe(
       'https://x.com/intent/post?text=' +
         encodeURIComponent('a b “c”') +
@@ -44,5 +56,14 @@ describe('twitterIntentUrl', () => {
         encodeURIComponent('https://irticalen.yasinozmeen.me/'),
     );
     expect(url.startsWith('https://x.com/intent/post?')).toBe(true);
+  });
+});
+
+describe('whatsappUrl', () => {
+  it('metin + boşluk + url kodlanır', () => {
+    const url = whatsappUrl('metin', 'https://irticalen.yasinozmeen.me/konu/x/');
+    expect(url).toBe(
+      'https://wa.me/?text=' + encodeURIComponent('metin https://irticalen.yasinozmeen.me/konu/x/'),
+    );
   });
 });

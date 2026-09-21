@@ -15,15 +15,30 @@ interface Props {
   jsonLd?: object | object[];
   /** Scrollless full-screen "stage" layout (home screens with the bottom dock) instead of the normal scrolling page. */
   frame?: boolean;
+  /** Overrides the default `/og.jpg` — e.g. a topic page's own `/og/<locale>/<slug>.png`. */
+  ogImage?: string;
+  /** Skips the hreflang alternate links — for pages that have no direct translation (e.g. topic pages). */
+  noHreflang?: boolean;
 }
 
-const { locale, title, description, path, alternates, ogType = 'website', jsonLd: jsonLdProp, frame = false } =
-  Astro.props;
+const {
+  locale,
+  title,
+  description,
+  path,
+  alternates,
+  ogType = 'website',
+  jsonLd: jsonLdProp,
+  frame = false,
+  ogImage: ogImageProp,
+  noHreflang = false,
+} = Astro.props;
 const dict = dictionaries[locale];
 const pagePath = path ?? localePath(locale);
 const alt = alternates ?? { tr: localePath('tr'), en: localePath('en') };
 const canonical = new URL(pagePath, Astro.site).toString();
-const ogImage = new URL('/og.jpg', Astro.site).toString();
+// Social crawlers only accept absolute image URLs — resolve whatever the page passed in.
+const ogImage = new URL(ogImageProp ?? '/og.jpg', Astro.site).toString();
 const ogLocale = locale === 'tr' ? 'tr_TR' : 'en_US';
 const pageTitle = title ?? dict.meta.title;
 const pageDescription = description ?? dict.meta.description;
@@ -58,9 +73,13 @@ const jsonLdList: object[] = jsonLdProp
     <title>{pageTitle}</title>
     <meta name="description" content={pageDescription} />
     <link rel="canonical" href={canonical} />
-    <link rel="alternate" hreflang="tr" href={new URL(alt.tr, Astro.site).toString()} />
-    <link rel="alternate" hreflang="en" href={new URL(alt.en, Astro.site).toString()} />
-    <link rel="alternate" hreflang="x-default" href={new URL(alt.tr, Astro.site).toString()} />
+    {!noHreflang && (
+      <>
+        <link rel="alternate" hreflang="tr" href={new URL(alt.tr, Astro.site).toString()} />
+        <link rel="alternate" hreflang="en" href={new URL(alt.en, Astro.site).toString()} />
+        <link rel="alternate" hreflang="x-default" href={new URL(alt.tr, Astro.site).toString()} />
+      </>
+    )}
 
     <meta property="og:type" content={ogType} />
     <meta property="og:title" content={pageTitle} />

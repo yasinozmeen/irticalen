@@ -1,0 +1,36 @@
+---
+import type { GetStaticPaths } from 'astro';
+import Base from '../../../layouts/Base.astro';
+import TopicPage from '../../../components/TopicPage.astro';
+import { dictionaries } from '../../../i18n';
+import { buildTopicIndex } from '../../../lib/slug';
+
+const locale = 'en' as const;
+const dict = dictionaries[locale];
+
+export const getStaticPaths = (() => {
+  return buildTopicIndex('en').map((entry) => ({
+    params: { slug: entry.slug },
+    props: { topic: entry.topic, categoryName: entry.categoryName, slug: entry.slug },
+  }));
+}) satisfies GetStaticPaths;
+
+const { topic, categoryName, slug } = Astro.props as { topic: string; categoryName: string; slug: string };
+
+const path = `/en/topic/${slug}/`;
+const pageTitle = `Speak for one minute about "${topic}" — İrticalen`;
+const pageDescription = `Speak off the cuff for one minute about ${topic}. A free impromptu speaking trainer that draws a random topic.`;
+const ogImage = new URL(`/og/en/${slug}.png`, Astro.site).toString();
+---
+
+<Base
+  locale={locale}
+  title={pageTitle}
+  description={pageDescription}
+  path={path}
+  ogType="article"
+  ogImage={ogImage}
+  noHreflang
+>
+  <TopicPage dict={dict} locale={locale} topic={topic} categoryName={categoryName} slug={slug} />
+</Base>

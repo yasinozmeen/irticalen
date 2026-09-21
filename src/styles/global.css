@@ -675,6 +675,42 @@ a {
   color: var(--red);
 }
 
+/* ---------- Share panel: aynı sayaç dialog'unun içeriği, ayrı bir katman değil ---------- */
+
+.share-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: 100%;
+  max-width: 520px;
+}
+
+.share-panel-image {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+.share-panel-text {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--ink);
+  user-select: text;
+}
+
+.share-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  align-items: center;
+}
+
+.share-panel-back {
+  margin-left: auto;
+}
+
 /* ---------- Settings dialog: kâğıt "sayfa", açılır katman istisnası olarak 1px çerçeve ---------- */
 
 .settings-backdrop {
@@ -1172,6 +1208,44 @@ input[type='range']::-moz-range-thumb {
   }
 }
 
+/* ---------- Topic pages (/konu/<slug>/, /en/topic/<slug>/) ---------- */
+
+.topic-article {
+  gap: 1.75rem;
+}
+
+.topic-heading {
+  font-weight: 700;
+  font-size: clamp(2.4rem, 3.4vw + 1.6rem, 4.75rem);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-transform: lowercase;
+  max-width: 18ch;
+  overflow-wrap: anywhere;
+}
+
+.topic-heading-line {
+  display: block;
+}
+
+.topic-dot {
+  color: var(--red);
+}
+
+.topic-arc {
+  margin: 0;
+}
+
+.topic-cta {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.topic-another-link {
+  text-transform: lowercase;
+}
+
 /* ---------- Scrollless home "stage" + fixed bottom dock ---------- */
 
 body.is-frame {
@@ -1478,7 +1552,11 @@ html::-webkit-scrollbar-thumb,
 .category-listbox::-webkit-scrollbar-thumb,
 .settings-dialog::-webkit-scrollbar-thumb,
 .sheet-page::-webkit-scrollbar-thumb {
+  /* A thin ink line rather than a slab: the 10px hit area stays, only 4px of it is painted. */
   background: var(--ink);
+  background-clip: padding-box;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
   border-radius: 0;
 }
 
@@ -1487,7 +1565,7 @@ html::-webkit-scrollbar-thumb:hover,
 .category-listbox::-webkit-scrollbar-thumb:hover,
 .settings-dialog::-webkit-scrollbar-thumb:hover,
 .sheet-page::-webkit-scrollbar-thumb:hover {
-  background: #000;
+  background-color: #000;
 }
 
 html::-webkit-scrollbar-corner,
@@ -1559,4 +1637,10 @@ html::-webkit-scrollbar-corner,
   body.is-frame .mode-blurb {
     display: none;
   }
+}
+
+/* Links styled as the primary ink block never carry the text-link underline. */
+a.btn-primary,
+a.btn-primary:hover {
+  text-decoration: none;
 }

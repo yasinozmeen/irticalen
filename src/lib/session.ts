@@ -20,7 +20,8 @@ export type SessionAction =
   | { type: 'RESEARCH_DONE' }
   | { type: 'READY_TO_SPEAK' }
   | { type: 'TIME_UP' }
-  | { type: 'CLOSE' };
+  | { type: 'CLOSE' }
+  | { type: 'PRESET_TOPIC'; mode: Mode; categoryId: string; topicIndex: number; topic: string };
 
 /** Initial session: off-the-cuff mode, no category/topic selected yet. */
 export function initialSession(): SessionState {
@@ -109,6 +110,19 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
     case 'CLOSE': {
       if (state.phase === 'idle') return state;
       return { ...state, phase: 'idle', spinning: false };
+    }
+
+    // Preset from a `?konu=<slug>` / `?topic=<slug>` link. Only applies to a fresh, untouched
+    // session — never interrupts a spin or an open timer.
+    case 'PRESET_TOPIC': {
+      if (state.phase !== 'idle' || state.spinning) return state;
+      return {
+        ...state,
+        mode: action.mode,
+        categoryId: action.categoryId,
+        topic: action.topic,
+        topicIndex: action.topicIndex,
+      };
     }
 
     default:

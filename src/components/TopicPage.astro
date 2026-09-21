@@ -1,0 +1,60 @@
+---
+import type { Dictionary, Locale } from '../i18n';
+import { paperLines } from '../lib/paperLines';
+import SiteFooter from './SiteFooter.astro';
+import { Logo } from './Logo';
+
+interface Props {
+  dict: Dictionary;
+  locale: Locale;
+  topic: string;
+  categoryName: string;
+  slug: string;
+}
+
+const { dict, locale, topic, categoryName, slug } = Astro.props;
+const homePath = locale === 'tr' ? '/' : '/en/';
+const startHref = locale === 'tr' ? `/?konu=${slug}` : `/en/?topic=${slug}`;
+const startLabel = locale === 'tr' ? 'Bu konuyla başla' : 'Start with this topic';
+const anotherLabel = locale === 'tr' ? 'başka bir konu çevir' : 'spin for another topic';
+const oneMinuteLine =
+  locale === 'tr'
+    ? 'Bu konuda hazırlıksız bir dakika konuşabilir misin?'
+    : 'Could you speak about this for one minute, unprepared?';
+const lines = paperLines(topic, locale, 12);
+---
+
+<div class="why-page topic-page">
+  <header class="why-topbar">
+    <a class="brand-link" href={homePath} aria-label={dict.brand}>
+      <Logo state="idle" />
+      <span class="wordmark">{dict.wordmark}</span>
+    </a>
+  </header>
+
+  <main>
+    <article class="why-article topic-article">
+      <p class="why-eyebrow">{categoryName}</p>
+      <h1 class="topic-heading">
+        {lines.map((line, i) => (
+          <span class="topic-heading-line">
+            {line}
+            {i === lines.length - 1 && <span class="topic-dot">.</span>}
+          </span>
+        ))}
+      </h1>
+      <p class="why-lead">{oneMinuteLine}</p>
+
+      <ol class="speech-arc topic-arc" aria-label={dict.timer.arcLabel}>
+        {dict.timer.arc.map((label) => <li>{label}</li>)}
+      </ol>
+
+      <div class="why-cta topic-cta">
+        <a class="btn btn-primary" href={startHref}>{startLabel}</a>
+        <a class="footer-nav-link topic-another-link" href={homePath}>{anotherLabel}</a>
+      </div>
+    </article>
+  </main>
+
+  <SiteFooter dict={dict} locale={locale} />
+</div>

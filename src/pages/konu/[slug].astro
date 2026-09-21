@@ -1,0 +1,36 @@
+---
+import type { GetStaticPaths } from 'astro';
+import Base from '../../layouts/Base.astro';
+import TopicPage from '../../components/TopicPage.astro';
+import { dictionaries } from '../../i18n';
+import { buildTopicIndex } from '../../lib/slug';
+
+const locale = 'tr' as const;
+const dict = dictionaries[locale];
+
+export const getStaticPaths = (() => {
+  return buildTopicIndex('tr').map((entry) => ({
+    params: { slug: entry.slug },
+    props: { topic: entry.topic, categoryName: entry.categoryName, slug: entry.slug },
+  }));
+}) satisfies GetStaticPaths;
+
+const { topic, categoryName, slug } = Astro.props as { topic: string; categoryName: string; slug: string };
+
+const path = `/konu/${slug}/`;
+const pageTitle = `"${topic}" üzerine bir dakika konuş — İrticalen`;
+const pageDescription = `${topic} üzerine hazırlıksız bir dakika konuş. Rastgele konu çeken ücretsiz doğaçlama konuşma pratiği.`;
+const ogImage = new URL(`/og/tr/${slug}.png`, Astro.site).toString();
+---
+
+<Base
+  locale={locale}
+  title={pageTitle}
+  description={pageDescription}
+  path={path}
+  ogType="article"
+  ogImage={ogImage}
+  noHreflang
+>
+  <TopicPage dict={dict} locale={locale} topic={topic} categoryName={categoryName} slug={slug} />
+</Base>

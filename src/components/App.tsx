@@ -18,14 +18,16 @@ import {
   SPIN_DURATION_MS,
   SPIN_SAFETY_MS,
   acquireWakeLock,
-  buildShareText,
-  getTracker,
+  shareText as buildShareText,
   shareUrl,
-  twitterIntentUrl,
+  topicPageUrl,
+  getTracker,
+  buildTopicIndex,
   type Countdown,
   type ReleaseWakeLock,
   type Settings,
 } from '../lib';
+import type { ShareChannel } from './SharePanel';
 import type { Category, Mode } from '../lib/types';
 import { dictionaries, fill, type Locale } from '../i18n';
 import { getCategories, getCategoryById } from '../data/topics';
@@ -54,6 +56,7 @@ function AppContent({ locale }: Props) {
     muted: false,
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sharePanelOpen, setSharePanelOpen] = useState(false);
   const [landKey, setLandKey] = useState(0);
   const [remainingSec, setRemainingSec] = useState(0);
   const [elapsedSec, setElapsedSec] = useState(0);
@@ -137,6 +140,44 @@ function AppContent({ locale }: Props) {
     soundRef.current.setMuted(loaded.muted);
   }, []);
 
+  // `/?konu=<slug>` (tr) or `/en/?topic=<slug>` (en): preset the topic from a shared link, mark it
+  // seen, then strip the param from the address bar. Runs once, mount-only; an invalid/missing slug
+  // is silently ignored.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const paramName = locale === 'tr' ? 'konu' : 'topic';
+      const slugParam = params.get(paramName);
+      if (slugParam) {
+        const entry = buildTopicIndex(locale).find((item) => item.slug === slugParam);
+        if (entry) {
+          const mode: Mode = entry.categoryId === 'deep-research' ? 'deep-research' : 'off-the-cuff';
+          const category = getCategoryById(locale, entry.categoryId);
+          const idx = category ? category.topics.indexOf(entry.topic) : -1;
+          dispatch({ type: 'PRESET_TOPIC', mode, categoryId: entry.categoryId, topicIndex: idx, topic: entry.topic });
+          if (mode === 'off-the-cuff') lastCategoryIdRef.current = entry.categoryId;
+          const seen = loadSeen(locale, entry.categoryId);
+          if (!seen.includes(entry.topic)) saveSeen(locale, entry.categoryId, [...seen, entry.topic]);
+          // Reuses the existing `land` contract (no new event name) with ph:'idle' to mark a
+          // link-preset topic, distinct from a real spin's ph.
+          tracker.track('land', {
+            t: entry.topic,
+            m: mode,
+            c: mode === 'off-the-cuff' ? entry.categoryId : undefined,
+            ph: 'idle',
+          });
+        }
+        params.delete(paramName);
+        const search = params.toString();
+        const newUrl = window.location.pathname + (search ? `?${search}` : '') + window.location.hash;
+        window.history.replaceState(null, '', newUrl);
+      }
+    } catch {
+      // never let a bad URL param break the app
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (state.mode === 'off-the-cuff' && state.categoryId) {
       lastCategoryIdRef.current = state.categoryId;
@@ -150,6 +191,15 @@ function AppContent({ locale }: Props) {
     () => getCategoryById(locale, effectiveCategoryId)?.topics ?? [],
     [locale, effectiveCategoryId],
   );
+
+  const topicIndex = useMemo(() => buildTopicIndex(locale), [locale]);
+  const currentSlug = useMemo(() => {
+    if (!state.topic) return null;
+    const inCategory = topicIndex.find(
+      (entry) => entry.topic === state.topic && entry.categoryId === effectiveCategoryId,
+    );
+    return inCategory?.slug ?? topicIndex.find((entry) => entry.topic === state.topic)?.slug ?? null;
+  }, [topicIndex, state.topic, effectiveCategoryId]);
 
   const clearSpinTimers = (): void => {
     if (rafRef.current !== null) {
@@ -349,32 +399,29 @@ function AppContent({ locale }: Props) {
     }
     stopCountdown();
     releaseWakeLock();
+    setSharePanelOpen(false);
     dispatch({ type: 'CLOSE' });
     startTriggerRef.current?.focus();
   };
 
-  const handleShare = (): void => {
-    tracker.track('share_click');
-    const text = buildShareText(dict.share.text, {
-      topic: state.topic ?? '',
-      minutes: speechMinutes,
-    });
-    const url = shareUrl(locale);
-    try {
-      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-        navigator.share({ text, url }).catch(() => {
-          // user cancelled the native share sheet — nothing to do
-        });
-        return;
-      }
-    } catch {
-      // fall through to the x.com intent below
-    }
-    try {
-      window.open(twitterIntentUrl(text, url), '_blank', 'noopener');
-    } catch {
-      // ignore — sharing is best-effort
-    }
+  const shareTextValue = buildShareText(dict.share.text, {
+    topic: state.topic ?? '',
+    minutes: Math.round(settings.speechSec / 60),
+  });
+  const shareUrlValue = currentSlug ? topicPageUrl(locale, currentSlug) : shareUrl(locale);
+  const shareImageUrl = currentSlug ? `/og/${locale}/${currentSlug}.png` : '';
+
+  const handleShareOpen = (): void => {
+    tracker.track('share_click', { t: 'open' });
+    setSharePanelOpen(true);
+  };
+
+  const handleShareBack = (): void => {
+    setSharePanelOpen(false);
+  };
+
+  const handleShareTrack = (channel: ShareChannel): void => {
+    tracker.track('share_click', { t: channel });
   };
 
   // Time ran out naturally (research -> ready). Show the upcoming speech duration.
@@ -536,7 +583,13 @@ function AppContent({ locale }: Props) {
         onDoneResearching={handleDoneResearching}
         onReadyToSpeak={handleReadyToSpeak}
         onClose={handleClose}
-        onShare={handleShare}
+        onShareOpen={handleShareOpen}
+        sharePanelOpen={sharePanelOpen}
+        shareImageUrl={shareImageUrl}
+        shareText={shareTextValue}
+        shareUrl={shareUrlValue}
+        onShareBack={handleShareBack}
+        onShareTrack={handleShareTrack}
       />
 
       <SettingsDialog

@@ -9,3 +9,5 @@ export * from './wakeLock';
 export * from './paperLines';
 export * from './track';
 export * from './share';
+export * from './slug';
+export * from './ogLayout';

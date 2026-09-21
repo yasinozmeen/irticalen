@@ -18,3 +18,8 @@ export function getCategories(locale: Locale): Category[] {
 export function getCategoryById(locale: Locale, id: string): Category | undefined {
   return byLocale[locale].find((category) => category.id === id);
 }
+
+/** Every category for a locale, in source order, including the deep-research pool. */
+export function getAllCategories(locale: Locale): Category[] {
+  return byLocale[locale];
+}

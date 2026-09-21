@@ -211,3 +211,49 @@ describe('session: isLocked', () => {
     expect(isLocked(spinning)).toBe(true);
   });
 });
+
+describe('session: PRESET_TOPIC', () => {
+  it('idle durumda konuyu, kategoriyi ve modu ayarlar', () => {
+    const idle = initialSession();
+    const after = sessionReducer(idle, {
+      type: 'PRESET_TOPIC',
+      mode: 'off-the-cuff',
+      categoryId: 'history',
+      topicIndex: 5,
+      topic: 'Bizans’ın düşüşü',
+    });
+    expect(after.mode).toBe('off-the-cuff');
+    expect(after.categoryId).toBe('history');
+    expect(after.topicIndex).toBe(5);
+    expect(after.topic).toBe('Bizans’ın düşüşü');
+    expect(after.phase).toBe('idle');
+  });
+
+  it('deep-research modu da ayarlayabilir', () => {
+    const idle = initialSession();
+    const after = sessionReducer(idle, {
+      type: 'PRESET_TOPIC',
+      mode: 'deep-research',
+      categoryId: 'deep-research',
+      topicIndex: 2,
+      topic: 'Pareto ilkesi',
+    });
+    expect(after.mode).toBe('deep-research');
+    expect(after.categoryId).toBe('deep-research');
+  });
+
+  it('spin sırasında veya idle dışı fazda etkisiz (aynı referans döner)', () => {
+    let state = initialSession();
+    state = sessionReducer(state, { type: 'SET_CATEGORY', categoryId: 'a', topicIndex: 0, topic: 'X' });
+    state = sessionReducer(state, { type: 'START' });
+    const before = state;
+    const after = sessionReducer(state, {
+      type: 'PRESET_TOPIC',
+      mode: 'off-the-cuff',
+      categoryId: 'b',
+      topicIndex: 1,
+      topic: 'Y',
+    });
+    expect(after).toBe(before);
+  });
+});

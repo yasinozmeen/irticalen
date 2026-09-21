@@ -44,6 +44,17 @@ export const en: Dictionary = {
   },
   share: {
     text: 'I just spoke off the cuff for {min} min about “{topic}”. Your turn:',
+    panelLabel: 'share',
+    x: 'Share on X',
+    whatsapp: 'WhatsApp',
+    copyLink: 'copy link',
+    copyLinkDone: 'copied',
+    copyLinkFailed: 'could not copy — select the text',
+    copyImage: 'copy image',
+    downloadImage: 'download image',
+    more: 'more…',
+    back: 'back',
+    imageAlt: 'topic preview image',
   },
   settings: {
     open: 'Settings',
@@ -94,7 +105,7 @@ export const en: Dictionary = {
     resultOk: 'Thanks, it went through.',
     resultLimit: 'Today’s quota is full; try again tomorrow?',
     resultError: 'Could not send. Check your connection and try again.',
-    privacyNote: 'Nothing about you is collected beyond the text you write.',
+    privacyNote: 'Along with your text, only language, page, device type and country code are saved. No name or IP address is stored.',
   },
   about: {
     word: {
