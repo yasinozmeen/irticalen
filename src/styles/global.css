@@ -361,6 +361,13 @@ a {
   color: var(--pencil);
   text-align: left;
   text-transform: lowercase;
+  transition: opacity 0.2s ease-out;
+}
+
+/* Same caption slot whether idle or spinning (see TopicReel) — hidden by opacity only, so it never
+   drops out of the flex column and shifts the wheel above it. */
+.topic-sheet.is-empty.is-caption-hidden {
+  opacity: 0;
 }
 
 /* landed topic: dev, lowercase, word-safe multi-line, red full stop on the last line */
@@ -397,6 +404,38 @@ a {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* ---------- View transitions: the topic word moves between the wheel, the big landed display and
+   the timer overlay as one continuous element instead of a hard cut. Only one `.vt-word` element
+   exists in the DOM at a time (App.tsx hands the name off explicitly). ---------- */
+
+.vt-word {
+  view-transition-name: topic-word;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(topic-word) {
+    animation-duration: 460ms;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  /* The word's font size differs a lot between the wheel row and the big landed display — sizing
+     the captured images by height only (not stretching width to fill the morphing box) keeps the
+     glyphs from smearing/blurring mid-flight, left-aligned like the rest of the page. */
+  ::view-transition-old(topic-word),
+  ::view-transition-new(topic-word) {
+    height: 100%;
+    width: auto;
+    max-width: none;
+    object-fit: contain;
+    object-position: left center;
+  }
+
+  /* Everything else on the page just cross-fades, briefly. */
+  ::view-transition-group(root) {
+    animation-duration: 140ms;
   }
 }
 
@@ -673,6 +712,28 @@ a {
 .timer-overlay.is-done .timer-clock,
 .timer-overlay.is-done .timer-status {
   color: var(--red);
+}
+
+/* Sayaç açılırken kelimenin altından doğan öğeler: hafif aşağıdan + opaklık, kademeli gecikmeli. */
+.timer-rise {
+  animation: rise-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timer-rise {
+    animation: none;
+  }
 }
 
 /* ---------- Share panel: aynı sayaç dialog'unun içeriği, ayrı bir katman değil ---------- */
@@ -1645,44 +1706,113 @@ a.btn-primary:hover {
   text-decoration: none;
 }
 
-/* ---- Idle wheel: before the first spin the drum is already there, drifting slowly ---- */
+/* ---- Idle wheel: before the first spin the drum is already there, drifting slowly ----
+   Same box (--row-h, height) as the spinning wheel — see .topic-wheel above — so the stage never
+   resizes or repositions when a spin starts; only the drift source changes (JS RAF in TopicReel,
+   not a separate CSS animation) and the resting text reads a shade lighter. */
 @property --wheel-rot {
   syntax: '<angle>';
   inherits: false;
   initial-value: 0deg;
 }
 
-.topic-stage.is-idle {
-  justify-content: center;
-}
-
-.topic-wheel.is-idle {
-  --row-h: clamp(2.75rem, 7vh, 4.75rem);
-  height: calc(var(--row-h) * 5);
-}
-
-.topic-wheel.is-idle .topic-wheel-drum {
-  animation: wheel-drift 90s linear infinite;
-}
-
 .topic-wheel.is-idle .topic-wheel-text {
   color: var(--rule-strong, #b9b1a0);
 }
 
-@keyframes wheel-drift {
+/* ---------- View transitions, part two: nothing pops. Things that arrive slide or rise in, things
+   that leave slide or fade out; the page underneath cross-fades. ---------- */
+
+@view-transition {
+  navigation: auto;
+}
+
+.sheet-page {
+  view-transition-name: sheet-page;
+}
+
+.settings-dialog {
+  view-transition-name: settings-dialog;
+}
+
+.share-panel {
+  view-transition-name: share-panel;
+}
+
+/* Between pages: the logo stays put, and the "neden yaptım?" link grows into that page's headline. */
+/* Only while navigating between pages (class set from Base.astro's pageswap/pagereveal hooks):
+   inside a page these would float above the timer or a sheet for the length of a transition. */
+.vt-nav .brand-link {
+  view-transition-name: brand;
+}
+
+.vt-nav .dock-link-why,
+.vt-nav .why-h1 {
+  view-transition-name: why-title;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(root) {
+    animation-duration: 220ms;
+  }
+
+  ::view-transition-group(why-title),
+  ::view-transition-group(brand) {
+    animation-duration: 520ms;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  ::view-transition-old(why-title),
+  ::view-transition-new(why-title) {
+    height: 100%;
+    width: auto;
+    max-width: none;
+    object-fit: contain;
+    object-position: left center;
+  }
+
+  /* A sheet of paper pushed up from the bottom edge, and pulled back down. */
+  ::view-transition-new(sheet-page):only-child {
+    animation: vt-sheet-up 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  ::view-transition-old(sheet-page):only-child {
+    animation: vt-sheet-down 280ms cubic-bezier(0.5, 0, 0.9, 0.4) both;
+  }
+
+  ::view-transition-new(settings-dialog):only-child,
+  ::view-transition-new(share-panel):only-child {
+    animation: vt-rise-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  ::view-transition-old(settings-dialog):only-child,
+  ::view-transition-old(share-panel):only-child {
+    animation: vt-sink-out 220ms ease-in both;
+  }
+}
+
+@keyframes vt-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes vt-sheet-down {
   to {
-    --wheel-rot: 360deg;
+    transform: translateY(100%);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .topic-wheel.is-idle .topic-wheel-drum {
-    animation: none;
+@keyframes vt-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
   }
 }
 
-@media (max-height: 640px) {
-  .topic-wheel.is-idle {
-    height: calc(var(--row-h) * 3);
+@keyframes vt-sink-out {
+  to {
+    opacity: 0;
+    transform: translateY(12px);
   }
 }

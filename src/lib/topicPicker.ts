@@ -86,3 +86,27 @@ export function wheelFaceStep(faceIndex: number, faceCount: number, position: nu
 export function wrapIndex(i: number, length: number): number {
   return ((i % length) + length) % length;
 }
+
+/**
+ * Eases a 0..1 progress into a 0..1 curve for a spin that continues from an already-moving wheel
+ * (the idle drift, or the tail of a previous spin) instead of starting from a dead stop: the first
+ * slice accelerates gently (quadratic ease-in, matching "hızdan hızlanarak"), then blends into the
+ * same cubic ease-out slam-to-a-stop used everywhere else. 0 -> 0, 1 -> 1, monotonic.
+ */
+export function spinEaseFrom(progress01: number): number {
+  const c = Math.min(1, Math.max(0, progress01));
+  const RAMP = 0.12;
+  const rampWeight = Math.min(1, c / RAMP);
+  const gentle = c * c;
+  const out = easeOutCubic(c);
+  return gentle * (1 - rampWeight) + out * rampWeight;
+}
+
+/**
+ * Fractional wheel position at `progress01`, continuing from a starting position `p0` to `target`.
+ * Replaces `positionAt` for spins that must not jump from wherever the wheel already is (idle
+ * drift, or the previous spin's landing spot) — `positionFrom(p0, target, 0) === p0` always.
+ */
+export function positionFrom(p0: number, target: number, progress01: number): number {
+  return p0 + spinEaseFrom(progress01) * (target - p0);
+}

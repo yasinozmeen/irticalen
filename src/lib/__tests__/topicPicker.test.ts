@@ -3,7 +3,9 @@ import {
   easeOutCubic,
   planSpin,
   positionAt,
+  positionFrom,
   randomIndex,
+  spinEaseFrom,
   stepAt,
   wheelFaceStep,
   wrapIndex,
@@ -157,6 +159,44 @@ describe('wheelFaceStep', () => {
         expect(distanceBeforeJump).toBeGreaterThanOrEqual(FACE_COUNT / 2 - 1);
       }
       prevN = n;
+    }
+  });
+});
+
+describe('spinEaseFrom', () => {
+  it('0 -> 0, 1 -> 1, monoton artan', () => {
+    expect(spinEaseFrom(0)).toBe(0);
+    expect(spinEaseFrom(1)).toBe(1);
+    let prev = -1;
+    for (let t = 0; t <= 1; t += 0.02) {
+      const v = spinEaseFrom(t);
+      expect(v).toBeGreaterThanOrEqual(prev);
+      prev = v;
+    }
+  });
+
+  it('aralık dışı progress değerlerini kırpar', () => {
+    expect(spinEaseFrom(-0.5)).toBe(0);
+    expect(spinEaseFrom(1.5)).toBe(1);
+  });
+});
+
+describe('positionFrom', () => {
+  it('progress=0 -> p0 (sıçrama yok), progress=1 -> target', () => {
+    const p0 = 12.37;
+    const target = 97;
+    expect(positionFrom(p0, target, 0)).toBe(p0);
+    expect(positionFrom(p0, target, 1)).toBe(target);
+  });
+
+  it('p0 ile target arasında monoton (target > p0 iken)', () => {
+    const p0 = 3.2;
+    const target = 60;
+    let prev = -Infinity;
+    for (let t = 0; t <= 1; t += 0.02) {
+      const v = positionFrom(p0, target, t);
+      expect(v).toBeGreaterThanOrEqual(prev);
+      prev = v;
     }
   });
 });

@@ -1,5 +1,6 @@
 import type { Locale } from './types';
 import type { SpinPlan } from './topicPicker';
+import { wrapIndex } from './topicPicker';
 import type { StorageLike } from './settings';
 
 /**
@@ -112,4 +113,40 @@ export function planSpinTo(
   const fullTurns = 3 + Math.floor(rng() * 3);
   const offset = (((landIndex - base) % listLength) + listLength) % listLength;
   return { totalSteps: fullTurns * listLength + offset, landIndex };
+}
+
+/** The plan for a spin that starts from a fractional wheel position (idle drift, or the tail of the
+ * previous spin) instead of a dead stop at 0. */
+export interface SpinPlanFrom {
+  /** Integer end position — always at least ~3 full turns past p0. */
+  target: number;
+  landIndex: number;
+}
+
+/**
+ * Like `planSpinTo`, but the wheel is already at fractional position `p0` (relative to `startIndex`)
+ * when the spin begins — e.g. mid-idle-drift, or resting wherever the previous spin left it. Returns
+ * the smallest integer `target > p0` that is at least `fullTurns` (3–5) full turns further along and
+ * lands exactly on `landIndex`: `wrapIndex(startIndex + target, listLength) === landIndex`.
+ */
+export function planSpinFrom(
+  p0: number,
+  startIndex: number,
+  listLength: number,
+  landIndex: number,
+  rng: () => number = Math.random,
+): SpinPlanFrom {
+  if (listLength <= 0) {
+    throw new Error('listLength must be positive');
+  }
+  if (listLength === 1) {
+    return { target: Math.max(p0, 0), landIndex: 0 };
+  }
+  const base = startIndex >= 0 ? startIndex : 0;
+  const desiredMod = wrapIndex(landIndex - base, listLength);
+  const fullTurns = 3 + Math.floor(rng() * 3); // 3..5 full turns, same as planSpin/planSpinTo
+  const minTarget = p0 + fullTurns * listLength;
+  const ceilMin = Math.ceil(minTarget);
+  const target = ceilMin + wrapIndex(desiredMod - ceilMin, listLength);
+  return { target, landIndex };
 }

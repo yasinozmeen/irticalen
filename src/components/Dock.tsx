@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Dictionary, Locale } from '../i18n';
-import { detectDevice, getTracker, sendFeedback, type FeedbackKind, type FeedbackResult } from '../lib';
+import { detectDevice, getTracker, sendFeedback, type FeedbackKind, type FeedbackResult, runViewTransition } from '../lib';
 import { useFocusTrap } from './useFocusTrap';
 
 interface Props {
@@ -57,7 +57,10 @@ export function Dock({ locale, dict }: Props) {
     };
   }, [openSheet]);
 
-  const closeSheet = (): void => setOpenSheet(null);
+  // Opening and closing go through a view transition so the sheet slides instead of popping.
+  const closeSheet = (): void => {
+    void runViewTransition(() => setOpenSheet(null));
+  };
 
   useFocusTrap(openSheet === 'about', aboutRef, closeSheet);
   useFocusTrap(openSheet === 'feedback', feedbackRef, closeSheet);
@@ -65,13 +68,15 @@ export function Dock({ locale, dict }: Props) {
   const whyPath = locale === 'tr' ? '/neden/' : '/en/why/';
 
   const openAbout = (): void => {
-    setOpenSheet('about');
+    void runViewTransition(() => setOpenSheet('about'));
     tracker.track('sheet_open');
   };
 
   const openFeedback = (): void => {
-    setFbStatus('idle');
-    setOpenSheet('feedback');
+    void runViewTransition(() => {
+      setFbStatus('idle');
+      setOpenSheet('feedback');
+    });
     tracker.track('feedback_open');
   };
 
@@ -129,7 +134,7 @@ export function Dock({ locale, dict }: Props) {
             <span class="dock-long">{dict.footer.wordHeading}</span>
             <span class="dock-short">{dict.footer.wordShort}</span>
           </button>
-          <a class="dock-link" href={whyPath}>
+          <a class="dock-link dock-link-why" href={whyPath}>
             <span class="dock-long">{dict.footer.why}</span>
             <span class="dock-short">{dict.footer.whyShort}</span>
           </a>

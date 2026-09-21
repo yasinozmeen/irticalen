@@ -109,6 +109,24 @@ const jsonLdList: object[] = jsonLdProp
       <script type="application/ld+json" set:html={JSON.stringify(entry).replace(/</g, '\\u003c')} />
     ))}
     <meta name="generator" content={Astro.generator} />
+      <script is:inline>
+      // Cross-page view transitions: mark the document only for the length of a navigation.
+      addEventListener('pageswap', (e) => {
+        if (e.viewTransition) document.documentElement.classList.add('vt-nav');
+      });
+      // Coming back through the back/forward cache: the class set on the way out is still there.
+      addEventListener('pageshow', (e) => {
+        if (e.persisted) document.documentElement.classList.remove('vt-nav');
+      });
+      addEventListener('pagereveal', (e) => {
+        if (!e.viewTransition) {
+          document.documentElement.classList.remove('vt-nav');
+          return;
+        }
+        document.documentElement.classList.add('vt-nav');
+        e.viewTransition.finished.finally(() => document.documentElement.classList.remove('vt-nav'));
+      });
+    </script>
   </head>
   <body class={frame ? 'is-frame' : undefined}>
     <div class="page-bg" aria-hidden="true"></div>

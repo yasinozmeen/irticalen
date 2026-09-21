@@ -7,17 +7,17 @@ import {
   initialSession,
   isLocked,
   loadSettings,
-  planSpinTo,
+  planSpinFrom,
   drawFromBag,
   loadSeen,
   saveSeen,
-  positionAt,
+  positionFrom,
   saveSettings,
   sessionReducer,
-  stepAt,
   SPIN_DURATION_MS,
   SPIN_SAFETY_MS,
   acquireWakeLock,
+  runViewTransition,
   shareText as buildShareText,
   shareUrl,
   topicPageUrl,
@@ -40,11 +40,17 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { LanguageSwitch } from './LanguageSwitch';
 import { Logo } from './Logo';
 
+/** How long the "süre." screen stays before the share screen takes over. */
+const AUTO_SHARE_DELAY_MS = 1600;
+
 interface Props {
   locale: Locale;
 }
 
 const DEFAULT_CATEGORY_ID = 'general';
+/** How long to let the "word slides back into the wheel" view transition play before the wheel
+ * itself starts turning on a re-spin — roughly the ~70% mark of the transition's own duration. */
+const RESPIN_TRANSITION_LEAD_MS = 320;
 
 function AppContent({ locale }: Props) {
   const dict = dictionaries[locale];
@@ -72,7 +78,6 @@ function AppContent({ locale }: Props) {
   const settingsTriggerRef = useRef<HTMLButtonElement>(null);
   const startTriggerRef = useRef<HTMLButtonElement>(null);
   const wheelRef = useRef<TopicReelHandle>(null);
-  const spinBaseIndexRef = useRef(0);
   const trackerRef = useRef(getTracker(locale));
   const tracker = trackerRef.current;
   const stateRef = useRef(state);
@@ -83,6 +88,9 @@ function AppContent({ locale }: Props) {
   const researchDoneSentRef = useRef(false);
   const speechDoneSentRef = useRef(false);
   const leaveSentRef = useRef(false);
+  const autoShareTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const respinTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spinBusyRef = useRef(false);
 
   const categories: Category[] = useMemo(() => getCategories(locale), [locale]);
 
@@ -210,9 +218,19 @@ function AppContent({ locale }: Props) {
       clearTimeout(safetyTimeoutRef.current);
       safetyTimeoutRef.current = null;
     }
+    if (respinTimeoutRef.current !== null) {
+      clearTimeout(respinTimeoutRef.current);
+      respinTimeoutRef.current = null;
+    }
   };
 
-  useEffect(() => clearSpinTimers, []);
+  useEffect(
+    () => () => {
+      clearSpinTimers();
+      if (autoShareTimerRef.current !== null) clearTimeout(autoShareTimerRef.current);
+    },
+    [],
+  );
 
   const stopCountdown = (): void => {
     countdownRef.current?.stop();
@@ -262,6 +280,14 @@ function AppContent({ locale }: Props) {
         } else if (wasSpeech && !speechDoneSentRef.current) {
           speechDoneSentRef.current = true;
           tracker.track('speech_done');
+          // The speech is over — after the "süre." beat, move on to the share screen by itself.
+          if (autoShareTimerRef.current !== null) clearTimeout(autoShareTimerRef.current);
+          autoShareTimerRef.current = setTimeout(() => {
+            autoShareTimerRef.current = null;
+            if (stateRef.current.phase !== 'done') return;
+            tracker.track('share_click', { t: 'auto' });
+            void runViewTransition(() => setSharePanelOpen(true));
+          }, AUTO_SHARE_DELAY_MS);
         }
       },
     });
@@ -287,30 +313,16 @@ function AppContent({ locale }: Props) {
   };
 
   const handleSpin = (): void => {
-    if (isLocked(state) || topics.length === 0) return;
+    // `state.spinning` only flips a render later (and, on a re-spin, inside a view transition), so a
+    // fast double tap would pass the state check twice — the ref is the real lock.
+    if (spinBusyRef.current || isLocked(state) || topics.length === 0) return;
+    spinBusyRef.current = true;
     soundRef.current.warmUp();
     const draw = drawFromBag(topics, loadSeen(locale, effectiveCategoryId), state.topicIndex);
-    const plan = planSpinTo(state.topicIndex, topics.length, draw.index);
-    dispatch({ type: 'SPIN_START' });
     tracker.track('spin', {
       m: state.mode,
       c: state.mode === 'off-the-cuff' ? effectiveCategoryId : undefined,
     });
-
-    const finalize = (): void => {
-      clearSpinTimers();
-      const index = plan.landIndex;
-      // Marked as seen only once it is actually shown — an interrupted spin does not burn a topic.
-      saveSeen(locale, effectiveCategoryId, draw.seen);
-      dispatch({ type: 'SPIN_LAND', index, topic: topics[index] });
-      setLandKey((key) => key + 1);
-      soundRef.current.land();
-      tracker.track('land', {
-        t: topics[index],
-        m: state.mode,
-        c: state.mode === 'off-the-cuff' ? effectiveCategoryId : undefined,
-      });
-    };
 
     let reduced = false;
     try {
@@ -319,47 +331,86 @@ function AppContent({ locale }: Props) {
       reduced = false;
     }
 
-    if (reduced || topics.length === 1) {
-      finalize();
-      return;
-    }
+    const finalize = (): void => {
+      spinBusyRef.current = false;
+      clearSpinTimers();
+      const index = draw.index;
+      // Marked as seen only once it is actually shown — an interrupted spin does not burn a topic.
+      saveSeen(locale, effectiveCategoryId, draw.seen);
+      soundRef.current.land();
+      // Landing hands the topic word's view-transition name from the wheel's center face to the
+      // big topic display — the dispatch itself is the swap moment the transition captures.
+      void runViewTransition(() => {
+        dispatch({ type: 'SPIN_LAND', index, topic: topics[index] });
+        setLandKey((key) => key + 1);
+      });
+      tracker.track('land', {
+        t: topics[index],
+        m: state.mode,
+        c: state.mode === 'off-the-cuff' ? effectiveCategoryId : undefined,
+      });
+    };
 
-    const baseIndex = state.topicIndex >= 0 ? state.topicIndex : 0;
-    spinBaseIndexRef.current = baseIndex;
-    const start = performance.now();
-    let lastStep = -1;
-
-    const frame = (now: number): void => {
-      const elapsed = now - start;
-      const progress = Math.min(1, elapsed / SPIN_DURATION_MS);
-      wheelRef.current?.setPosition(positionAt(progress, plan.totalSteps));
-      const step = Math.min(plan.totalSteps, stepAt(progress, plan.totalSteps));
-      if (step !== lastStep) {
-        lastStep = step;
-        if (step >= plan.totalSteps) {
-          finalize();
-          return;
-        }
-        const index = ((baseIndex + step) % topics.length + topics.length) % topics.length;
-        dispatch({ type: 'SPIN_TICK', index });
-        soundRef.current.tick(Math.max(0.08, 1 - progress));
-      }
-      if (elapsed >= SPIN_DURATION_MS) {
+    // The wheel's position is anchored to index 0 and persists across spins/idle drift (see
+    // TopicReel) — reading it here, right before the wheel starts turning, is what lets the spin
+    // continue from wherever it already is instead of jumping back to a standing start.
+    const runSpinLoop = (): void => {
+      if (reduced || topics.length === 1) {
         finalize();
         return;
       }
+
+      const p0 = wheelRef.current?.getPosition() ?? 0;
+      const plan = planSpinFrom(p0, 0, topics.length, draw.index);
+      const start = performance.now();
+      let lastTickStep = Math.floor(p0);
+
+      const frame = (now: number): void => {
+        const elapsed = now - start;
+        const progress = Math.min(1, elapsed / SPIN_DURATION_MS);
+        const position = positionFrom(p0, plan.target, progress);
+        wheelRef.current?.setPosition(position);
+        const step = Math.floor(position);
+        if (step !== lastTickStep) {
+          lastTickStep = step;
+          soundRef.current.tick(Math.max(0.08, 1 - progress));
+        }
+        if (elapsed >= SPIN_DURATION_MS) {
+          finalize();
+          return;
+        }
+        rafRef.current = requestAnimationFrame(frame);
+      };
+
       rafRef.current = requestAnimationFrame(frame);
+      safetyTimeoutRef.current = setTimeout(finalize, SPIN_SAFETY_MS);
     };
 
-    rafRef.current = requestAnimationFrame(frame);
-    safetyTimeoutRef.current = setTimeout(finalize, SPIN_SAFETY_MS);
+    if (state.topic !== null && !reduced) {
+      // "tekrar çevir": the big word slides back into the wheel's center face first — SPIN_START is
+      // the swap moment — then, once that transition is mostly done, the wheel starts turning.
+      void runViewTransition(() => {
+        dispatch({ type: 'SPIN_START' });
+      });
+      respinTimeoutRef.current = setTimeout(() => {
+        respinTimeoutRef.current = null;
+        runSpinLoop();
+      }, RESPIN_TRANSITION_LEAD_MS);
+    } else {
+      dispatch({ type: 'SPIN_START' });
+      runSpinLoop();
+    }
   };
 
   const handleStart = (): void => {
     if (isLocked(state) || state.topic === null) return;
     soundRef.current.warmUp();
     const nextPhase = state.mode === 'deep-research' ? 'research' : 'speech';
-    dispatch({ type: 'START' });
+    // Opening the timer hands the topic word's view-transition name from the big landed display to
+    // `.timer-topic` — the dispatch is the swap moment the transition captures.
+    void runViewTransition(() => {
+      dispatch({ type: 'START' });
+    });
     beginCountdown(nextPhase === 'research' ? settings.researchSec : settings.speechSec);
     researchDoneSentRef.current = false;
     speechDoneSentRef.current = false;
@@ -392,6 +443,10 @@ function AppContent({ locale }: Props) {
   };
 
   const handleClose = (): void => {
+    if (autoShareTimerRef.current !== null) {
+      clearTimeout(autoShareTimerRef.current);
+      autoShareTimerRef.current = null;
+    }
     // `ready` has no running clock, so it carries no remaining time — the phase alone tells the story.
     const phase = state.phase;
     if (!speechDoneSentRef.current && (phase === 'research' || phase === 'speech' || phase === 'ready')) {
@@ -400,8 +455,15 @@ function AppContent({ locale }: Props) {
     stopCountdown();
     releaseWakeLock();
     setSharePanelOpen(false);
-    dispatch({ type: 'CLOSE' });
-    startTriggerRef.current?.focus();
+    // Closing hands the topic word's view-transition name back from `.timer-topic` to the big
+    // landed display it came from.
+    // Focus goes back only once the shell is no longer inert — a focus() on an inert subtree is dropped.
+    void runViewTransition(
+      () => {
+        dispatch({ type: 'CLOSE' });
+      },
+      () => startTriggerRef.current?.focus(),
+    );
   };
 
   const shareTextValue = buildShareText(dict.share.text, {
@@ -413,11 +475,16 @@ function AppContent({ locale }: Props) {
 
   const handleShareOpen = (): void => {
     tracker.track('share_click', { t: 'open' });
-    setSharePanelOpen(true);
+    // Opened by hand — the automatic opening must not fire again behind the visitor's back.
+    if (autoShareTimerRef.current !== null) {
+      clearTimeout(autoShareTimerRef.current);
+      autoShareTimerRef.current = null;
+    }
+    void runViewTransition(() => setSharePanelOpen(true));
   };
 
   const handleShareBack = (): void => {
-    setSharePanelOpen(false);
+    void runViewTransition(() => setSharePanelOpen(false));
   };
 
   const handleShareTrack = (channel: ShareChannel): void => {
@@ -456,12 +523,14 @@ function AppContent({ locale }: Props) {
   };
 
   const openSettings = (): void => {
-    setSettingsOpen(true);
+    void runViewTransition(() => setSettingsOpen(true));
     tracker.track('settings_open');
   };
   const closeSettings = (): void => {
-    setSettingsOpen(false);
-    settingsTriggerRef.current?.focus();
+    void runViewTransition(
+      () => setSettingsOpen(false),
+      () => settingsTriggerRef.current?.focus(),
+    );
   };
 
   const spinning = state.spinning;
@@ -534,12 +603,12 @@ function AppContent({ locale }: Props) {
         <TopicReel
           ref={wheelRef}
           topics={topics}
-          startIndex={spinning ? spinBaseIndexRef.current : state.topicIndex}
           topic={state.topic}
           spinning={spinning}
           landKey={landKey}
           dict={dict}
           locale={locale}
+          wordOwner={!sessionOpen}
         />
 
         <p class="mode-blurb">

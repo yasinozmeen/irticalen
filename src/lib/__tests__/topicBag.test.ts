@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { drawFromBag, loadSeen, planSpinTo, saveSeen } from '../topicBag';
+import { drawFromBag, loadSeen, planSpinFrom, planSpinTo, saveSeen } from '../topicBag';
+import { wrapIndex } from '../topicPicker';
 import type { StorageLike } from '../settings';
 
 function memoryStorage(initial: Record<string, string> = {}): StorageLike {
@@ -100,6 +101,38 @@ describe('planSpinTo edge cases', () => {
         expect((1 + planSpinTo(1, size, to).totalSteps) % size).toBe(to);
       }
     }
+  });
+});
+
+describe('planSpinFrom', () => {
+  it('always lands exactly on landIndex from a fractional p0, at least 3 full turns further', () => {
+    const listLength = 6;
+    for (let trial = 0; trial < 500; trial += 1) {
+      const p0 = Math.random() * 40; // arbitrary drift position, may already be mid-turn
+      const startIndex = Math.floor(Math.random() * listLength);
+      const landIndex = Math.floor(Math.random() * listLength);
+      const plan = planSpinFrom(p0, startIndex, listLength, landIndex, Math.random);
+      expect(Number.isInteger(plan.target)).toBe(true);
+      expect(wrapIndex(startIndex + plan.target, listLength)).toBe(landIndex);
+      expect(plan.target - p0).toBeGreaterThanOrEqual(3 * listLength);
+      expect(plan.target).toBeGreaterThan(p0);
+    }
+  });
+
+  it('p0 = 0 davranışı planSpinTo ile aynı iniş indeksini verir', () => {
+    const plan = planSpinFrom(0, 2, 5, 4, () => 0);
+    // fullTurns=3, desiredMod = (4-2)%5 = 2, minTarget=15, ceilMin=15, diff=(2-15)%5=2 -> target=17
+    expect(plan.target).toBe(17);
+    expect((2 + plan.target) % 5).toBe(4);
+  });
+
+  it('listLength 1 ise her zaman index 0', () => {
+    expect(planSpinFrom(3.5, 0, 1, 0).landIndex).toBe(0);
+    expect(planSpinFrom(3.5, 0, 1, 0).target).toBeGreaterThanOrEqual(3.5);
+  });
+
+  it('listLength 0 ise hata fırlatır', () => {
+    expect(() => planSpinFrom(0, 0, 0, 0)).toThrow();
   });
 });
 

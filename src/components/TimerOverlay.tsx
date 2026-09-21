@@ -97,18 +97,25 @@ export function TimerOverlay({
         />
       ) : (
         <>
-          <div class="timer-logo">
+          <div class="timer-logo timer-rise" style={{ animationDelay: '0ms' } as Record<string, string>}>
             <Logo state={phase as LogoState} variant="onDark" size={44} />
           </div>
 
           {mode === 'deep-research' && phase === 'research' && (
-            <p class="timer-research-badge">{dict.timer.researching}</p>
+            <p class="timer-research-badge timer-rise" style={{ animationDelay: '40ms' } as Record<string, string>}>
+              {dict.timer.researching}
+            </p>
           )}
 
-          <p class="timer-topic">{topic}</p>
+          <p class="timer-topic vt-word">{topic}</p>
 
+          {/* Everything below the word rises up from under it, staggered — it just arrived. */}
           {showArc && (
-            <ol class="speech-arc" aria-label={dict.timer.arcLabel}>
+            <ol
+              class="speech-arc timer-rise"
+              style={{ animationDelay: '80ms' } as Record<string, string>}
+              aria-label={dict.timer.arcLabel}
+            >
               {dict.timer.arc.map((label, index) => (
                 <li key={label} class={index <= currentArcStep ? 'is-hit' : ''}>
                   {label}
@@ -118,19 +125,25 @@ export function TimerOverlay({
           )}
 
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <div class="timer-ring" role="timer" style={{ '--p': String(progress) } as any}>
+          <div
+            class="timer-ring timer-rise"
+            role="timer"
+            style={{ '--p': String(progress), animationDelay: '120ms' } as any}
+          >
             <span class="timer-clock">{formatClock(remainingSec)}</span>
           </div>
 
-          <p class="timer-status" aria-live="polite">
+          <p class="timer-status timer-rise" style={{ animationDelay: '160ms' } as Record<string, string>} aria-live="polite">
             {statusText}
           </p>
 
           {phase === 'ready' && (
-            <p class="timer-up-next">{fill(dict.timer.upNext, { min: speechMinutes })}</p>
+            <p class="timer-up-next timer-rise" style={{ animationDelay: '200ms' } as Record<string, string>}>
+              {fill(dict.timer.upNext, { min: speechMinutes })}
+            </p>
           )}
 
-          <div class="timer-actions">
+          <div class="timer-actions timer-rise" style={{ animationDelay: '220ms' } as Record<string, string>}>
             {phase === 'research' && (
               <button type="button" class="btn btn-primary" onClick={onDoneResearching}>
                 {dict.timer.doneResearching}
