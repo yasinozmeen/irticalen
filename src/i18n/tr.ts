@@ -58,8 +58,11 @@ export const tr = {
   },
   footer: {
     wordHeading: 'irticalen ne demek?',
+    wordShort: 'ne demek?',
     linksHeading: 'Bağlantılar',
     why: 'Bu siteyi neden yaptım?',
+    whyShort: 'neden?',
+    close: 'kapat',
     projects: 'Diğer projelerim',
     x: 'X’te @yasinozmeen',
     github: 'Kaynak kodu (GitHub)',

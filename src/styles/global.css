@@ -210,7 +210,6 @@ a {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  border-top: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
   padding: 0.5rem 0;
 }
@@ -834,47 +833,10 @@ input[type='range']::-moz-range-thumb {
   line-height: 1.5;
 }
 
-/* ---------- About section (server-rendered) ---------- */
-
-.about-section {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 2rem var(--space-page-x) max(3rem, env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.about-heading {
-  font-weight: 600;
-  font-size: clamp(1.5rem, 5vw, 2.1rem);
-  letter-spacing: -0.01em;
-  color: var(--ink);
-}
-
-.about-section p {
-  font-size: 1.05rem;
-  line-height: 1.6;
-  color: var(--ink);
-  max-width: 62ch;
-}
-
-.about-inspired {
-  font-size: 1rem;
-  color: var(--pencil);
-}
-
-.about-why-link {
-  display: inline-block;
-  font-weight: 500;
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--pencil);
-  text-underline-offset: 0.28em;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  *,
+  /* .reading-progress is scroll-driven, not autoplaying — it stays exempt so it still fills as the
+     reader scrolls under reduced motion; see the reading-progress rules further down. */
+  *:not(.reading-progress),
   *::before,
   *::after {
     animation: none !important;
@@ -1207,5 +1169,287 @@ input[type='range']::-moz-range-thumb {
 @media (max-width: 480px) {
   .why-h1 {
     max-width: none;
+  }
+}
+
+/* ---------- Scrollless home "stage" + fixed bottom dock ---------- */
+
+body.is-frame {
+  height: 100svh;
+  overflow: hidden;
+}
+
+body.is-frame .app-shell {
+  height: 100svh;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: calc(3.25rem + 1.25rem + env(safe-area-inset-bottom));
+}
+
+.dock {
+  display: flex;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  min-height: 3.25rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 max(1.25rem, calc((100vw - 760px) / 2 + 1.25rem)) env(safe-area-inset-bottom);
+  border-top: 1px solid var(--rule);
+  background: var(--paper-tex), var(--paper);
+  background-size: 389px 389px, 557px 557px, auto;
+  background-position: 0 0, 131px 73px, 0 0;
+}
+
+.dock-group {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.dock-link {
+  font: inherit;
+  font-size: 1rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink);
+  padding: 0.75rem 0;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.28em;
+  text-decoration-color: var(--pencil);
+  text-transform: lowercase;
+  white-space: nowrap;
+  transition: text-decoration-color 0.15s ease-out;
+}
+
+.dock-link:hover {
+  text-decoration-color: var(--ink);
+}
+
+.dock-short {
+  display: none;
+}
+
+.dock-ico {
+  color: var(--ink);
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  min-height: 44px;
+}
+
+@media (max-width: 560px) {
+  .dock {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+    gap: 0.5rem;
+  }
+
+  .dock-group {
+    gap: 0.8rem;
+  }
+
+  .dock-long {
+    display: none;
+  }
+
+  .dock-short {
+    display: inline;
+  }
+
+  .dock-link {
+    font-size: 0.95rem;
+  }
+
+  .dock-projects {
+    display: none;
+  }
+}
+
+/* ---------- "irticalen ne demek?" sheet ---------- */
+
+.sheet {
+  display: grid;
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  place-items: end center;
+  background: rgba(243, 238, 226, 0.82);
+}
+
+.sheet[hidden] {
+  display: none;
+}
+
+.sheet-page {
+  width: min(100%, 760px);
+  max-height: 85svh;
+  overflow-y: auto;
+  padding: 2rem 1.75rem calc(1.5rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--ink);
+  background: var(--paper-tex), var(--paper);
+  background-size: 389px 389px, 557px 557px, auto;
+  background-position: 0 0, 131px 73px, 0 0;
+  color: var(--ink);
+}
+
+.sheet-term {
+  font-weight: 600;
+  font-size: clamp(2.75rem, 11vw, 4rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.sheet-term i {
+  color: var(--red);
+  font-style: normal;
+}
+
+.sheet-term span {
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--pencil);
+  margin-left: 0.5rem;
+}
+
+.sheet-kind {
+  font-style: italic;
+  color: var(--pencil);
+  margin-top: 0.4rem;
+  text-transform: lowercase;
+}
+
+.sheet-def {
+  font-size: 1.3rem;
+  line-height: 1.4;
+  margin-top: 1rem;
+}
+
+.sheet-ex {
+  font-style: italic;
+  color: var(--pencil);
+  margin-top: 0.4rem;
+}
+
+.sheet-body {
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  line-height: 1.55;
+  max-width: 60ch;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+/* ---------- Custom scrollbar (kâğıt dilinde, tarayıcı varsayılanı yerine) ---------- */
+
+html,
+.app-shell,
+.category-listbox,
+.settings-dialog,
+.sheet-page {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink) transparent;
+}
+
+html::-webkit-scrollbar,
+.app-shell::-webkit-scrollbar,
+.category-listbox::-webkit-scrollbar,
+.settings-dialog::-webkit-scrollbar,
+.sheet-page::-webkit-scrollbar {
+  width: 10px;
+}
+
+html::-webkit-scrollbar-track,
+.app-shell::-webkit-scrollbar-track,
+.category-listbox::-webkit-scrollbar-track,
+.settings-dialog::-webkit-scrollbar-track,
+.sheet-page::-webkit-scrollbar-track {
+  background-color: transparent;
+  background-image: linear-gradient(var(--rule), var(--rule));
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 1px 100%;
+}
+
+html::-webkit-scrollbar-thumb,
+.app-shell::-webkit-scrollbar-thumb,
+.category-listbox::-webkit-scrollbar-thumb,
+.settings-dialog::-webkit-scrollbar-thumb,
+.sheet-page::-webkit-scrollbar-thumb {
+  background: var(--ink);
+  border-radius: 0;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+.app-shell::-webkit-scrollbar-thumb:hover,
+.category-listbox::-webkit-scrollbar-thumb:hover,
+.settings-dialog::-webkit-scrollbar-thumb:hover,
+.sheet-page::-webkit-scrollbar-thumb:hover {
+  background: #000;
+}
+
+html::-webkit-scrollbar-corner,
+.app-shell::-webkit-scrollbar-corner,
+.category-listbox::-webkit-scrollbar-corner,
+.settings-dialog::-webkit-scrollbar-corner,
+.sheet-page::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ---------- Reading progress line (/neden/, /en/why/) — scroll-driven, JS-free ---------- */
+
+.reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 25;
+  background: var(--ink);
+  border-bottom: 1px solid var(--rule);
+  transform-origin: left;
+  transform: scaleX(0);
+  pointer-events: none;
+}
+
+@supports (animation-timeline: scroll()) {
+  /* animation-timeline is set as an inline style on the element itself (see WhyArticle.astro),
+     deliberately kept OUT of this shorthand — build-time CSS minification folds a same-rule
+     `animation-timeline` longhand into the `animation` shorthand as `... scroll(root)`, and that
+     merged shorthand fails to parse (silently drops to `none`) in current engines even though the
+     longhand alone is well supported. Splitting them across stylesheet + inline avoids the merge. */
+  .reading-progress {
+    animation: reading-progress-fill linear forwards;
+  }
+}
+
+@supports not (animation-timeline: scroll()) {
+  .reading-progress {
+    display: none;
+  }
+}
+
+@keyframes reading-progress-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
   }
 }

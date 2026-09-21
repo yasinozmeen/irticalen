@@ -289,7 +289,7 @@ function AppContent({ locale }: Props) {
   const sessionOpen = state.phase !== 'idle';
   const contentInert = sessionOpen || settingsOpen;
 
-  // The server-rendered "about" section lives outside this island; make it inert too while a dialog is open.
+  // The bottom dock (and, on article pages, the site footer) lives outside this island; make it inert too while a dialog is open.
   useEffect(() => {
     const outside = document.querySelectorAll<HTMLElement>('[data-outside-app]');
     outside.forEach((el) => {

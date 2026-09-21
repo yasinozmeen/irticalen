@@ -1,12 +1,14 @@
 ---
 import Base from '../../layouts/Base.astro';
 import WhyArticle from '../../components/WhyArticle.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
 import { dictionaries } from '../../i18n';
 import { why } from '../../content/why';
 
 const locale = 'tr' as const;
 const dict = dictionaries[locale];
 const content = why[locale];
+const otherLocalePath = '/en/why/';
 
 const canonical = new URL(content.path, Astro.site).toString();
 const ogImage = new URL('/og.png', Astro.site).toString();
@@ -63,4 +65,5 @@ const jsonLd = [
   jsonLd={jsonLd}
 >
   <WhyArticle dict={dict} locale={locale} content={content} />
+  <SiteFooter dict={dict} locale={locale} otherLocalePath={otherLocalePath} />
 </Base>

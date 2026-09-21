@@ -1,7 +1,6 @@
 ---
 import '../styles/global.css';
 import { dictionaries, localeTag, localePath, type Locale } from '../i18n';
-import SiteFooter from '../components/SiteFooter.astro';
 
 interface Props {
   locale: Locale;
@@ -14,9 +13,12 @@ interface Props {
   ogType?: 'website' | 'article';
   /** Overrides the default WebApplication JSON-LD with one or more schema objects. */
   jsonLd?: object | object[];
+  /** Scrollless full-screen "stage" layout (home screens with the bottom dock) instead of the normal scrolling page. */
+  frame?: boolean;
 }
 
-const { locale, title, description, path, alternates, ogType = 'website', jsonLd: jsonLdProp } = Astro.props;
+const { locale, title, description, path, alternates, ogType = 'website', jsonLd: jsonLdProp, frame = false } =
+  Astro.props;
 const dict = dictionaries[locale];
 const pagePath = path ?? localePath(locale);
 const alt = alternates ?? { tr: localePath('tr'), en: localePath('en') };
@@ -41,8 +43,6 @@ const defaultJsonLd = {
   },
   isAccessibleForFree: true,
 };
-
-const otherLocalePath = locale === 'tr' ? alt.en : alt.tr;
 
 const jsonLdList: object[] = jsonLdProp
   ? Array.isArray(jsonLdProp)
@@ -91,9 +91,8 @@ const jsonLdList: object[] = jsonLdProp
     ))}
     <meta name="generator" content={Astro.generator} />
   </head>
-  <body>
+  <body class={frame ? 'is-frame' : undefined}>
     <div class="page-bg" aria-hidden="true"></div>
     <slot />
-    <SiteFooter dict={dict} locale={locale} otherLocalePath={otherLocalePath} />
   </body>
 </html>

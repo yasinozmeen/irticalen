@@ -60,8 +60,11 @@ export const en: Dictionary = {
   },
   footer: {
     wordHeading: 'What does “irticalen” mean?',
+    wordShort: 'meaning?',
     linksHeading: 'Links',
     why: 'Why I built this',
+    whyShort: 'why?',
+    close: 'close',
     projects: 'My other projects',
     x: '@yasinozmeen on X',
     github: 'Source code (GitHub)',
