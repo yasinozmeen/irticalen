@@ -26,3 +26,6 @@ pnpm-debug.log*
 # local agent notes
 CLAUDE.md
 .shots/
+
+# cloudflare worker local state
+.wrangler/

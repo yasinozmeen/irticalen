@@ -1,0 +1,43 @@
+# İzleme ve geri bildirim — sözleşme
+
+Amaç: ziyaretçinin akışın neresinde bıraktığını görmek (huni), hataları yakalamak, konu önerisi ve
+sorun bildirimi almak. **Kişisel veri yok:** çerez yok, IP saklanmaz, tarayıcı kimliği saklanmaz,
+kalıcı kullanıcı numarası yok. Oturum numarası yalnız bellekte durur; sayfa kapanınca yok olur.
+`navigator.doNotTrack === '1'` ise hiçbir olay gönderilmez (geri bildirim formu yine çalışır).
+
+Servis: Cloudflare Worker, aynı alan adında `/api/*` (CORS gerekmez). Depo: Cloudflare D1.
+
+## POST /api/e — olay
+Gövde JSON (sendBeacon `text/plain` de yollayabilir; gövde her durumda JSON olarak ayrıştırılır), en çok 2 KB:
+
+| alan | tip | not |
+|---|---|---|
+| `s` | string 8–40 | bellekteki oturum numarası (zorunlu) |
+| `n` | string | olay adı, aşağıdaki listeden (zorunlu) |
+| `l` | `tr` \| `en` | dil |
+| `m` | `off-the-cuff` \| `deep-research` | mod |
+| `c` | string ≤40 | kategori kimliği |
+| `t` | string ≤200 | konu ya da hata mesajı |
+| `v` | number | sayısal değer (saniye) |
+| `ph` | string ≤20 | o anki evre: `idle` `spinning` `research` `ready` `speech` `done` |
+| `p` | string ≤80 | sayfa yolu |
+| `d` | `mobile` \| `desktop` | genişlik < 768 → mobile |
+| `r` | string ≤80 | yönlendiren alan adı (yalnız host) |
+
+Olay adları: `page_view` `spin` `land` `start_research` `research_done` `start_speech` `speech_done`
+`close_early` (v = kalan sn; `ph` hangi evrede kapatıldığını söyler — `speech`'te az kalan süreyle kapatmak çoğu zaman "erken bitirdim" demektir, `ready`'de `v` yoktur) `mode_change` `category_change` `settings_open` `sheet_open`
+`share_click` `feedback_open` `feedback_sent` `js_error` (t = mesaj) `leave` (v = sayfada geçen sn).
+
+Yanıt: `204` (geçerli), `400` (geçersiz — gövde yok sayılır), `413` (büyük). Sunucu ayrıca `ts`
+(epoch ms) ve `country` (`request.cf.country`, 2 harf) ekler. IP ve User-Agent SAKLANMAZ.
+
+## POST /api/feedback — konu önerisi / sorun bildirimi
+Gövde JSON, en çok 4 KB: `kind` (`topic` \| `problem` \| `other`, zorunlu), `text` (1–1000, zorunlu),
+`contact` (≤120, isteğe bağlı — kişi kendi isteğiyle yazar), `l`, `p`, `s`, `ph`, `d`.
+Yanıt: `201` `{ "ok": true }`, `400`, `413`, `429` (günlük tavan: 300 kayıt/gün).
+
+## Diğer
+- `GET /api/health` → `200 {"ok":true}`.
+- `/api/*` dışındaki ve tanımsız yollar → `404`. Yalnız `POST`/`GET`; diğerleri `405`.
+- Başka bir siteden gelen `POST` (yabancı `Origin`) → `403`.
+- Servis çökerse site aynen çalışır: istemci hiçbir hatayı yüzeye çıkarmaz.

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Dictionary, Locale } from '../i18n';
+import { detectDevice, getTracker, sendFeedback, type FeedbackKind, type FeedbackResult } from '../lib';
 import { useFocusTrap } from './useFocusTrap';
 
 interface Props {
@@ -7,28 +8,44 @@ interface Props {
   dict: Dictionary;
 }
 
+const FEEDBACK_KINDS: FeedbackKind[] = ['topic', 'problem', 'other'];
+const FEEDBACK_MAX_LEN = 1000;
+const FEEDBACK_COUNTER_THRESHOLD = 900;
+
+type SheetKind = 'about' | 'feedback' | null;
+
 /**
- * Bottom dock (always visible on the frameless home screens) + the "irticalen ne demek?" sheet
- * it opens. A standalone island (not part of the main App island) so it can hydrate independently
- * — but it still participates in App's `[data-outside-app]` inert mechanism (see App.tsx) by
- * carrying that same data attribute on the dock `<nav>`, and the sheet uses the shared
- * `useFocusTrap` hook exactly like the timer/settings dialogs.
+ * Bottom dock (always visible on the frameless home screens) + the two kâğıt "sheet" pages it can
+ * open: "irticalen ne demek?" and "bize yaz" (feedback/topic suggestions). A standalone island (not
+ * part of the main App island) so it can hydrate independently — but it still participates in App's
+ * `[data-outside-app]` inert mechanism (see App.tsx) by carrying that same data attribute on the
+ * dock `<nav>`, and both sheets use the shared `useFocusTrap` hook exactly like the timer/settings
+ * dialogs. Only one sheet may be open at a time — `openSheet` is a single piece of state, so the two
+ * can never fight over focus or inert.
  *
- * The sheet's content (dictionary entry + about paragraphs) is always rendered — only its
+ * The about sheet's content (dictionary entry + about paragraphs) is always rendered — only its
  * visibility is toggled via the `hidden` attribute — so the text is present in the static,
  * server-rendered HTML for SEO even though the dialog starts closed.
  */
 export function Dock({ locale, dict }: Props) {
-  const [open, setOpen] = useState(false);
-  const sheetRef = useRef<HTMLDivElement>(null);
+  const [openSheet, setOpenSheet] = useState<SheetKind>(null);
+  const aboutRef = useRef<HTMLDivElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  const trackerRef = useRef(getTracker(locale));
+  const tracker = trackerRef.current;
 
-  // While the sheet is open nothing behind it may be reachable — not by Tab, not by a screen
+  const [fbKind, setFbKind] = useState<FeedbackKind>('topic');
+  const [fbText, setFbText] = useState('');
+  const [fbContact, setFbContact] = useState('');
+  const [fbStatus, setFbStatus] = useState<'idle' | 'sending' | FeedbackResult>('idle');
+
+  // While a sheet is open nothing behind it may be reachable — not by Tab, not by a screen
   // reader's virtual cursor. App does the same for its own dialogs (see App.tsx); it cannot change
   // state while inert, so the two never fight over the attribute.
   // Declared before useFocusTrap on purpose: cleanups run in hook order, so the dock is interactive
   // again by the time the trap hands focus back to the trigger button.
   useEffect(() => {
-    if (!open) return;
+    if (!openSheet) return;
     const behind = document.querySelectorAll<HTMLElement>('.app-shell, [data-outside-app]');
     behind.forEach((el) => {
       el.inert = true;
@@ -38,11 +55,65 @@ export function Dock({ locale, dict }: Props) {
         el.inert = false;
       });
     };
-  }, [open]);
+  }, [openSheet]);
 
-  useFocusTrap(open, sheetRef, () => setOpen(false));
+  const closeSheet = (): void => setOpenSheet(null);
+
+  useFocusTrap(openSheet === 'about', aboutRef, closeSheet);
+  useFocusTrap(openSheet === 'feedback', feedbackRef, closeSheet);
 
   const whyPath = locale === 'tr' ? '/neden/' : '/en/why/';
+
+  const openAbout = (): void => {
+    setOpenSheet('about');
+    tracker.track('sheet_open');
+  };
+
+  const openFeedback = (): void => {
+    setFbStatus('idle');
+    setOpenSheet('feedback');
+    tracker.track('feedback_open');
+  };
+
+  const sendingRef = useRef(false);
+
+  const handleFeedbackSubmit = async (event: Event): Promise<void> => {
+    event.preventDefault();
+    const text = fbText.trim();
+    // Ref guard: state is a render behind, so a double tap would otherwise send twice.
+    if (!text || sendingRef.current) return;
+    sendingRef.current = true;
+    setFbStatus('sending');
+    const result = await sendFeedback({
+      kind: fbKind,
+      text: text.slice(0, FEEDBACK_MAX_LEN),
+      contact: fbContact.trim() || undefined,
+      l: locale,
+      p: typeof location !== 'undefined' ? location.pathname : undefined,
+      s: tracker.sessionId,
+      d: detectDevice(),
+    });
+    sendingRef.current = false;
+    setFbStatus(result);
+    if (result === 'ok') {
+      tracker.track('feedback_sent');
+      setFbText('');
+      setFbContact('');
+    }
+  };
+
+  const remaining = FEEDBACK_MAX_LEN - fbText.length;
+  const showCounter = fbText.length > FEEDBACK_COUNTER_THRESHOLD;
+  const resultText =
+    fbStatus === 'sending'
+      ? dict.feedback.sending
+      : fbStatus === 'ok'
+        ? dict.feedback.resultOk
+        : fbStatus === 'limit'
+          ? dict.feedback.resultLimit
+          : fbStatus === 'error'
+            ? dict.feedback.resultError
+            : '';
 
   return (
     <>
@@ -52,8 +123,8 @@ export function Dock({ locale, dict }: Props) {
             type="button"
             class="dock-link"
             aria-haspopup="dialog"
-            aria-expanded={open}
-            onClick={() => setOpen(true)}
+            aria-expanded={openSheet === 'about'}
+            onClick={openAbout}
           >
             <span class="dock-long">{dict.footer.wordHeading}</span>
             <span class="dock-short">{dict.footer.wordShort}</span>
@@ -62,6 +133,16 @@ export function Dock({ locale, dict }: Props) {
             <span class="dock-long">{dict.footer.why}</span>
             <span class="dock-short">{dict.footer.whyShort}</span>
           </a>
+          <button
+            type="button"
+            class="dock-link"
+            aria-haspopup="dialog"
+            aria-expanded={openSheet === 'feedback'}
+            onClick={openFeedback}
+          >
+            <span class="dock-long">{dict.footer.writeToUs}</span>
+            <span class="dock-short">{dict.footer.writeToUsShort}</span>
+          </button>
         </div>
         <div class="dock-group">
           <a class="dock-link dock-projects" href="https://yasinozmeen.me" target="_blank" rel="noopener">
@@ -92,11 +173,11 @@ export function Dock({ locale, dict }: Props) {
       </nav>
 
       <div
-        ref={sheetRef}
+        ref={aboutRef}
         class="sheet"
-        hidden={!open}
+        hidden={openSheet !== 'about'}
         onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setOpen(false);
+          if (event.target === event.currentTarget) closeSheet();
         }}
       >
         <div
@@ -127,10 +208,98 @@ export function Dock({ locale, dict }: Props) {
             <a class="dock-link" href={whyPath}>
               {dict.footer.why}
             </a>
-            <button type="button" class="dock-link" onClick={() => setOpen(false)}>
+            <button type="button" class="dock-link" onClick={closeSheet}>
               {dict.footer.close}
             </button>
           </p>
+        </div>
+      </div>
+
+      <div
+        ref={feedbackRef}
+        class="sheet"
+        hidden={openSheet !== 'feedback'}
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) closeSheet();
+        }}
+      >
+        <div
+          class="sheet-page"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="feedback-term"
+          tabIndex={-1}
+          data-autofocus
+        >
+          <p class="sheet-term" id="feedback-term">
+            {dict.feedback.title}
+            <i>.</i>
+          </p>
+
+          <form onSubmit={handleFeedbackSubmit}>
+            <div class="mode-switch feedback-kind" role="radiogroup" aria-label={dict.feedback.kindLabel}>
+              {FEEDBACK_KINDS.map((kind) => (
+                <button
+                  key={kind}
+                  type="button"
+                  role="radio"
+                  aria-checked={fbKind === kind}
+                  onClick={() => setFbKind(kind)}
+                >
+                  {dict.feedback.kinds[kind]}
+                </button>
+              ))}
+            </div>
+
+            <div class="feedback-field">
+              <label class="feedback-label" for="feedback-text">
+                {dict.feedback.textLabel}
+              </label>
+              <p class="feedback-hint">{dict.feedback.hints[fbKind]}</p>
+              <textarea
+                id="feedback-text"
+                class="feedback-textarea"
+                rows={4}
+                maxLength={FEEDBACK_MAX_LEN}
+                value={fbText}
+                onInput={(event) => setFbText((event.target as HTMLTextAreaElement).value)}
+              />
+              {showCounter && (
+                <p class="feedback-counter">
+                  {dict.feedback.counter.replace('{n}', String(Math.max(0, remaining)))}
+                </p>
+              )}
+            </div>
+
+            <div class="feedback-field">
+              <label class="feedback-label" for="feedback-contact">
+                {dict.feedback.contactLabel}
+              </label>
+              <input
+                id="feedback-contact"
+                class="feedback-input"
+                type="text"
+                maxLength={120}
+                value={fbContact}
+                onInput={(event) => setFbContact((event.target as HTMLInputElement).value)}
+              />
+            </div>
+
+            <div class="feedback-actions">
+              <button type="submit" class="btn btn-primary" disabled={!fbText.trim() || fbStatus === 'sending'}>
+                {fbStatus === 'sending' ? dict.feedback.sending : dict.feedback.submit}
+              </button>
+              <button type="button" class="dock-link" onClick={closeSheet}>
+                {dict.footer.close}
+              </button>
+            </div>
+
+            <p class="feedback-status" aria-live="polite">
+              {resultText}
+            </p>
+          </form>
+
+          <p class="feedback-note">{dict.feedback.privacyNote}</p>
         </div>
       </div>
     </>

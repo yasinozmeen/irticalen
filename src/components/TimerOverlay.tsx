@@ -17,6 +17,7 @@ interface Props {
   onDoneResearching: () => void;
   onReadyToSpeak: () => void;
   onClose: () => void;
+  onShare: () => void;
 }
 
 const STATUS_BY_PHASE: Record<Phase, keyof Dictionary['timer'] | null> = {
@@ -40,6 +41,7 @@ export function TimerOverlay({
   onDoneResearching,
   onReadyToSpeak,
   onClose,
+  onShare,
 }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const open = phase !== 'idle';
@@ -104,6 +106,11 @@ export function TimerOverlay({
         {phase === 'ready' && (
           <button type="button" class="btn btn-primary" onClick={onReadyToSpeak}>
             {dict.timer.readyToSpeak}
+          </button>
+        )}
+        {isDone && (
+          <button type="button" class="btn btn-secondary" onClick={onShare}>
+            {dict.timer.share}
           </button>
         )}
         <button type="button" class="btn btn-secondary" onClick={onClose}>

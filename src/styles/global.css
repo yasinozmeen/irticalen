@@ -1356,6 +1356,84 @@ body.is-frame .app-shell {
   margin-top: 1.25rem;
 }
 
+/* ---------- "bize yaz" feedback form (same kâğıt sheet, F-kurallarına uyar: kutu/gölge yok) ---------- */
+
+.feedback-kind {
+  margin-top: 1.25rem;
+}
+
+.feedback-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 1.5rem;
+  max-width: 44rem;
+}
+
+.feedback-label {
+  font-weight: 500;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.feedback-hint {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--pencil);
+}
+
+.feedback-textarea,
+.feedback-input {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  padding: 0.5rem 0;
+  font: inherit;
+  color: var(--ink);
+  transition: border-color 0.15s ease-out;
+}
+
+.feedback-textarea {
+  resize: vertical;
+  min-height: 5.5rem;
+}
+
+.feedback-textarea:focus,
+.feedback-input:focus {
+  border-bottom-color: var(--ink);
+}
+
+.feedback-counter {
+  font-size: 0.85rem;
+  color: var(--pencil);
+  text-align: right;
+}
+
+.feedback-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.feedback-status {
+  min-height: 1.5em;
+  margin-top: 0.75rem;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.feedback-note {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--pencil);
+}
+
 /* ---------- Custom scrollbar (kâğıt dilinde, tarayıcı varsayılanı yerine) ---------- */
 
 html,
@@ -1455,5 +1533,26 @@ html::-webkit-scrollbar-corner,
   }
   to {
     transform: scaleX(1);
+  }
+}
+
+/* ---- Short screens (small phones with browser bars): keep the action row above the dock ---- */
+@media (max-height: 640px) {
+  body.is-frame .app-shell {
+    gap: 0.75rem;
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+
+  body.is-frame .top-bar {
+    padding-bottom: 0.6rem;
+  }
+
+  body.is-frame .topic-stage {
+    min-height: 0;
+    gap: 0.5rem;
+  }
+
+  body.is-frame .mode-blurb {
+    display: none;
   }
 }

@@ -40,6 +40,10 @@ export const en: Dictionary = {
     close: 'Close',
     arc: ['What?', 'So what?', 'Now what?'],
     arcLabel: 'Speech outline',
+    share: 'share',
+  },
+  share: {
+    text: 'I just spoke off the cuff for {min} min about “{topic}”. Your turn:',
   },
   settings: {
     open: 'Settings',
@@ -70,6 +74,27 @@ export const en: Dictionary = {
     github: 'GitHub',
     madeBy: 'Made by Yasin Özmen. Open source, MIT licensed.',
     home: 'Back to the app',
+    writeToUs: 'write to us',
+    writeToUsShort: 'write',
+  },
+  feedback: {
+    title: 'write to us',
+    kindLabel: 'Type',
+    kinds: { topic: 'suggest a topic', problem: 'report a problem', other: 'other' },
+    textLabel: 'Your message',
+    hints: {
+      topic: 'Which topic, in which category?',
+      problem: 'What were you doing, what happened?',
+      other: 'What’s on your mind?',
+    },
+    counter: '{n} left',
+    contactLabel: 'If you want a reply, leave your email or X handle (optional)',
+    submit: 'Send',
+    sending: 'sending…',
+    resultOk: 'Thanks, it went through.',
+    resultLimit: 'Today’s quota is full; try again tomorrow?',
+    resultError: 'Could not send. Check your connection and try again.',
+    privacyNote: 'Nothing about you is collected beyond the text you write.',
   },
   about: {
     word: {

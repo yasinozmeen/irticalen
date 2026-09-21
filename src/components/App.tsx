@@ -18,6 +18,10 @@ import {
   SPIN_DURATION_MS,
   SPIN_SAFETY_MS,
   acquireWakeLock,
+  buildShareText,
+  getTracker,
+  shareUrl,
+  twitterIntentUrl,
   type Countdown,
   type ReleaseWakeLock,
   type Settings,
@@ -66,8 +70,65 @@ function AppContent({ locale }: Props) {
   const startTriggerRef = useRef<HTMLButtonElement>(null);
   const wheelRef = useRef<TopicReelHandle>(null);
   const spinBaseIndexRef = useRef(0);
+  const trackerRef = useRef(getTracker(locale));
+  const tracker = trackerRef.current;
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const mountTimeRef = useRef(0);
+  // One-shot guards: state updates land a render later, so a timer hitting zero and a tap in the
+  // same instant must not report the same milestone twice (or a finish as an early close).
+  const researchDoneSentRef = useRef(false);
+  const speechDoneSentRef = useRef(false);
+  const leaveSentRef = useRef(false);
 
   const categories: Category[] = useMemo(() => getCategories(locale), [locale]);
+
+  // page_view once on mount, leave (with elapsed seconds + current phase) on pagehide, and the two
+  // window-level error hooks (uncaught errors + unhandled rejections both count as js_error).
+  useEffect(() => {
+    mountTimeRef.current = Date.now();
+    tracker.track('page_view');
+
+    const onPageHide = (): void => {
+      if (leaveSentRef.current) return;
+      leaveSentRef.current = true;
+      const elapsedSec = Math.max(0, Math.round((Date.now() - mountTimeRef.current) / 1000));
+      tracker.track('leave', { v: elapsedSec, ph: stateRef.current.phase });
+    };
+    const errorMessage = (value: unknown): string => {
+      if (value instanceof Error) return value.message;
+      try {
+        return String(value);
+      } catch {
+        return 'error';
+      }
+    };
+    const onError = (event: ErrorEvent): void => {
+      tracker.track('js_error', { t: event.message });
+    };
+    const onRejection = (event: PromiseRejectionEvent): void => {
+      tracker.track('js_error', { t: errorMessage(event.reason) });
+    };
+
+    // Back/forward cache: the page comes back without re-mounting — start a fresh visit clock.
+    const onPageShow = (event: PageTransitionEvent): void => {
+      if (!event.persisted) return;
+      mountTimeRef.current = Date.now();
+      leaveSentRef.current = false;
+      tracker.track('page_view');
+    };
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => {
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Load persisted settings on the client only, after the SSR-safe defaults have rendered.
   useEffect(() => {
@@ -140,8 +201,18 @@ function AppContent({ locale }: Props) {
       },
       onDone: () => {
         soundRef.current.fanfare();
+        const wasResearch = stateRef.current.phase === 'research';
+        const wasSpeech = stateRef.current.phase === 'speech';
         dispatch({ type: 'TIME_UP' });
         countdownRef.current = null;
+        // Natural time-out counts the same as the matching manual action below.
+        if (wasResearch && !researchDoneSentRef.current) {
+          researchDoneSentRef.current = true;
+          tracker.track('research_done');
+        } else if (wasSpeech && !speechDoneSentRef.current) {
+          speechDoneSentRef.current = true;
+          tracker.track('speech_done');
+        }
       },
     });
     holdWakeLock();
@@ -150,6 +221,7 @@ function AppContent({ locale }: Props) {
   const handleModeChange = (mode: Mode): void => {
     if (isLocked(state)) return;
     dispatch({ type: 'SET_MODE', mode });
+    tracker.track('mode_change', { m: mode });
   };
 
   const handleCategoryChange = (categoryId: string): void => {
@@ -161,6 +233,7 @@ function AppContent({ locale }: Props) {
     // the category list never uses up topics from the bag.
     if (categoryId === state.categoryId) return;
     dispatch({ type: 'SET_CATEGORY', categoryId, topicIndex: -1, topic: null });
+    tracker.track('category_change', { c: categoryId });
   };
 
   const handleSpin = (): void => {
@@ -169,6 +242,10 @@ function AppContent({ locale }: Props) {
     const draw = drawFromBag(topics, loadSeen(locale, effectiveCategoryId), state.topicIndex);
     const plan = planSpinTo(state.topicIndex, topics.length, draw.index);
     dispatch({ type: 'SPIN_START' });
+    tracker.track('spin', {
+      m: state.mode,
+      c: state.mode === 'off-the-cuff' ? effectiveCategoryId : undefined,
+    });
 
     const finalize = (): void => {
       clearSpinTimers();
@@ -178,6 +255,11 @@ function AppContent({ locale }: Props) {
       dispatch({ type: 'SPIN_LAND', index, topic: topics[index] });
       setLandKey((key) => key + 1);
       soundRef.current.land();
+      tracker.track('land', {
+        t: topics[index],
+        m: state.mode,
+        c: state.mode === 'off-the-cuff' ? effectiveCategoryId : undefined,
+      });
     };
 
     let reduced = false;
@@ -229,6 +311,13 @@ function AppContent({ locale }: Props) {
     const nextPhase = state.mode === 'deep-research' ? 'research' : 'speech';
     dispatch({ type: 'START' });
     beginCountdown(nextPhase === 'research' ? settings.researchSec : settings.speechSec);
+    researchDoneSentRef.current = false;
+    speechDoneSentRef.current = false;
+    tracker.track(nextPhase === 'research' ? 'start_research' : 'start_speech', {
+      m: state.mode,
+      t: state.topic,
+      c: state.mode === 'off-the-cuff' ? effectiveCategoryId : undefined,
+    });
   };
 
   const handleDoneResearching = (): void => {
@@ -239,19 +328,53 @@ function AppContent({ locale }: Props) {
     setTimerTotalSec(settings.speechSec);
     setRemainingSec(settings.speechSec);
     setElapsedSec(0);
+    if (!researchDoneSentRef.current) {
+      researchDoneSentRef.current = true;
+      tracker.track('research_done');
+    }
   };
 
   const handleReadyToSpeak = (): void => {
     if (state.phase !== 'ready') return;
     dispatch({ type: 'READY_TO_SPEAK' });
     beginCountdown(settings.speechSec);
+    tracker.track('start_speech', { m: state.mode, t: state.topic ?? undefined });
   };
 
   const handleClose = (): void => {
+    // `ready` has no running clock, so it carries no remaining time — the phase alone tells the story.
+    const phase = state.phase;
+    if (!speechDoneSentRef.current && (phase === 'research' || phase === 'speech' || phase === 'ready')) {
+      tracker.track('close_early', { v: phase === 'ready' ? undefined : remainingSec, ph: phase });
+    }
     stopCountdown();
     releaseWakeLock();
     dispatch({ type: 'CLOSE' });
     startTriggerRef.current?.focus();
+  };
+
+  const handleShare = (): void => {
+    tracker.track('share_click');
+    const text = buildShareText(dict.share.text, {
+      topic: state.topic ?? '',
+      minutes: speechMinutes,
+    });
+    const url = shareUrl(locale);
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        navigator.share({ text, url }).catch(() => {
+          // user cancelled the native share sheet — nothing to do
+        });
+        return;
+      }
+    } catch {
+      // fall through to the x.com intent below
+    }
+    try {
+      window.open(twitterIntentUrl(text, url), '_blank', 'noopener');
+    } catch {
+      // ignore — sharing is best-effort
+    }
   };
 
   // Time ran out naturally (research -> ready). Show the upcoming speech duration.
@@ -285,7 +408,10 @@ function AppContent({ locale }: Props) {
     soundRef.current.setMuted(muted);
   };
 
-  const openSettings = (): void => setSettingsOpen(true);
+  const openSettings = (): void => {
+    setSettingsOpen(true);
+    tracker.track('settings_open');
+  };
   const closeSettings = (): void => {
     setSettingsOpen(false);
     settingsTriggerRef.current?.focus();
@@ -410,6 +536,7 @@ function AppContent({ locale }: Props) {
         onDoneResearching={handleDoneResearching}
         onReadyToSpeak={handleReadyToSpeak}
         onClose={handleClose}
+        onShare={handleShare}
       />
 
       <SettingsDialog
@@ -431,7 +558,7 @@ function AppContent({ locale }: Props) {
 export default function App({ locale }: Props) {
   const dict = dictionaries[locale];
   return (
-    <ErrorBoundary dict={dict}>
+    <ErrorBoundary dict={dict} locale={locale}>
       <AppContent locale={locale} />
     </ErrorBoundary>
   );

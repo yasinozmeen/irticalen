@@ -23,7 +23,7 @@ const dict = dictionaries[locale];
 const pagePath = path ?? localePath(locale);
 const alt = alternates ?? { tr: localePath('tr'), en: localePath('en') };
 const canonical = new URL(pagePath, Astro.site).toString();
-const ogImage = new URL('/og.png', Astro.site).toString();
+const ogImage = new URL('/og.jpg', Astro.site).toString();
 const ogLocale = locale === 'tr' ? 'tr_TR' : 'en_US';
 const pageTitle = title ?? dict.meta.title;
 const pageDescription = description ?? dict.meta.description;

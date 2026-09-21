@@ -1,8 +1,10 @@
 import { Component, type ComponentChildren } from 'preact';
-import type { Dictionary } from '../i18n';
+import type { Dictionary, Locale } from '../i18n';
+import { getTracker } from '../lib';
 
 interface Props {
   dict: Dictionary;
+  locale: Locale;
   children: ComponentChildren;
 }
 
@@ -21,6 +23,8 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: unknown): void {
     // eslint-disable-next-line no-console
     console.error('İrticalen: unhandled error in app island', error);
+    const message = error instanceof Error ? error.message : String(error);
+    getTracker(this.props.locale).track('js_error', { t: message });
   }
 
   private handleRetry = (): void => {

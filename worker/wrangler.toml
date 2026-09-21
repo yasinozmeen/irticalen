@@ -1,0 +1,13 @@
+name = "irticalen-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+workers_dev = false
+
+routes = [
+  { pattern = "irticalen.yasinozmeen.me/api/*", zone_name = "yasinozmeen.me" }
+]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "irticalen"
+database_id = "767bb179-1705-4ac0-b8f2-8d4e11c5d012"

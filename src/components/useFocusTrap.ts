@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import type { RefObject } from 'preact';
 
 const FOCUSABLE_SELECTOR =
-  'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * Traps Tab focus inside a container while `active` is true, and calls
@@ -47,7 +47,8 @@ export function useFocusTrap(
       const firstEl = items[0];
       const lastEl = items[items.length - 1];
       // Focus can land outside the trap (e.g. on <body> after clicking plain text); pull it back in.
-      if (!root.contains(document.activeElement) || document.activeElement === root) {
+      // Also covers the `[data-autofocus]` container itself, which is focused but not tabbable.
+      if (!items.includes(document.activeElement as HTMLElement)) {
         event.preventDefault();
         (event.shiftKey ? lastEl : firstEl).focus();
         return;

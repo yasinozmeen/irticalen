@@ -38,6 +38,10 @@ export const tr = {
     close: 'Kapat',
     arc: ['Nedir?', 'Neden önemli?', 'Ne yapmalı?'],
     arcLabel: 'Konuşma iskeleti',
+    share: 'paylaş',
+  },
+  share: {
+    text: '“{topic}” üzerine {min} dakika irticalen konuştum. Sıra sende:',
   },
   settings: {
     open: 'Ayarlar',
@@ -68,6 +72,27 @@ export const tr = {
     github: 'GitHub',
     madeBy: 'Yasin Özmen yaptı. Açık kaynak, MIT lisanslı.',
     home: 'Uygulamaya dön',
+    writeToUs: 'bize yaz',
+    writeToUsShort: 'yaz',
+  },
+  feedback: {
+    title: 'bize yaz',
+    kindLabel: 'Tür',
+    kinds: { topic: 'konu öner', problem: 'sorun bildir', other: 'başka' },
+    textLabel: 'Mesajın',
+    hints: {
+      topic: 'Hangi konu, hangi kategoriye?',
+      problem: 'Ne yapıyordun, ne oldu?',
+      other: 'Aklındaki ne?',
+    },
+    counter: '{n} kaldı',
+    contactLabel: 'Sana dönmemi istersen e-posta ya da X kullanıcı adın (isteğe bağlı)',
+    submit: 'Gönder',
+    sending: 'gönderiliyor…',
+    resultOk: 'Teşekkürler, ulaştı.',
+    resultLimit: 'Bugünlük kutu doldu; yarın tekrar dener misin?',
+    resultError: 'Gönderilemedi. İnternetini kontrol edip tekrar dene.',
+    privacyNote: 'Yazdığın metin dışında senden hiçbir bilgi alınmaz.',
   },
   about: {
     word: {

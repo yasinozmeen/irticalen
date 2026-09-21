@@ -37,7 +37,7 @@ Takılırsan ekrandaki üç soruyu izle: **Nedir? → Neden önemli? → Ne yapm
 - Türkçe ve İngilizce arayüz.
 - Süreler ayarlanabilir (konuşma 1–10 dk, araştırma 1–60 dk). Ses efektleri kapatılabilir.
 - Klavyeyle tam kullanım, ekran okuyucu desteği, “hareketi azalt” tercihine saygı.
-- **Ses kaydı yok, üyelik yok, çerez yok, izleme yok.** Ayarların yalnızca kendi tarayıcında durur.
+- **Ses kaydı yok, üyelik yok, çerez yok.** Ayarların yalnızca kendi tarayıcında durur. Siteyi iyileştirmek için yalnız isimsiz kullanım sayıları tutulur (hangi adımda bırakıldığı, hata oluştu mu); IP adresi, tarayıcı kimliği ya da kalıcı kullanıcı numarası saklanmaz. Ayrıntı: [`docs/TRACKING.md`](docs/TRACKING.md).
 
 ## Katkı: konu eklemek
 
@@ -107,7 +107,7 @@ Fikir ve akış, [@bitterbuilds](https://www.instagram.com/bitterbuilds/) taraf�
 - **Researched** — a harder concept lands; time your research first, then speak.
 - Turkish and English UI, 260+ topics across 11 categories, adjustable timers.
 - Fully keyboard accessible, screen-reader friendly, respects reduced motion.
-- **No recording, no account, no cookies, no tracking.** Settings live in your browser only.
+- **No recording, no account, no cookies.** Settings live in your browser only. To improve the site, anonymous usage counts are kept (which step people drop off at, whether an error happened); no IP address, browser fingerprint or persistent user id is stored. Details: [`docs/TRACKING.md`](docs/TRACKING.md).
 
 Try it: [irticalen.yasinozmeen.me/en/](https://irticalen.yasinozmeen.me/en/)
 
