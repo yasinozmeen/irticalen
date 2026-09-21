@@ -229,7 +229,6 @@ export function Dock({ locale, dict }: Props) {
           aria-modal="true"
           aria-labelledby="feedback-term"
           tabIndex={-1}
-          data-autofocus
         >
           <p class="sheet-term" id="feedback-term">
             {dict.feedback.title}
@@ -244,7 +243,11 @@ export function Dock({ locale, dict }: Props) {
                   type="button"
                   role="radio"
                   aria-checked={fbKind === kind}
-                  onClick={() => setFbKind(kind)}
+                  onClick={() => {
+                    setFbKind(kind);
+                    // Picking a kind is a step towards writing — put the cursor where the writing goes.
+                    document.getElementById('feedback-text')?.focus();
+                  }}
                 >
                   {dict.feedback.kinds[kind]}
                 </button>
@@ -259,6 +262,7 @@ export function Dock({ locale, dict }: Props) {
               <textarea
                 id="feedback-text"
                 class="feedback-textarea"
+                data-autofocus
                 rows={4}
                 maxLength={FEEDBACK_MAX_LEN}
                 value={fbText}

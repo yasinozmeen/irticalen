@@ -1,6 +1,7 @@
 import { parseEvent, parseFeedback } from './validate.js';
+import { feedbackMessage, notifyTelegram, type NotifyEnv } from './notify.js';
 
-export interface Env {
+export interface Env extends NotifyEnv {
   DB: D1Database;
 }
 
@@ -26,7 +27,7 @@ function isForeignOrigin(request: Request): boolean {
 }
 
 export default {
-  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const pathname = url.pathname.length > 1 && url.pathname.endsWith('/')
       ? url.pathname.slice(0, -1)
@@ -200,6 +201,9 @@ export default {
             country
           )
           .run();
+
+        // After the response: the visitor never waits for Telegram.
+        ctx.waitUntil(notifyTelegram(env, feedbackMessage(fb, country)));
 
         return new Response(JSON.stringify({ ok: true }), {
           status: 201,

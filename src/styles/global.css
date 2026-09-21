@@ -1386,10 +1386,9 @@ body.is-frame .app-shell {
 .feedback-input {
   width: 100%;
   background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--rule);
+  border: 1px solid var(--rule);
   border-radius: 0;
-  padding: 0.5rem 0;
+  padding: 0.6rem 0.75rem;
   font: inherit;
   color: var(--ink);
   transition: border-color 0.15s ease-out;
@@ -1400,9 +1399,14 @@ body.is-frame .app-shell {
   min-height: 5.5rem;
 }
 
+/* The field being written in is the one red frame on the page; the rest stay as faint as a rule. */
 .feedback-textarea:focus,
-.feedback-input:focus {
-  border-bottom-color: var(--ink);
+.feedback-input:focus,
+.feedback-textarea:focus-visible,
+.feedback-input:focus-visible {
+  border-color: var(--red);
+  outline: 1px solid var(--red);
+  outline-offset: 0;
 }
 
 .feedback-counter {
