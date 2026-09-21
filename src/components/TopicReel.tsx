@@ -78,7 +78,10 @@ export const TopicReel = forwardRef<TopicReelHandle, Props>(function TopicReel(
 
   const safeStartIndex = startIndex < 0 ? 0 : startIndex;
   const hasTopics = topics.length > 0;
-  const showWheel = hasTopics && spinning;
+  // Before the first topic the wheel is already on the page, drifting slowly: the empty middle read
+  // as "something failed to load". It only turns into the big topic once a spin has landed.
+  const idleWheel = hasTopics && !spinning && topic === null;
+  const showWheel = hasTopics && (spinning || idleWheel);
   const showLanded = !spinning && topic !== null;
 
   const lines = useMemo(() => (topic ? paperLines(topic, locale) : []), [topic, locale]);
@@ -87,16 +90,16 @@ export const TopicReel = forwardRef<TopicReelHandle, Props>(function TopicReel(
   const label = spinning ? dict.reel.spinning : topic ? dict.reel.landed : dict.reel.idle;
 
   return (
-    <section class="topic-stage">
+    <section class={`topic-stage${idleWheel ? ' is-idle' : ''}`}>
       <p class="reel-label">{label}</p>
       {showWheel ? (
-        <div class="topic-wheel" aria-hidden="true">
+        <div class={`topic-wheel${idleWheel ? ' is-idle' : ''}`} aria-hidden="true">
           <div class="topic-wheel-mask">
             <div class="topic-wheel-drum" ref={drumRef} style={{ '--wheel-rot': '0deg' } as Record<string, string>}>
               {Array.from({ length: FACE_COUNT }, (_, face) => {
                 const step = wheelFaceStep(face, FACE_COUNT, centerStep);
                 const text = topics[wrapIndex(safeStartIndex + step, topics.length)] ?? '';
-                const isCenterFace = face === wrapIndex(centerStep, FACE_COUNT);
+                const isCenterFace = !idleWheel && face === wrapIndex(centerStep, FACE_COUNT);
                 const scale = textScale(text);
                 return (
                   <div
@@ -117,7 +120,12 @@ export const TopicReel = forwardRef<TopicReelHandle, Props>(function TopicReel(
           <div class="topic-wheel-band topic-wheel-band-top" />
           <div class="topic-wheel-band topic-wheel-band-bottom" />
         </div>
-      ) : showLanded ? (
+      ) : null}
+      {idleWheel ? (
+        <p class="topic-sheet is-empty" id="topic-display">
+          {dict.reel.empty}
+        </p>
+      ) : showWheel ? null : showLanded ? (
         <p
           key={landKey}
           class="topic-display"

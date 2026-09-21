@@ -1644,3 +1644,45 @@ a.btn-primary,
 a.btn-primary:hover {
   text-decoration: none;
 }
+
+/* ---- Idle wheel: before the first spin the drum is already there, drifting slowly ---- */
+@property --wheel-rot {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.topic-stage.is-idle {
+  justify-content: center;
+}
+
+.topic-wheel.is-idle {
+  --row-h: clamp(2.75rem, 7vh, 4.75rem);
+  height: calc(var(--row-h) * 5);
+}
+
+.topic-wheel.is-idle .topic-wheel-drum {
+  animation: wheel-drift 90s linear infinite;
+}
+
+.topic-wheel.is-idle .topic-wheel-text {
+  color: var(--rule-strong, #b9b1a0);
+}
+
+@keyframes wheel-drift {
+  to {
+    --wheel-rot: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topic-wheel.is-idle .topic-wheel-drum {
+    animation: none;
+  }
+}
+
+@media (max-height: 640px) {
+  .topic-wheel.is-idle {
+    height: calc(var(--row-h) * 3);
+  }
+}
