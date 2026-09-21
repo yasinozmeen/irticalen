@@ -1,0 +1,39 @@
+/* B — Afiş: sokak afişi. Konu bir kâğıt parçası gibi ekrana yapıştırılır; yazı kahramandır. */
+[data-design="b"] {
+  --sun: #ffd23f; --ink: #17122b; --tomato: #ff4b2b; --paper: #fffdf5; --focus: #17122b;
+  color: var(--ink); background: var(--sun); font-family: "Bricolage Grotesque", system-ui, sans-serif;
+}
+[data-design="b"] .bg { background: radial-gradient(rgba(23, 18, 43, .11) 1.2px, transparent 1.4px) 0 0 / 14px 14px, var(--sun); }
+[data-design="b"] .brand { font-weight: 800; font-size: 1.6rem; letter-spacing: -.03em; }
+[data-design="b"] .chip, [data-design="b"] .category, [data-design="b"] .modes {
+  background: var(--paper); border: 2.5px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink);
+}
+[data-design="b"] .chip-dim { opacity: .45; }
+[data-design="b"] .modes { padding: 0; overflow: hidden; }
+[data-design="b"] .modes button + button { border-left: 2.5px solid var(--ink); }
+[data-design="b"] .modes button[aria-checked="true"] { background: var(--ink); color: var(--sun); }
+[data-design="b"] .reel { align-items: flex-start; gap: 1rem; }
+[data-design="b"] .reel-label { background: var(--ink); color: var(--sun); padding: .3rem .7rem; border-radius: 8px; font-weight: 700; font-size: .9rem; transform: rotate(-2deg); }
+[data-design="b"] .topic {
+  font-weight: 800; font-size: clamp(3.4rem, 15vw, 7rem); line-height: .92; letter-spacing: -.045em;
+  background: var(--paper); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 8px 8px 0 var(--ink);
+  padding: .3em .35em .36em; transform: rotate(-1.6deg); max-width: 100%;
+}
+[data-design="b"] .topic.is-spinning { transform: rotate(1deg); color: var(--tomato); }
+[data-design="b"] .blurb { margin-top: .75rem; font-size: 1.05rem; font-weight: 500; max-width: 30ch; line-height: 1.45; }
+[data-design="b"] .btn { border: 3px solid var(--ink); border-radius: 16px; box-shadow: 5px 5px 0 var(--ink); font-weight: 800; font-size: 1.05rem; }
+[data-design="b"] .btn:active:not(:disabled) { transform: translate(4px, 4px); box-shadow: 1px 1px 0 var(--ink); }
+[data-design="b"] .btn.primary { background: var(--tomato); color: var(--paper); }
+[data-design="b"] .btn.secondary { background: var(--paper); color: var(--ink); }
+
+[data-design="b"] .overlay { background: var(--tomato); color: var(--paper); }
+[data-design="b"] .ov-topic { font-weight: 800; font-size: clamp(1.75rem, 7vw, 3rem); letter-spacing: -.03em; line-height: 1; }
+[data-design="b"] .arc li { border: 2.5px solid var(--ink); border-radius: 10px; background: transparent; color: var(--ink); }
+[data-design="b"] .arc li.hit { background: var(--ink); color: var(--sun); }
+[data-design="b"] .ring { background: conic-gradient(var(--ink) calc(var(--p) * 360deg), var(--sun) 0); border: 3px solid var(--ink); box-shadow: 8px 8px 0 var(--ink); }
+[data-design="b"] .ring::before { content: ""; position: absolute; inset: 22px; border-radius: 50%; background: var(--paper); border: 3px solid var(--ink); }
+[data-design="b"] .clock { color: var(--ink); font-weight: 800; font-size: clamp(3.25rem, 15vw, 5.5rem); letter-spacing: -.04em; }
+[data-design="b"] .status { font-weight: 800; font-size: 1.75rem; letter-spacing: -.02em; }
+[data-design="b"] .overlay.done { background: var(--ink); }
+[data-design="b"] .overlay.done .arc li { border-color: var(--sun); color: var(--sun); }
+[data-design="b"] .overlay.done .arc li.hit { background: var(--sun); color: var(--ink); }

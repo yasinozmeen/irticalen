@@ -1,0 +1,70 @@
+import type { Dictionary } from './index';
+
+export const en: Dictionary = {
+  meta: {
+    title: 'İrticalen — impromptu speaking practice',
+    description:
+      'Draw a random topic, start the timer, speak. İrticalen is a free impromptu speaking trainer for presentations, interviews and everyday conversation. No sign-up, no recording.',
+  },
+  brand: 'İrticalen',
+  madeBy: 'made by',
+  skipToApp: 'Skip to the app',
+  language: { label: 'Language', switchTo: 'Türkçe', current: 'EN', other: 'TR' },
+  modes: {
+    label: 'Mode',
+    offTheCuff: 'Off the cuff',
+    deepResearch: 'Researched',
+    offTheCuffBlurb: 'No prep. The topic lands, the floor is yours.',
+    deepResearchBlurb: 'Draw a topic, set a research timer, then start the speech timer when you are ready.',
+  },
+  category: { label: 'Category' },
+  reel: { idle: 'Ready', spinning: 'Drawing…', landed: 'Your topic', empty: 'Spin to draw a topic', announce: 'Your topic: {topic}' },
+  actions: {
+    spin: 'Spin',
+    spinAgain: 'Spin again',
+    spinning: 'Spinning…',
+    startSpeech: 'Start {min} min timer',
+    startResearch: 'Start {min} min research',
+  },
+  timer: {
+    dialogLabel: 'Timer',
+    researching: 'Researching',
+    statusResearch: 'Research.',
+    statusReady: 'Research done.',
+    statusSpeech: 'Speak.',
+    statusDone: 'Time.',
+    upNext: 'Up next: {min} min to speak.',
+    doneResearching: 'Done researching',
+    readyToSpeak: 'I’m ready to speak',
+    close: 'Close',
+    arc: ['What?', 'So what?', 'Now what?'],
+    arcLabel: 'Speech outline',
+  },
+  settings: {
+    open: 'Settings',
+    title: 'Settings',
+    hint: 'Timer lengths, in whole minutes.',
+    speech: 'Speech',
+    research: 'Research',
+    researchHint: 'Researched mode only',
+    minutes: '{min} min',
+    mute: 'Mute sound effects',
+    saved: 'Saved for next time.',
+    done: 'Done',
+  },
+  error: {
+    title: 'Something went wrong',
+    body: 'Reload the page to keep practicing. Your timer settings are still saved.',
+    retry: 'Try again',
+  },
+  about: {
+    heading: 'What is İrticalen?',
+    paragraphs: [
+      '“İrticalen” is the Turkish word for speaking extemporaneously — saying something coherent with no time to prepare. It is the skill you need when a meeting turns to you, an interviewer asks the question you did not expect, or someone hands you a glass and says “say a few words”.',
+      'It works simply: pick a category, spin for a topic, start the timer and keep talking until it runs out. If you stall, follow the three prompts on screen: What? So what? Now what?',
+      'In Researched mode you first time your research, then speak. Nothing is recorded and there is no account; your settings stay in your own browser.',
+    ],
+    inspiredBy: 'Inspired by Unprompted (@bitterbuilds).',
+    source: 'Source code on GitHub',
+  },
+};

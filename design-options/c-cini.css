@@ -1,0 +1,42 @@
+/* C — Çini: İznik sırı. Beyaz sır zemin, kobalt yazı, turkuaz ve mercan. Sayaç bir çini rozetidir. */
+[data-design="c"] {
+  --glaze: #f4f8fb; --white: #ffffff; --cobalt: #173f8a; --turq: #168f93; --coral: #c9412b; --mist: #5d7194; --focus: #c9412b;
+  --tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%23173f8a'/%3E%3Cg fill='%23f4f8fb'%3E%3Cpath d='M8 2l6 6-6 6-6-6zM24 2l6 6-6 6-6-6zM40 2l6 6-6 6-6-6zM8 18l6 6-6 6-6-6zM40 18l6 6-6 6-6-6zM8 34l6 6-6 6-6-6zM24 34l6 6-6 6-6-6zM40 34l6 6-6 6-6-6z'/%3E%3C/g%3E%3Cg fill='%23168f93'%3E%3Ccircle cx='8' cy='8' r='2'/%3E%3Ccircle cx='24' cy='8' r='2'/%3E%3Ccircle cx='40' cy='8' r='2'/%3E%3Ccircle cx='8' cy='24' r='2'/%3E%3Ccircle cx='40' cy='24' r='2'/%3E%3Ccircle cx='8' cy='40' r='2'/%3E%3Ccircle cx='24' cy='40' r='2'/%3E%3Ccircle cx='40' cy='40' r='2'/%3E%3C/g%3E%3C/svg%3E");
+  color: var(--cobalt); background: var(--glaze); font-family: "Figtree", system-ui, sans-serif;
+}
+[data-design="c"] .bg { background: radial-gradient(ellipse 90% 60% at 50% 0%, #ffffff, var(--glaze) 70%); }
+[data-design="c"] .brand { font-family: "Newsreader", serif; font-weight: 600; font-size: 1.6rem; letter-spacing: -.01em; }
+[data-design="c"] .chip, [data-design="c"] .category { background: var(--white); border: 1.5px solid #cfdcec; border-radius: 12px; }
+[data-design="c"] .chip-dim { color: var(--mist); font-weight: 500; }
+[data-design="c"] .controls { justify-content: center; }
+[data-design="c"] .modes { background: #e4edf6; border-radius: 14px; padding: 4px; }
+[data-design="c"] .modes button { border-radius: 10px; color: var(--mist); }
+[data-design="c"] .modes button[aria-checked="true"] { background: var(--white); color: var(--cobalt); box-shadow: 0 1px 3px rgba(23, 63, 138, .18); }
+[data-design="c"] .reel {
+  align-items: center; text-align: center; background: var(--white); padding: clamp(1.5rem, 5vw, 2.5rem) 1.25rem;
+  border: 14px solid var(--cobalt); border-image: var(--tile) 16 round; box-shadow: 0 24px 60px -30px rgba(23, 63, 138, .45);
+}
+[data-design="c"] .reel-label { color: var(--turq); font-weight: 600; font-size: .95rem; }
+[data-design="c"] .topic { font-family: "Newsreader", serif; font-weight: 500; font-size: clamp(2.75rem, 11vw, 5rem); line-height: 1.04; letter-spacing: -.02em; }
+[data-design="c"] .topic.is-spinning { color: var(--mist); }
+[data-design="c"] .blurb { color: var(--mist); max-width: 34ch; line-height: 1.55; }
+[data-design="c"] .btn { border-radius: 14px; }
+[data-design="c"] .btn.primary { background: var(--cobalt); color: var(--white); box-shadow: 0 12px 28px -14px rgba(23, 63, 138, .8); }
+[data-design="c"] .btn.primary:hover:not(:disabled) { background: #1f4fa8; }
+[data-design="c"] .btn.secondary { background: var(--white); border: 1.5px solid #cfdcec; }
+[data-design="c"] .btn.secondary:hover:not(:disabled) { border-color: var(--cobalt); }
+
+[data-design="c"] .overlay { background: var(--glaze); }
+[data-design="c"] .ov-topic { font-family: "Newsreader", serif; font-weight: 500; font-size: clamp(1.6rem, 5.5vw, 2.4rem); }
+[data-design="c"] .arc li { border-radius: 10px; background: #e4edf6; color: var(--mist); }
+[data-design="c"] .arc li.hit { background: var(--turq); color: var(--white); }
+[data-design="c"] .ring {
+  background:
+    conic-gradient(rgba(244, 248, 251, .86) calc(var(--p) * 360deg), transparent 0),
+    repeating-conic-gradient(var(--cobalt) 0 7.5deg, var(--turq) 7.5deg 15deg);
+  box-shadow: 0 0 0 5px var(--white), 0 0 0 7px var(--cobalt), 0 30px 70px -30px rgba(23, 63, 138, .55);
+}
+[data-design="c"] .ring::before { content: ""; position: absolute; inset: 26px; border-radius: 50%; background: var(--white); box-shadow: 0 0 0 2px var(--cobalt), 0 0 0 7px var(--white); }
+[data-design="c"] .clock { font-family: "Newsreader", serif; font-weight: 500; font-size: clamp(3.25rem, 15vw, 5.25rem); }
+[data-design="c"] .status { font-size: 1.25rem; font-weight: 600; color: var(--turq); }
+[data-design="c"] .overlay.done .clock, [data-design="c"] .overlay.done .status { color: var(--coral); }
