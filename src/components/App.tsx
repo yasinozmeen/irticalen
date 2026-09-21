@@ -315,9 +315,9 @@ function AppContent({ locale }: Props) {
       <div class="app-shell" inert={contentInert || undefined}>
         <header class="top-bar">
           <h1 class="brand-heading">
-            <a class="brand-link" href="#top">
+            <a class="brand-link" href="#top" aria-label={dict.brand}>
               <Logo state={spinning ? 'spinning' : 'idle'} />
-              {dict.brand}
+              {dict.wordmark}
             </a>
           </h1>
           <div class="top-actions">

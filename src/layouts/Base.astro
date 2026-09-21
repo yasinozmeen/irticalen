@@ -1,18 +1,32 @@
 ---
 import '../styles/global.css';
 import { dictionaries, localeTag, localePath, type Locale } from '../i18n';
+import SiteFooter from '../components/SiteFooter.astro';
 
 interface Props {
   locale: Locale;
+  title?: string;
+  description?: string;
+  /** This page's own path, e.g. '/neden/'. Defaults to the locale's home path. */
+  path?: string;
+  /** Paths of the tr/en equivalents of this page, for hreflang. Defaults to the site's home pages. */
+  alternates?: { tr: string; en: string };
+  ogType?: 'website' | 'article';
+  /** Overrides the default WebApplication JSON-LD with one or more schema objects. */
+  jsonLd?: object | object[];
 }
 
-const { locale } = Astro.props;
+const { locale, title, description, path, alternates, ogType = 'website', jsonLd: jsonLdProp } = Astro.props;
 const dict = dictionaries[locale];
-const canonical = new URL(localePath(locale), Astro.site).toString();
+const pagePath = path ?? localePath(locale);
+const alt = alternates ?? { tr: localePath('tr'), en: localePath('en') };
+const canonical = new URL(pagePath, Astro.site).toString();
 const ogImage = new URL('/og.png', Astro.site).toString();
 const ogLocale = locale === 'tr' ? 'tr_TR' : 'en_US';
+const pageTitle = title ?? dict.meta.title;
+const pageDescription = description ?? dict.meta.description;
 
-const jsonLd = {
+const defaultJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebApplication',
   name: dict.brand,
@@ -27,29 +41,37 @@ const jsonLd = {
   },
   isAccessibleForFree: true,
 };
+
+const otherLocalePath = locale === 'tr' ? alt.en : alt.tr;
+
+const jsonLdList: object[] = jsonLdProp
+  ? Array.isArray(jsonLdProp)
+    ? jsonLdProp
+    : [jsonLdProp]
+  : [defaultJsonLd];
 ---
 
 <html lang={localeTag[locale]}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>{dict.meta.title}</title>
-    <meta name="description" content={dict.meta.description} />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
     <link rel="canonical" href={canonical} />
-    <link rel="alternate" hreflang="tr" href={new URL(localePath('tr'), Astro.site).toString()} />
-    <link rel="alternate" hreflang="en" href={new URL(localePath('en'), Astro.site).toString()} />
-    <link rel="alternate" hreflang="x-default" href={new URL(localePath('tr'), Astro.site).toString()} />
+    <link rel="alternate" hreflang="tr" href={new URL(alt.tr, Astro.site).toString()} />
+    <link rel="alternate" hreflang="en" href={new URL(alt.en, Astro.site).toString()} />
+    <link rel="alternate" hreflang="x-default" href={new URL(alt.tr, Astro.site).toString()} />
 
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content={dict.meta.title} />
-    <meta property="og:description" content={dict.meta.description} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={ogImage} />
     <meta property="og:locale" content={ogLocale} />
     <meta property="og:site_name" content={dict.brand} />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={dict.meta.title} />
-    <meta name="twitter:description" content={dict.meta.description} />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
     <meta name="twitter:image" content={ogImage} />
 
     <meta name="theme-color" content="#f3f7fb" />
@@ -64,11 +86,14 @@ const jsonLd = {
       rel="stylesheet"
     />
 
-    <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
+    {jsonLdList.map((entry) => (
+      <script type="application/ld+json" set:html={JSON.stringify(entry).replace(/</g, '\\u003c')} />
+    ))}
     <meta name="generator" content={Astro.generator} />
   </head>
   <body>
     <div class="page-bg" aria-hidden="true"></div>
     <slot />
+    <SiteFooter dict={dict} locale={locale} otherLocalePath={otherLocalePath} />
   </body>
 </html>

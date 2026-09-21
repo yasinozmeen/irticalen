@@ -1,0 +1,71 @@
+---
+import type { Dictionary, Locale } from '../i18n';
+import type { WhyContent } from '../content/why';
+import { Logo } from './Logo';
+
+interface Props {
+  dict: Dictionary;
+  locale: Locale;
+  content: WhyContent;
+}
+
+const { dict, locale, content } = Astro.props;
+const homePath = locale === 'tr' ? '/' : '/en/';
+const otherLangHref = locale === 'tr' ? '/en/why/' : '/neden/';
+const otherLangLabel = dict.language.switchTo;
+---
+
+<div class="why-page">
+  <header class="why-topbar">
+    <a class="brand-link" href={homePath} aria-label={dict.brand}>
+      <Logo state="idle" />
+      {dict.wordmark}
+    </a>
+    <a class="why-lang-link" href={otherLangHref}>{otherLangLabel}</a>
+  </header>
+
+  <main>
+    <article class="why-article">
+      <p class="why-eyebrow">{content.eyebrow}</p>
+      <h1 class="why-h1">{content.h1}</h1>
+      <p class="why-lead">{content.lead}</p>
+      <p class="why-byline">
+        {content.byline} · <time datetime={content.updated}>{content.updated}</time>
+      </p>
+
+      {content.sections.map((section) => (
+        <section id={section.id} class="why-section">
+          <h2>{section.h2}</h2>
+          {section.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+        </section>
+      ))}
+
+      <section class="why-section" id="nasil-kullanilir">
+        <h2>{content.steps.h2}</h2>
+        <p>{content.steps.intro}</p>
+        <ol class="why-steps">
+          {content.steps.items.map((item) => (
+            <li>
+              <strong>{item.title}</strong> <span>{item.text}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section class="why-section" id="sss">
+        <h2>{content.faq.h2}</h2>
+        {content.faq.items.map((item) => (
+          <div class="why-faq-item">
+            <h3>{item.q}</h3>
+            <p>{item.a}</p>
+          </div>
+        ))}
+      </section>
+
+      <div class="why-cta">
+        <p>{content.cta.text}</p>
+        <a class="btn btn-primary" href={homePath}>{content.cta.button}</a>
+      </div>
+    </article>
+  </main>
+</div>

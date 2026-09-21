@@ -1,0 +1,66 @@
+---
+import Base from '../../layouts/Base.astro';
+import WhyArticle from '../../components/WhyArticle.astro';
+import { dictionaries } from '../../i18n';
+import { why } from '../../content/why';
+
+const locale = 'tr' as const;
+const dict = dictionaries[locale];
+const content = why[locale];
+
+const canonical = new URL(content.path, Astro.site).toString();
+const ogImage = new URL('/og.png', Astro.site).toString();
+
+const personUrl = 'https://yasinozmeen.me';
+const person = {
+  '@type': 'Person',
+  name: 'Yasin Özmen',
+  url: personUrl,
+  sameAs: ['https://x.com/yasinozmeen', 'https://github.com/yasinozmeen'],
+};
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: content.h1,
+    description: content.meta.description,
+    inLanguage: 'tr',
+    datePublished: content.updated,
+    dateModified: content.updated,
+    author: person,
+    publisher: person,
+    mainEntityOfPage: canonical,
+    image: ogImage,
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: content.faq.items.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: dict.wordmark, item: new URL('/', Astro.site).toString() },
+      { '@type': 'ListItem', position: 2, name: content.h1, item: canonical },
+    ],
+  },
+];
+---
+
+<Base
+  locale={locale}
+  title={content.meta.title}
+  description={content.meta.description}
+  path={content.path}
+  alternates={{ tr: '/neden/', en: '/en/why/' }}
+  ogType="article"
+  jsonLd={jsonLd}
+>
+  <WhyArticle dict={dict} locale={locale} content={content} />
+</Base>

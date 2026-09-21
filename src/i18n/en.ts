@@ -7,6 +7,7 @@ export const en: Dictionary = {
       'Draw a random topic, start the timer, speak. İrticalen is a free impromptu speaking trainer for presentations, interviews and everyday conversation. No sign-up, no recording.',
   },
   brand: 'İrticalen',
+  wordmark: 'irticalen',
   madeBy: 'made by',
   skipToApp: 'Skip to the app',
   language: { label: 'Language', switchTo: 'Türkçe', current: 'EN', other: 'TR' },
@@ -56,6 +57,16 @@ export const en: Dictionary = {
     title: 'Something went wrong',
     body: 'Reload the page to keep practicing. Your timer settings are still saved.',
     retry: 'Try again',
+  },
+  footer: {
+    wordHeading: 'What does “irticalen” mean?',
+    linksHeading: 'Links',
+    why: 'Why I built this',
+    projects: 'My other projects',
+    x: '@yasinozmeen on X',
+    github: 'Source code (GitHub)',
+    madeBy: 'Made by Yasin Özmen. Open source, MIT licensed.',
+    home: 'Back to the app',
   },
   about: {
     word: {

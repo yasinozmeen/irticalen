@@ -1,38 +1,19 @@
 ---
-import type { Dictionary } from '../i18n';
+import type { Dictionary, Locale } from '../i18n';
 
 interface Props {
   dict: Dictionary;
+  locale: Locale;
 }
 
-const { dict } = Astro.props;
+const { dict, locale } = Astro.props;
 const { about } = dict;
+const whyPath = locale === 'tr' ? '/neden/' : '/en/why/';
 ---
 
 <section class="about-section" data-outside-app>
-  <dl class="word-card">
-    <dt>
-      <span class="word-term" lang="tr">{about.word.term}</span>
-      <span class="word-pron">{about.word.pronunciation}</span>
-    </dt>
-    <dd class="word-kind">{about.word.kind}</dd>
-    <dd class="word-def">{about.word.definition}</dd>
-    <dd class="word-example">{about.word.example}</dd>
-  </dl>
-
   <h2 class="about-heading">{about.heading}</h2>
   {about.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+  <p><a class="about-why-link" href={whyPath}>{dict.footer.why}</a></p>
   <p class="about-inspired">{about.inspiredBy}</p>
-
-  <p class="about-links">
-    <a class="about-coffee" href="https://buymeacoffee.com/yasinozmeen" target="_blank" rel="noopener noreferrer">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" aria-hidden="true">
-        <path d="M4 9h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h2a2 2 0 0 1 0 5h-2M8 3v3M12 3v3" />
-      </svg>
-      {about.coffee}
-    </a>
-    <a class="about-source" href="https://github.com/yasinozmeen/irticalen" rel="noopener noreferrer">
-      {about.source}
-    </a>
-  </p>
 </section>

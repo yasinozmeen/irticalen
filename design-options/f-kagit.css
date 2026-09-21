@@ -1,0 +1,78 @@
+/* F — Kâğıt: her şey kâğıt üstünde mürekkep.
+   KURAL: kutu, gölge, kenarlık YOK. Dokunulabilir her şey altı çizili yazıdır; seçili olan kalın mürekkep çizgisi alır;
+   sayfadaki TEK dolu yüzey birincil eylemdir (mürekkep blok). TEK vurgu: kırmızı nokta. Tek yazı ailesi. */
+[data-design="f"] {
+  --paper: #f1eee4; --ink: #1d1a16; --pencil: #8b857a; --rule: #cfc9bb; --red: #b8281c; --focus: #b8281c;
+  color: var(--ink); background: var(--paper); font-family: "Newsreader", Georgia, serif; font-size: 1.125rem;
+  font-optical-sizing: auto;
+}
+[data-design="f"] .bg {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .17 0 0 0 0 .12 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse 130% 90% at 50% 40%, #f6f3ea, #e9e5d8 100%);
+}
+[data-design="f"] .app { padding-left: 1.75rem; padding-right: 1.75rem; gap: 1.5rem; }
+[data-design="f"] .logo, [data-design="f"] .logo-e { display: none; }
+[data-design="f"] .brand { font-weight: 600; font-size: 1.6rem; letter-spacing: -.01em; text-transform: lowercase; }
+[data-design="f"] .brand span::after { content: "."; color: var(--red); }
+
+/* dokunulabilir = altı çizili yazı */
+[data-design="f"] .chip, [data-design="f"] .category, [data-design="f"] .modes button, [data-design="f"] .btn.secondary {
+  padding: 0; min-width: 0; font-size: 1.05rem; font-weight: 500; text-transform: lowercase; letter-spacing: .005em;
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .28em; text-decoration-color: var(--pencil);
+}
+[data-design="f"] .chip.icon svg { width: 20px; height: 20px; }
+[data-design="f"] .chip.icon { text-decoration: none; }
+[data-design="f"] .top-actions { gap: 1.25rem; }
+[data-design="f"] .chip-dim { color: var(--pencil); font-weight: 400; }
+[data-design="f"] .controls { justify-content: space-between; gap: 1rem; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: .35rem 0; }
+[data-design="f"] .modes { gap: 1.25rem; }
+[data-design="f"] .modes button { color: var(--pencil); text-decoration: none; }
+[data-design="f"] .modes button[aria-checked="true"] { color: var(--ink); font-weight: 600; text-decoration: underline; text-decoration-thickness: 3px; text-decoration-color: var(--ink); text-underline-offset: .32em; }
+[data-design="f"] .category { gap: .35rem; text-decoration-style: dotted; }
+
+/* konu: sözlük kartı gibi — küçük harf, heceli kırılım, kırmızı nokta */
+[data-design="f"] .reel { align-items: flex-start; justify-content: flex-end; gap: 1rem; padding-bottom: .5rem; }
+[data-design="f"] .reel-label { font-style: italic; color: var(--pencil); font-size: 1.1rem; text-transform: lowercase; }
+[data-design="f"] .topic { font-weight: 500; font-size: clamp(4rem, 19vw, 7.5rem); line-height: .9; letter-spacing: -.035em; text-wrap: nowrap; }
+[data-design="f"] .topic .pl { display: block; }
+[data-design="f"] .topic .dot { font-style: normal; color: var(--red); }
+[data-design="f"] .topic.is-spinning { color: var(--pencil); }
+[data-design="f"] .topic.is-spinning .dot { color: var(--pencil); }
+[data-design="f"] .blurb { color: var(--ink); max-width: 30ch; line-height: 1.5; font-size: 1.05rem; border-top: 1px solid var(--rule); padding-top: .85rem; width: 100%; }
+
+[data-design="f"] .actions { grid-template-columns: auto 1fr; gap: 1.5rem; align-items: center; }
+[data-design="f"] .btn { min-height: 56px; font-size: 1.1rem; }
+[data-design="f"] .btn.primary { background: var(--ink); color: var(--paper); font-weight: 500; text-transform: lowercase; letter-spacing: .01em; border-radius: 0; }
+[data-design="f"] .btn.primary:hover:not(:disabled) { background: #000; }
+[data-design="f"] .btn.primary:active:not(:disabled) { transform: translateY(2px); }
+
+/* sayaç: yine kâğıt. halka yok; sayfayı boydan boya geçen mürekkep cetveli */
+[data-design="f"] .overlay {
+  align-items: flex-start; text-align: left; padding: 2rem 1.75rem; justify-content: flex-end; gap: 1.1rem;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .17 0 0 0 0 .12 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse 130% 90% at 50% 40%, #f6f3ea, #e9e5d8 100%);
+}
+[data-design="f"] .ov-topic { order: 1; font-style: italic; font-size: 1.35rem; color: var(--pencil); text-transform: lowercase; }
+[data-design="f"] .ov-topic::after { content: "."; color: var(--red); font-style: normal; }
+[data-design="f"] .ring {
+  order: 2; width: 100%; aspect-ratio: auto; border-radius: 0; display: block; padding-bottom: 1.1rem;
+  background:
+    linear-gradient(var(--ink), var(--ink)) left bottom / calc(var(--p) * 100%) 5px no-repeat,
+    repeating-linear-gradient(90deg, var(--pencil) 0 1px, transparent 1px calc(100% / 12)) left bottom / 100% 12px no-repeat,
+    linear-gradient(var(--rule), var(--rule)) left bottom / 100% 1px no-repeat;
+}
+[data-design="f"] .clock { font-weight: 500; font-variant-numeric: lining-nums tabular-nums; font-size: clamp(5.5rem, 27vw, 10rem); line-height: .9; letter-spacing: -.04em; display: block; }
+[data-design="f"] .arc { order: 3; justify-content: flex-start; gap: 0 1.1rem; }
+[data-design="f"] .arc li { padding: 0; font-size: 1.1rem; font-weight: 400; color: var(--pencil); text-transform: lowercase; font-style: italic; }
+[data-design="f"] .arc li.hit { color: var(--ink); font-style: normal; font-weight: 600; text-decoration: underline; text-decoration-thickness: 2px; text-decoration-color: var(--red); text-underline-offset: .3em; }
+[data-design="f"] .status { order: 4; font-size: 2.25rem; font-weight: 500; text-transform: lowercase; letter-spacing: -.02em; }
+[data-design="f"] .overlay .btn { order: 5; min-width: 0; margin-top: .5rem; }
+[data-design="f"] .overlay.done .clock, [data-design="f"] .overlay.done .status { color: var(--red); }
+[data-design="f"] .overlay.done .ring { animation: none; }
+[data-design="f"] .ring { text-align: left; }
+[data-design="f"] .clock { margin-left: -.04em; }
+[data-design="f"] .topic { font-size: min(clamp(4rem, 19vw, 7.5rem), calc(84vw / (var(--len, 7) * .6))); }
+[data-design="f"] .clock { width: 100%; text-align: left; }
+[data-design="f"] .ring { place-items: start; justify-items: start; }

@@ -6,13 +6,14 @@
 <title>İrticalen — tasarım örneği</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=EB+Garamond:wght@400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Figtree:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400..600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=EB+Garamond:wght@400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Figtree:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400..600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="base.css" />
 <link rel="stylesheet" href="a-sahne.css" />
 <link rel="stylesheet" href="b-afis.css" />
 <link rel="stylesheet" href="c-cini.css" />
 <link rel="stylesheet" href="d-cilt.css" />
 <link rel="stylesheet" href="e-cini2.css" />
+<link rel="stylesheet" href="f-kagit.css" />
 </head>
 <body>
 <div class="bg" aria-hidden="true"></div>
@@ -54,7 +55,7 @@
 <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="Sayaç" hidden>
   <p class="ov-topic" id="ovTopic">İlk müşteri</p>
   <ol class="arc" id="arc">
-    <li>Ne?</li><li>Ne olmuş yani?</li><li>Şimdi ne?</li>
+    <li>Nedir?</li><li>Neden önemli?</li><li>Ne yapmalı?</li>
   </ol>
   <div class="ring" id="ring" role="timer">
     <span class="clock" id="clock">01:00</span>
@@ -69,6 +70,53 @@ document.documentElement.dataset.design = q.get('d') || 'a';
 const topics = ['İlk müşteri','Hayır demek','Nakit oksijendir','Ortak seçmek','Tek kişilik şirket','Başarısızlık hakkı','Usta-çırak','Sermayesiz başlamak','Esnaf aklı','Güven sermayesi','Kusurlu haliyle çıkar','Yan iş tavanı'];
 const $ = id => document.getElementById(id);
 let idx = 0, spinning = false, iv;
+
+const VOWELS = 'aeıioöuüâîûAEIİOÖUÜÂÎÛ';
+function syllables(word) {
+  const out = []; let cur = '';
+  const chars = [...word];
+  for (let i = 0; i < chars.length; i++) {
+    cur += chars[i];
+    if (!VOWELS.includes(chars[i])) continue;
+    let j = i + 1; while (j < chars.length && !VOWELS.includes(chars[j])) j++;
+    if (j >= chars.length) { cur += chars.slice(i + 1).join(''); i = chars.length; break; }
+    const cluster = j - i - 1; const keep = cluster <= 1 ? 0 : cluster - 1;
+    cur += chars.slice(i + 1, i + 1 + keep).join(''); out.push(cur); cur = ''; i += keep;
+  }
+  if (cur) out.push(cur);
+  return out.length ? out : [word];
+}
+function paperLines(topic, max = 7) {
+  const lines = []; let line = '';
+  const flush = () => { if (line) { lines.push(line); line = ''; } };
+  for (const word of topic.toLocaleLowerCase('tr').split(/ |(?<=-)/)) {
+    if (word.length <= max + 1) {
+      if (line && (line + ' ' + word).length <= max) line += ' ' + word; else { flush(); line = word; }
+      continue;
+    }
+    flush();
+    // Split a long word into evenly sized lines at syllable boundaries (no orphan syllables).
+    const syls = syllables(word), parts = Math.ceil(word.length / max), target = word.length / parts;
+    let cur = '', made = 0;
+    syls.forEach((syl, i) => {
+      const rest = syls.slice(i).join('').length;
+      if (cur && made < parts - 1 && Math.abs(cur.length - target) <= Math.abs(cur.length + syl.length - target) && rest >= 3) { lines.push(cur + '-'); cur = ''; made++; }
+      cur += syl;
+    });
+    line = cur;
+  }
+  flush();
+  return lines;
+}
+function setTopic(text) {
+  const el = $('topic');
+  if (document.documentElement.dataset.design !== 'f') { el.textContent = text; return; }
+  const lines = paperLines(text);
+  el.innerHTML = lines.map((l, i) => '<span class="pl">' + l + (i === lines.length - 1 ? '<i class="dot">.</i>' : '') + '</span>').join('');
+  el.dataset.plain = text;
+  el.style.setProperty('--len', Math.max(7, ...lines.map(l => l.length)));
+}
+
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 $('spin').onclick = () => {
@@ -79,7 +127,7 @@ $('spin').onclick = () => {
   const startIdx = idx, t0 = performance.now(), dur = reduce ? 1 : 2600; let last = -1;
   (function frame(now) {
     const p = Math.min(1, (now - t0) / dur), step = Math.floor((1 - (1 - p) ** 3) * total);
-    if (step !== last) { last = step; idx = (startIdx + step) % topics.length; $('topic').textContent = topics[idx]; }
+    if (step !== last) { last = step; idx = (startIdx + step) % topics.length; setTopic(topics[idx]); }
     if (p < 1) return requestAnimationFrame(frame);
     spinning = false; $('reelLabel').textContent = 'Konun'; $('spin').textContent = 'Tekrar çevir';
     $('spin').disabled = $('start').disabled = false; $('topic').classList.remove('is-spinning');
@@ -88,7 +136,7 @@ $('spin').onclick = () => {
 };
 
 function openTimer(total, startAt) {
-  $('ovTopic').textContent = $('topic').textContent; $('overlay').hidden = false; $('app').inert = true;
+  $('ovTopic').textContent = $('topic').dataset.plain || $('topic').textContent; $('overlay').hidden = false; $('app').inert = true;
   const end = Date.now() + startAt * 1000;
   const tick = () => {
     const left = Math.max(0, Math.ceil((end - Date.now()) / 1000)), el = total - left;
@@ -103,6 +151,7 @@ function closeTimer() { clearInterval(iv); $('overlay').hidden = true; $('app').
 $('start').onclick = () => openTimer(60, 60);
 $('close').onclick = closeTimer;
 addEventListener('keydown', e => e.key === 'Escape' && closeTimer());
+setTopic(q.get('topic') || topics[0]);
 if (q.get('screen') === 'timer') openTimer(60, 38);
 </script>
 </body>

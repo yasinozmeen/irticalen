@@ -5,6 +5,7 @@ export const tr = {
       'Rastgele bir konu çek, sayacı başlat, konuş. İrticalen; sunum, mülakat ve gündelik sohbet için ücretsiz doğaçlama konuşma antrenmanı. Üyelik yok, kayıt yok.',
   },
   brand: 'İrticalen',
+  wordmark: 'irticalen',
   madeBy: 'yapan',
   skipToApp: 'Uygulamaya geç',
   language: { label: 'Dil', switchTo: 'English', current: 'TR', other: 'EN' },
@@ -54,6 +55,16 @@ export const tr = {
     title: 'Bir şeyler ters gitti',
     body: 'Pratiğe devam etmek için sayfayı yenile. Sayaç ayarların kayıtlı.',
     retry: 'Tekrar dene',
+  },
+  footer: {
+    wordHeading: 'irticalen ne demek?',
+    linksHeading: 'Bağlantılar',
+    why: 'Bu siteyi neden yaptım?',
+    projects: 'Diğer projelerim',
+    x: 'X’te @yasinozmeen',
+    github: 'Kaynak kodu (GitHub)',
+    madeBy: 'Yasin Özmen yaptı. Açık kaynak, MIT lisanslı.',
+    home: 'Uygulamaya dön',
   },
   about: {
     word: {
