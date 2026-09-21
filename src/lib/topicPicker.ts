@@ -1,17 +1,17 @@
-/** Çevirme animasyonu toplam süresi (ms). */
+/** Total spin animation duration (ms). */
 export const SPIN_DURATION_MS = 4800;
-/** Çevirme güvenlik zaman aşımı (ms) — animasyon bu süreye kadar kesin biter. */
+/** Spin safety timeout (ms) — the animation is guaranteed to end by this time. */
 export const SPIN_SAFETY_MS = 5100;
 
-/** Bir çevirmenin planı: kaç adım atılacağı ve nereye ineceği. */
+/** The plan for one spin: how many steps to take and where it lands. */
 export interface SpinPlan {
   totalSteps: number;
   landIndex: number;
 }
 
 /**
- * Çevirme planını hesaplar. Bir önceki konuya asla inmez (listLength >= 2 iken).
- * currentIndex -1 olabilir (henüz konu seçilmemiş) — bu durumda her indekse inebilir.
+ * Computes the spin plan. Never lands on the previous topic (when listLength >= 2).
+ * currentIndex may be -1 (no topic selected yet) — in that case it can land on any index.
  */
 export function planSpin(
   currentIndex: number,
@@ -19,7 +19,7 @@ export function planSpin(
   rng: () => number = Math.random,
 ): SpinPlan {
   if (listLength <= 0) {
-    throw new Error('listLength pozitif olmalı');
+    throw new Error('listLength must be positive');
   }
   if (listLength === 1) {
     return { totalSteps: 0, landIndex: 0 };
@@ -27,7 +27,7 @@ export function planSpin(
   const fullTurns = 3 + Math.floor(rng() * 3); // 3..5 tam tur
 
   if (currentIndex < 0) {
-    // Henüz seçili konu yok: kısıtlama gerekmez, herhangi bir indekse inebilir.
+    // No topic selected yet: no restriction needed, it can land on any index.
     const offset = Math.floor(rng() * listLength); // [0, listLength-1]
     const totalSteps = fullTurns * listLength + offset;
     return { totalSteps, landIndex: offset };
@@ -39,21 +39,21 @@ export function planSpin(
   return { totalSteps, landIndex };
 }
 
-/** [0, listLength) aralığında rastgele bir indeks döndürür. */
+/** Returns a random index in [0, listLength). */
 export function randomIndex(listLength: number, rng: () => number = Math.random): number {
   if (listLength <= 0) {
-    throw new Error('listLength pozitif olmalı');
+    throw new Error('listLength must be positive');
   }
   return Math.floor(rng() * listLength);
 }
 
-/** Kübik ease-out: hızlı başlar, yavaşça durur. */
+/** Cubic ease-out: starts fast, slows to a stop. */
 export function easeOutCubic(t: number): number {
   const clamped = Math.min(1, Math.max(0, t));
   return 1 - Math.pow(1 - clamped, 3);
 }
 
-/** Verilen ilerleme (0..1) ve toplam adım sayısına göre o ana kadar atılmış adım sayısı. */
+/** Given progress (0..1) and the total step count, how many steps have been taken so far. */
 export function stepAt(progress01: number, totalSteps: number): number {
   const eased = easeOutCubic(progress01);
   return Math.floor(eased * totalSteps);

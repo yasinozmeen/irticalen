@@ -22,7 +22,7 @@ export type SessionAction =
   | { type: 'TIME_UP' }
   | { type: 'CLOSE' };
 
-/** Başlangıç oturumu: hazırlıksız mod, henüz kategori/konu seçilmemiş. */
+/** Initial session: off-the-cuff mode, no category/topic selected yet. */
 export function initialSession(): SessionState {
   return {
     mode: 'off-the-cuff',
@@ -34,12 +34,12 @@ export function initialSession(): SessionState {
   };
 }
 
-/** Çevirme sürüyor ya da oturum açıksa (idle dışında bir fazdaysa) tüm kontroller kilitlidir. */
+/** All controls are locked while spinning, or whenever the session is open (any phase other than idle). */
 export function isLocked(state: SessionState): boolean {
   return state.spinning || state.phase !== 'idle';
 }
 
-/** Saf reducer: geçersiz geçişlerde state referansını DEĞİŞTİRMEDEN aynen döndürür. */
+/** Pure reducer: on invalid transitions it returns the exact same state reference, UNCHANGED. */
 export function sessionReducer(state: SessionState, action: SessionAction): SessionState {
   switch (action.type) {
     case 'SET_MODE': {

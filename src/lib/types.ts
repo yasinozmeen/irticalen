@@ -1,21 +1,20 @@
-/** Konuşma modu: hazırlıksız (off-the-cuff) ya da araştırmalı (deep-research). */
+/** Speaking mode: unprepared (off-the-cuff) or researched (deep-research). */
 export type Mode = 'off-the-cuff' | 'deep-research';
 
-/** Oturumun anlık aşaması. */
+/** The session's current phase. */
 export type Phase = 'idle' | 'research' | 'ready' | 'speech' | 'done';
 
-/** Arayüz dili. */
+/** UI language. */
 export type Locale = 'tr' | 'en';
 
-/** Konu kategorisi (yalnız hazırlıksız modda seçilebilir). */
+/** A topic category (selectable only in off-the-cuff mode). */
 export interface Category {
   id: string;
   label: string;
-  emoji: string;
   topics: string[];
 }
 
-/** Kullanıcı ayarları (kalıcı). */
+/** User settings (persisted). */
 export interface Settings {
   speechSec: number;
   researchSec: number;

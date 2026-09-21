@@ -1,12 +1,12 @@
 import type { Locale, Settings } from './types';
 
-/** Dakika sınırları. */
+/** Minute bounds. */
 export const SPEECH_MIN = 1;
 export const SPEECH_MAX = 10;
 export const RESEARCH_MIN = 1;
 export const RESEARCH_MAX = 60;
 
-/** Varsayılan süreler (saniye). */
+/** Default durations (seconds). */
 export const DEFAULT_SPEECH_SEC = 60;
 export const DEFAULT_RESEARCH_SEC = 600;
 
@@ -15,25 +15,25 @@ const KEY_RESEARCH = 'irticalen:research';
 const KEY_MUTED = 'irticalen:muted';
 const KEY_LANG = 'irticalen:lang';
 
-/** Basit storage arayüzü (localStorage ile uyumlu, enjekte edilebilir). */
+/** Minimal storage interface (localStorage-compatible, injectable). */
 export interface StorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
 }
 
-/** Enjekte edilmediyse globalThis.localStorage'ı güvenli biçimde döndürür (SSR'da undefined). */
+/** Safely returns globalThis.localStorage when nothing was injected (undefined during SSR). */
 function defaultStorage(): StorageLike | undefined {
   try {
     if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
       return (globalThis as unknown as { localStorage: StorageLike }).localStorage;
     }
   } catch {
-    // erişilemiyorsa yok say
+    // ignore when inaccessible
   }
   return undefined;
 }
 
-/** Dakika değerini kind'e göre yuvarlar ve sınırlar; NaN/bozuk değer varsayılana düşer. */
+/** Rounds and clamps a minute value by kind; NaN/malformed values fall back to the default. */
 export function clampMinutes(kind: 'speech' | 'research', minutes: number): number {
   const min = kind === 'speech' ? SPEECH_MIN : RESEARCH_MIN;
   const max = kind === 'speech' ? SPEECH_MAX : RESEARCH_MAX;
@@ -62,7 +62,7 @@ function readSeconds(
   }
 }
 
-/** Kayıtlı ayarları okur; storage yoksa/bozuksa varsayılana düşer. Hiçbir zaman fırlatmaz. */
+/** Reads saved settings; falls back to defaults if storage is missing/corrupt. Never throws. */
 export function loadSettings(storage: StorageLike | undefined = defaultStorage()): Settings {
   const speechSec = readSeconds(storage, KEY_SPEECH, 'speech', DEFAULT_SPEECH_SEC);
   const researchSec = readSeconds(storage, KEY_RESEARCH, 'research', DEFAULT_RESEARCH_SEC);
@@ -75,7 +75,7 @@ export function loadSettings(storage: StorageLike | undefined = defaultStorage()
   return { speechSec, researchSec, muted };
 }
 
-/** Ayarları kısmi olarak kaydeder (verilenler dışındakiler dokunulmaz). Hiçbir zaman fırlatmaz. */
+/** Saves settings partially (fields not provided are left untouched). Never throws. */
 export function saveSettings(
   partial: Partial<Settings>,
   storage: StorageLike | undefined = defaultStorage(),
@@ -99,7 +99,7 @@ export function saveSettings(
   }
 }
 
-/** Kayıtlı dili okur; yoksa/bozuksa 'tr' döner. */
+/** Reads the saved locale; returns 'tr' if missing/corrupt. */
 export function loadLocale(storage: StorageLike | undefined = defaultStorage()): Locale {
   try {
     const raw = storage?.getItem(KEY_LANG);
@@ -110,7 +110,7 @@ export function loadLocale(storage: StorageLike | undefined = defaultStorage()):
   return 'tr';
 }
 
-/** Dili kaydeder. Hiçbir zaman fırlatmaz. */
+/** Saves the locale. Never throws. */
 export function saveLocale(locale: Locale, storage: StorageLike | undefined = defaultStorage()): void {
   try {
     storage?.setItem(KEY_LANG, locale);

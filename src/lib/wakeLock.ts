@@ -1,4 +1,4 @@
-/** Ekranın kilitlenmesini/kararmasını engeller (varsa Wake Lock API ile). */
+/** Prevents the screen from locking/dimming (via the Wake Lock API, when available). */
 export type ReleaseWakeLock = () => void;
 
 interface WakeLockSentinelLike {
@@ -12,8 +12,8 @@ interface NavigatorWithWakeLock {
 }
 
 /**
- * Wake Lock alır. API yoksa ya da istek reddedilirse asla fırlatmaz;
- * her durumda no-op bir serbest bırakma fonksiyonu döner.
+ * Acquires a wake lock. Never throws when the API is unavailable or the
+ * request is denied; always returns a (possibly no-op) release function.
  */
 export async function acquireWakeLock(): Promise<ReleaseWakeLock> {
   const noop: ReleaseWakeLock = () => {};

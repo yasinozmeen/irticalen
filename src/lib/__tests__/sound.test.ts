@@ -83,6 +83,22 @@ describe('createSoundEngine', () => {
     expect(createBufferSource).not.toHaveBeenCalled();
   });
 
+  it('rate-limits ticks so a fast spin cannot stack bursts into distortion', () => {
+    const { FakeAudioContext, createBufferSource } = makeFakeAudioContext();
+    (globalThis as Record<string, unknown>).AudioContext = FakeAudioContext;
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000_000);
+
+    const engine = createSoundEngine();
+    for (let i = 0; i < 20; i++) engine.tick(1);
+    expect(createBufferSource).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(1_000_000 + 50);
+    engine.tick(1);
+    expect(createBufferSource).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
   it('mute kapalıyken createOscillator/createBufferSource çağrılır', () => {
     const { FakeAudioContext, createOscillator, createBufferSource } = makeFakeAudioContext();
     (globalThis as Record<string, unknown>).AudioContext = FakeAudioContext;

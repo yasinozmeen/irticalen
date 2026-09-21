@@ -1,28 +1,28 @@
-/** Geri sayımı durdurma tanıtıcısı. */
+/** Handle for stopping the countdown. */
 export interface Countdown {
   stop(): void;
 }
 
 export interface CreateCountdownOptions {
-  /** Toplam süre (saniye). */
+  /** Total duration (seconds). */
   seconds: number;
-  /** Kalan saniye değişince çağrılır (ilk değer hemen gelir). */
+  /** Called whenever the remaining seconds change (the first value fires immediately). */
   onTick(remainingSec: number): void;
-  /** Süre bitince tam bir kez çağrılır. */
+  /** Called exactly once when time runs out. */
   onDone(): void;
-  /** Enjekte edilebilir saat (test için). */
+  /** Injectable clock (for testing). */
   now?: () => number;
-  /** Enjekte edilebilir setInterval (test için). */
+  /** Injectable setInterval (for testing). */
   setIntervalFn?: (handler: () => void, ms: number) => ReturnType<typeof setInterval>;
-  /** Enjekte edilebilir clearInterval (test için). */
+  /** Injectable clearInterval (for testing). */
   clearIntervalFn?: (id: ReturnType<typeof setInterval>) => void;
 }
 
 /**
- * Duvar saatine göre geri sayım. 100 ms'de bir kontrol eder; kalan saniye
- * yalnızca değiştiğinde onTick çağrılır (ilk değer hemen gelir). 0'a
- * ulaşınca onDone tam bir kez çağrılır ve interval temizlenir. stop()
- * çağrıldıktan sonra hiçbir callback tetiklenmez.
+ * Wall-clock countdown. Checks every 100 ms; onTick fires only when the
+ * remaining seconds actually change (the first value fires immediately).
+ * When it reaches 0, onDone fires exactly once and the interval is cleared.
+ * After stop() is called, no callback fires again.
  */
 export function createCountdown(options: CreateCountdownOptions): Countdown {
   const {
@@ -56,7 +56,7 @@ export function createCountdown(options: CreateCountdownOptions): Countdown {
   };
 
   const intervalId = setIntervalFn(tick, 100);
-  // İlk değeri hemen ver.
+  // Emit the first value immediately.
   tick();
 
   return {
@@ -68,7 +68,7 @@ export function createCountdown(options: CreateCountdownOptions): Countdown {
   };
 }
 
-/** Saniyeyi "MM:SS" formatına çevirir. */
+/** Formats seconds as "MM:SS". */
 export function formatClock(totalSeconds: number): string {
   const safe = Math.max(0, Math.floor(totalSeconds));
   const minutes = Math.floor(safe / 60);
@@ -78,7 +78,7 @@ export function formatClock(totalSeconds: number): string {
   return `${mm}:${ss}`;
 }
 
-/** Konuşma süresi üçe bölünür: 0 = Ne?, 1 = Ne olmuş yani?, 2 = Şimdi ne? */
+/** The speech duration is split into thirds: 0 = What?, 1 = So what?, 2 = Now what? */
 export function speechArcStep(elapsedSec: number, totalSec: number): 0 | 1 | 2 {
   if (totalSec <= 0) return 0;
   const ratio = Math.min(1, Math.max(0, elapsedSec / totalSec));

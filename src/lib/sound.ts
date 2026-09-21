@@ -1,16 +1,16 @@
-/** Ses motoru: Web Audio ile dosyasız efektler üretir. */
+/** Sound engine: produces file-less effects with the Web Audio API. */
 export interface SoundEngine {
-  /** İlk kullanıcı etkileşiminde AudioContext'i ısıtır (tembel oluşturma). */
+  /** Warms up the AudioContext on the first user interaction (lazy creation). */
   warmUp(): void;
-  /** Çevirme tıkı: ~18 ms bant geçiren beyaz gürültü. */
+  /** Spin tick: ~30 ms of band-passed, decaying white noise (rate-limited). */
   tick(volume01: number): void;
-  /** İniş akoru: C5-E5-G5 sinüs. */
+  /** Landing chord: C5-E5-G5 sine. */
   land(): void;
-  /** Bitiş fanfarı: G4-C5-E5-G5 + final C6 üçgen dalga. */
+  /** End fanfare: G4-C5-E5-G5 + final C6 triangle wave. */
   fanfare(): void;
-  /** Sessiz bayrağını ayarlar. */
+  /** Sets the muted flag. */
   setMuted(muted: boolean): void;
-  /** Sessiz mi? */
+  /** Whether sound is muted. */
   isMuted(): boolean;
 }
 
@@ -28,7 +28,7 @@ function getAudioContextCtor(): AudioContextCtor | undefined {
   }
 }
 
-/** createSoundEngine: AudioContext tembel oluşturulur, yoksa tüm fonksiyonlar no-op'tur. */
+/** createSoundEngine: the AudioContext is created lazily; if unavailable, every function is a no-op. */
 export function createSoundEngine(): SoundEngine {
   let muted = false;
   let ctx: AudioContext | undefined;
@@ -77,38 +77,57 @@ export function createSoundEngine(): SoundEngine {
       osc.start(startAt);
       osc.stop(startAt + durationSec + 0.02);
     } catch {
-      // sessizce yok say
+      // ignore
     }
+  }
+
+  /** Minimum gap between ticks. Without it the fast start of a spin stacks dozens of bursts and distorts. */
+  const MIN_TICK_GAP_MS = 45;
+  const TICK_DURATION_SEC = 0.03;
+  const TICK_PEAK_GAIN = 0.22;
+  let lastTickAt = 0;
+  let tickBuffer: AudioBuffer | undefined;
+
+  /** Builds the tick sample once: white noise with an exponential decay baked in, so it never starts or ends abruptly. */
+  function getTickBuffer(audioCtx: AudioContext): AudioBuffer {
+    if (tickBuffer) return tickBuffer;
+    const sampleRate = audioCtx.sampleRate ?? 44100;
+    const frameCount = Math.max(1, Math.floor(sampleRate * TICK_DURATION_SEC));
+    const buffer = audioCtx.createBuffer(1, frameCount, sampleRate);
+    const data = buffer.getChannelData(0);
+    const attackFrames = Math.max(1, Math.floor(sampleRate * 0.001));
+    for (let i = 0; i < frameCount; i++) {
+      const attack = Math.min(1, i / attackFrames);
+      const decay = Math.exp((-6 * i) / frameCount);
+      data[i] = (Math.random() * 2 - 1) * attack * decay;
+    }
+    tickBuffer = buffer;
+    return buffer;
   }
 
   function playNoiseBurst(audioCtx: AudioContext, volume01: number): void {
     try {
-      const durationSec = 0.018;
-      const sampleRate = audioCtx.sampleRate ?? 44100;
-      const frameCount = Math.max(1, Math.floor(sampleRate * durationSec));
-      const buffer = audioCtx.createBuffer(1, frameCount, sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < frameCount; i++) {
-        data[i] = (Math.random() * 2 - 1) * Math.min(1, Math.max(0, volume01));
-      }
+      const nowMs = Date.now();
+      if (nowMs - lastTickAt < MIN_TICK_GAP_MS) return;
+      lastTickAt = nowMs;
+
       const source = audioCtx.createBufferSource();
-      source.buffer = buffer;
+      source.buffer = getTickBuffer(audioCtx);
 
       const bandpass = audioCtx.createBiquadFilter();
       bandpass.type = 'bandpass';
-      bandpass.frequency.value = 2600;
+      bandpass.frequency.value = 2400;
       bandpass.Q.value = 1.2;
 
       const gain = audioCtx.createGain();
-      gain.gain.value = Math.min(1, Math.max(0, volume01));
+      gain.gain.value = TICK_PEAK_GAIN * Math.min(1, Math.max(0, volume01));
 
       source.connect(bandpass);
       bandpass.connect(gain);
       gain.connect(audioCtx.destination);
       source.start();
-      source.stop(safeNow(audioCtx) + durationSec + 0.01);
     } catch {
-      // sessizce yok say
+      // ignore
     }
   }
 

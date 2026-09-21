@@ -47,3 +47,7 @@ ol { list-style: none; }
 @keyframes pulse { 50% { transform: scale(1.03); } }
 .overlay.done .ring { animation: pulse .8s ease-in-out 3; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+.brand { display: inline-flex; align-items: center; gap: .6rem; }
+.logo { display: none; }
+[data-design="d"] .logo { display: block; }

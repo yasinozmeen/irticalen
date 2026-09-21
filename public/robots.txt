@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://irticalen.yasinozmeen.me/sitemap-index.xml

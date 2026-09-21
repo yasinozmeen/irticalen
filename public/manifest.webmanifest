@@ -1,0 +1,24 @@
+{
+  "name": "İrticalen",
+  "short_name": "İrticalen",
+  "description": "Rastgele bir konu çek, sayacı başlat, konuş.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffd23f",
+  "theme_color": "#ffd23f",
+  "lang": "tr",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
