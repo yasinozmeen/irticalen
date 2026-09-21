@@ -1362,6 +1362,10 @@ html,
 .app-shell,
 .category-listbox,
 .settings-dialog,
+.sheet-page:focus {
+  outline: none;
+}
+
 .sheet-page {
   scrollbar-width: thin;
   scrollbar-color: var(--ink) transparent;

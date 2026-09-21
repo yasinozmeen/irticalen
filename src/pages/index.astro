@@ -11,5 +11,5 @@ const dict = dictionaries[locale];
 <Base locale={locale} frame>
   <App client:load locale={locale} />
 
-  <Dock client:idle locale={locale} dict={dict} />
+  <Dock client:load locale={locale} dict={dict} />
 </Base>

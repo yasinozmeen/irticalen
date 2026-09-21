@@ -21,22 +21,26 @@ interface Props {
 export function Dock({ locale, dict }: Props) {
   const [open, setOpen] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const sheetPageRef = useRef<HTMLDivElement>(null);
-  const openTriggerRef = useRef<HTMLButtonElement>(null);
 
-  const close = (): void => {
-    setOpen(false);
-    openTriggerRef.current?.focus();
-  };
-
-  useFocusTrap(open, sheetRef, close);
-
-  // useFocusTrap focuses the sheet's first focusable element, which is one of the bottom action
-  // links — the browser then auto-scrolls the sheet into view around it. Reset the scroll back to
-  // the top so the dictionary entry (the reason the sheet was opened) is what's actually visible.
+  // While the sheet is open nothing behind it may be reachable — not by Tab, not by a screen
+  // reader's virtual cursor. App does the same for its own dialogs (see App.tsx); it cannot change
+  // state while inert, so the two never fight over the attribute.
+  // Declared before useFocusTrap on purpose: cleanups run in hook order, so the dock is interactive
+  // again by the time the trap hands focus back to the trigger button.
   useEffect(() => {
-    if (open) sheetPageRef.current?.scrollTo({ top: 0 });
+    if (!open) return;
+    const behind = document.querySelectorAll<HTMLElement>('.app-shell, [data-outside-app]');
+    behind.forEach((el) => {
+      el.inert = true;
+    });
+    return () => {
+      behind.forEach((el) => {
+        el.inert = false;
+      });
+    };
   }, [open]);
+
+  useFocusTrap(open, sheetRef, () => setOpen(false));
 
   const whyPath = locale === 'tr' ? '/neden/' : '/en/why/';
 
@@ -44,7 +48,13 @@ export function Dock({ locale, dict }: Props) {
     <>
       <nav class="dock" aria-label={dict.footer.linksHeading} data-outside-app>
         <div class="dock-group">
-          <button ref={openTriggerRef} type="button" class="dock-link" onClick={() => setOpen(true)}>
+          <button
+            type="button"
+            class="dock-link"
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            onClick={() => setOpen(true)}
+          >
             <span class="dock-long">{dict.footer.wordHeading}</span>
             <span class="dock-short">{dict.footer.wordShort}</span>
           </button>
@@ -84,15 +94,19 @@ export function Dock({ locale, dict }: Props) {
       <div
         ref={sheetRef}
         class="sheet"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="sheet-term"
         hidden={!open}
         onMouseDown={(event) => {
-          if (event.target === event.currentTarget) close();
+          if (event.target === event.currentTarget) setOpen(false);
         }}
       >
-        <div class="sheet-page" ref={sheetPageRef}>
+        <div
+          class="sheet-page"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sheet-term"
+          tabIndex={-1}
+          data-autofocus
+        >
           <p class="sheet-term" id="sheet-term">
             {dict.about.word.term}
             <i>.</i> <span>{dict.about.word.pronunciation}</span>
@@ -113,7 +127,7 @@ export function Dock({ locale, dict }: Props) {
             <a class="dock-link" href={whyPath}>
               {dict.footer.why}
             </a>
-            <button type="button" class="dock-link" onClick={close}>
+            <button type="button" class="dock-link" onClick={() => setOpen(false)}>
               {dict.footer.close}
             </button>
           </p>

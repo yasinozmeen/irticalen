@@ -6,8 +6,9 @@ const FOCUSABLE_SELECTOR =
 
 /**
  * Traps Tab focus inside a container while `active` is true, and calls
- * `onEscape` on the Escape key. Focuses the first focusable element on
- * activation and returns focus to the previously focused element on
+ * `onEscape` on the Escape key. On activation focuses the container's
+ * `[data-autofocus]` element if there is one, otherwise the first focusable
+ * element, and returns focus to the previously focused element on
  * deactivation. Used by the timer overlay and settings dialogs.
  *
  * `onEscape` is read through a ref so that a new callback identity on every
@@ -31,8 +32,8 @@ export function useFocusTrap(
     const getFocusable = (): HTMLElement[] =>
       Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
 
-    const first = getFocusable()[0];
-    first?.focus();
+    const initial = root.querySelector<HTMLElement>('[data-autofocus]') ?? getFocusable()[0];
+    initial?.focus();
 
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
@@ -45,6 +46,12 @@ export function useFocusTrap(
       if (items.length === 0) return;
       const firstEl = items[0];
       const lastEl = items[items.length - 1];
+      // Focus can land outside the trap (e.g. on <body> after clicking plain text); pull it back in.
+      if (!root.contains(document.activeElement) || document.activeElement === root) {
+        event.preventDefault();
+        (event.shiftKey ? lastEl : firstEl).focus();
+        return;
+      }
       if (event.shiftKey && document.activeElement === firstEl) {
         event.preventDefault();
         lastEl.focus();
