@@ -29,3 +29,7 @@ CLAUDE.md
 
 # cloudflare worker local state
 .wrangler/
+
+# local secrets
+.dev.vars*
+.env*

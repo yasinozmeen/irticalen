@@ -8,6 +8,7 @@ interface RecordedCall {
 
 function createMockDB(options?: {
   feedbackCount?: number;
+  perVisitorCount?: number;
   throwOnEventsRun?: boolean;
   throwOnFeedbackRun?: boolean;
   throwOnFeedbackFirst?: boolean;
@@ -37,6 +38,7 @@ function createMockDB(options?: {
           if (options?.throwOnFeedbackFirst) {
             throw new Error('D1 feedback first failure');
           }
+          if (query.includes('ip_hash = ?')) return { count: options?.perVisitorCount ?? 0 } as T;
           return { count: options?.feedbackCount ?? 0 } as T;
         },
       };
@@ -254,9 +256,9 @@ describe('Worker index.ts', () => {
     const data = await res.json();
     expect(data).toEqual({ ok: true });
 
-    expect(db.calls.length).toBe(2);
     expect(db.calls[0].query).toContain('SELECT COUNT(*)');
-    expect(db.calls[1].query).toContain('INSERT INTO feedback');
+    const insert = db.calls.find((call) => call.query.includes('INSERT INTO feedback'))!;
+    expect(insert).toBeDefined();
 
     const [
       ts,
@@ -269,7 +271,7 @@ describe('Worker index.ts', () => {
       phase,
       device,
       country,
-    ] = db.calls[1].bindings;
+    ] = insert.bindings;
 
     expect(typeof ts).toBe('number');
     expect(kind).toBe('topic');
@@ -314,14 +316,14 @@ describe('Worker index.ts', () => {
     expect(res.status).toBe(413);
   });
 
-  it('günlük tavan (300 kayıt) → 429', async () => {
+  it('günlük tavan (1000 kayıt) → 429', async () => {
     const req = new Request('https://irticalen.yasinozmeen.me/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: 'topic', text: 'Limit testi' }),
     });
 
-    const db = createMockDB({ feedbackCount: 300 });
+    const db = createMockDB({ feedbackCount: 1000 });
     const res = await worker.fetch(req, { DB: db as any }, mockCtx);
 
     expect(res.status).toBe(429);
@@ -470,5 +472,50 @@ describe('origin gate', () => {
       const res = await worker.fetch(req, { DB: db } as unknown as Env, mockCtx);
       expect(res.status).toBe(204);
     }
+  });
+});
+
+describe('per-visitor limit and privacy of the fingerprint', () => {
+  const post = (ip: string) =>
+    new Request('https://irticalen.yasinozmeen.me/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': ip },
+      body: JSON.stringify({ kind: 'other', text: 'merhaba' }),
+    });
+
+  it('blocks the sixth message from the same visitor in a day', async () => {
+    const db = createMockDB({ feedbackCount: 10, perVisitorCount: 5 });
+    const res = await worker.fetch(post('203.0.113.7'), { DB: db, IP_SALT: 'salt' } as unknown as Env, mockCtx);
+    expect(res.status).toBe(429);
+    expect(db.calls.some((call) => call.query.includes('INSERT'))).toBe(false);
+  });
+
+  it('stores a salted hash, never the IP itself', async () => {
+    const db = createMockDB({ feedbackCount: 0 });
+    const res = await worker.fetch(post('203.0.113.7'), { DB: db, IP_SALT: 'salt' } as unknown as Env, mockCtx);
+    expect(res.status).toBe(201);
+    const bound = db.calls.flatMap((call) => call.bindings).map(String);
+    expect(bound.some((value) => value.includes('203.0.113.7'))).toBe(false);
+    const hash = db.calls.find((call) => call.query.includes('INSERT'))!.bindings.at(-1);
+    expect(hash).toMatch(/^[0-9a-f]{24}$/);
+  });
+
+  it('gives a different fingerprint with a different salt, and none without a salt', async () => {
+    const hashWith = async (env: Record<string, unknown>) => {
+      const db = createMockDB();
+      await worker.fetch(post('203.0.113.7'), { DB: db, ...env } as unknown as Env, mockCtx);
+      return db.calls.find((call) => call.query.includes('INSERT'))!.bindings.at(-1);
+    };
+    expect(await hashWith({ IP_SALT: 'a' })).not.toBe(await hashWith({ IP_SALT: 'b' }));
+    expect(await hashWith({})).toBeNull();
+  });
+
+  it('keeps the phone quiet during a flood but still stores the record', async () => {
+    const waited: Promise<unknown>[] = [];
+    const ctx = { waitUntil: (p: Promise<unknown>) => waited.push(p), passThroughOnException: () => {} } as unknown as ExecutionContext;
+    const db = createMockDB({ feedbackCount: 20 });
+    const res = await worker.fetch(post('203.0.113.7'), { DB: db, TELEGRAM_BOT_TOKEN: 't', TELEGRAM_CHAT_ID: '1' } as unknown as Env, ctx);
+    expect(res.status).toBe(201);
+    expect(waited).toHaveLength(0);
   });
 });

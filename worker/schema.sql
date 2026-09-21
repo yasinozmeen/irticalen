@@ -30,7 +30,11 @@ CREATE TABLE IF NOT EXISTS feedback (
   session TEXT,
   phase TEXT,
   device TEXT,
-  country TEXT
+  country TEXT,
+  -- günlük tuzla özetlenmiş IP (geri çevrilemez, ertesi gün eşleşmez); yalnız kişi başı günlük sınır için
+  ip_hash TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_feedback_ts ON feedback(ts);
+
+CREATE INDEX IF NOT EXISTS idx_feedback_iphash_ts ON feedback (ip_hash, ts);

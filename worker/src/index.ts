@@ -3,6 +3,20 @@ import { feedbackMessage, notifyTelegram, type NotifyEnv } from './notify.js';
 
 export interface Env extends NotifyEnv {
   DB: D1Database;
+  IP_SALT?: string;
+}
+
+/**
+ * A one-day fingerprint of the sender: SHA-256(ip + secret salt + UTC date), truncated. It cannot be
+ * turned back into an IP and does not match the same visitor on another day. The IP itself is never stored.
+ */
+async function visitorHash(request: Request, env: Env, now: number): Promise<string | null> {
+  const ip = request.headers.get('cf-connecting-ip');
+  if (!ip || !env.IP_SALT) return null;
+  const day = new Date(now).toISOString().slice(0, 10);
+  const data = new TextEncoder().encode(`${ip}|${env.IP_SALT}|${day}`);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest).slice(0, 12), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 const NO_STORE_HEADERS: HeadersInit = {
@@ -16,7 +30,11 @@ const JSON_NO_STORE_HEADERS: HeadersInit = {
 
 const MAX_EVENT_BYTES = 2048;
 const MAX_FEEDBACK_BYTES = 4096;
-const FEEDBACK_DAILY_CAP = 300;
+const FEEDBACK_DAILY_CAP = 1000;
+const FEEDBACK_PER_VISITOR_DAILY_CAP = 5;
+/** Above this many records in an hour the phone stays quiet; the records are still stored. */
+const NOTIFY_HOURLY_CAP = 20;
+const ONE_HOUR_MS = 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const ALLOWED_ORIGIN = 'https://irticalen.yasinozmeen.me';
 
@@ -185,8 +203,28 @@ export default {
           });
         }
 
+        const ipHash = await visitorHash(request, env, ts);
+        if (ipHash !== null) {
+          const mine = await env.DB.prepare(
+            `SELECT COUNT(*) AS count FROM feedback WHERE ts >= ? AND ip_hash = ?`
+          )
+            .bind(oneDayAgo, ipHash)
+            .first<{ count: number }>();
+          if (Number(mine?.count ?? 0) >= FEEDBACK_PER_VISITOR_DAILY_CAP) {
+            return new Response(JSON.stringify({ error: 'Daily feedback limit exceeded' }), {
+              status: 429,
+              headers: JSON_NO_STORE_HEADERS,
+            });
+          }
+        }
+
+        const lastHour = await env.DB.prepare(`SELECT COUNT(*) AS count FROM feedback WHERE ts >= ?`)
+          .bind(ts - ONE_HOUR_MS)
+          .first<{ count: number }>();
+        const quietPhone = Number(lastHour?.count ?? 0) >= NOTIFY_HOURLY_CAP;
+
         await env.DB.prepare(
-          `INSERT INTO feedback (ts, kind, text, contact, locale, path, session, phase, device, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO feedback (ts, kind, text, contact, locale, path, session, phase, device, country, ip_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
           .bind(
             ts,
@@ -198,12 +236,13 @@ export default {
             fb.session,
             fb.phase,
             fb.device,
-            country
+            country,
+            ipHash
           )
           .run();
 
         // After the response: the visitor never waits for Telegram.
-        ctx.waitUntil(notifyTelegram(env, feedbackMessage(fb, country)));
+        if (!quietPhone) ctx.waitUntil(notifyTelegram(env, feedbackMessage(fb, country)));
 
         return new Response(JSON.stringify({ ok: true }), {
           status: 201,

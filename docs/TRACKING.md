@@ -12,7 +12,7 @@ Gövde JSON (sendBeacon `text/plain` de yollayabilir; gövde her durumda JSON ol
 
 | alan | tip | not |
 |---|---|---|
-| `s` | string 8–40 | bellekteki oturum numarası (zorunlu) |
+| `s` | string 8–40, yalnız harf/rakam/tire | bellekteki oturum numarası (zorunlu) |
 | `n` | string | olay adı, aşağıdaki listeden (zorunlu) |
 | `l` | `tr` \| `en` | dil |
 | `m` | `off-the-cuff` \| `deep-research` | mod |
@@ -34,7 +34,13 @@ Yanıt: `204` (geçerli), `400` (geçersiz — gövde yok sayılır), `413` (bü
 ## POST /api/feedback — konu önerisi / sorun bildirimi
 Gövde JSON, en çok 4 KB: `kind` (`topic` \| `problem` \| `other`, zorunlu), `text` (1–1000, zorunlu),
 `contact` (≤120, isteğe bağlı — kişi kendi isteğiyle yazar), `l`, `p`, `s`, `ph`, `d`.
-Yanıt: `201` `{ "ok": true }`, `400`, `413`, `429` (günlük tavan: 300 kayıt/gün).
+Yanıt: `201` `{ "ok": true }`, `400`, `413`, `429`.
+
+Kötüye kullanıma karşı: kişi başına günde 5, toplamda günde 1000 kayıt. "Kişi"yi ayırt etmek için IP adresi
+SAKLANMAZ; yerine `SHA-256(IP + gizli tuz + günün tarihi)` özetinin ilk 12 baytı saklanır. Bu özet IP'ye geri
+çevrilemez ve aynı kişi ertesi gün farklı bir özet üretir (günler arası eşleştirme yapılamaz). Yalnız geri
+bildirimde tutulur; olaylarda (`/api/e`) hiç yoktur. Saatte 20'den fazla kayıt gelirse Telegram bildirimi
+susar, kayıtlar yine saklanır.
 
 ## Diğer
 - `GET /api/health` → `200 {"ok":true}`.

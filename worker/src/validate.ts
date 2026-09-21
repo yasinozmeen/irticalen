@@ -96,7 +96,7 @@ export function parseEvent(raw: unknown): ParseResult<ValidatedEvent> {
     return { ok: false };
   }
   const session = record.s.trim();
-  if (session.length < 8 || session.length > 40) {
+  if (session.length < 8 || session.length > 40 || !/^[A-Za-z0-9-]+$/.test(session)) {
     return { ok: false };
   }
 

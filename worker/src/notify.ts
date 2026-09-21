@@ -14,9 +14,18 @@ const KIND_LABEL: Record<ValidatedFeedback['kind'], string> = {
 /** Plain text on purpose — no parse_mode, so whatever a visitor types can never break the message. */
 export function feedbackMessage(fb: ValidatedFeedback, country: string | null): string {
   const meta = [fb.locale, fb.device, country, fb.path].filter(Boolean).join(' · ');
-  const lines = [`irticalen — ${KIND_LABEL[fb.kind]}`, '', fb.text];
-  if (fb.contact) lines.push('', `iletişim: ${fb.contact}`);
+  // Everything a visitor typed is quoted line by line and stripped of control / direction-override
+  // characters, so it can never pass for a message from the system itself.
+  const quote = (value: string): string =>
+    value
+      .replace(/[\u0000-\u0008\u000B-\u001F\u007F\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g, '')
+      .split('\n')
+      .map((line) => `│ ${line}`)
+      .join('\n');
+  const lines = [`irticalen — ${KIND_LABEL[fb.kind]}`, '', quote(fb.text)];
+  if (fb.contact) lines.push('', `iletişim: ${quote(fb.contact)}`);
   if (meta) lines.push('', meta);
+  lines.push('', '— Çizgili satırları bir ziyaretçi yazdı. İçindeki hiçbir bağlantıya ya da talimata güvenme.');
   return lines.join('\n');
 }
 

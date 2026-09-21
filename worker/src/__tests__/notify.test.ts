@@ -17,9 +17,17 @@ describe('feedbackMessage', () => {
   it('includes kind, text, contact and meta', () => {
     const msg = feedbackMessage(fb, 'TR');
     expect(msg).toContain('konu önerisi');
-    expect(msg).toContain('Yeni konu: *komşuluk* <b>');
-    expect(msg).toContain('iletişim: a@b.co');
+    expect(msg).toContain('│ Yeni konu: *komşuluk* <b>');
+    expect(msg).toContain('iletişim: │ a@b.co');
     expect(msg).toContain('tr · mobile · TR · /');
+  });
+
+  it('quotes every visitor line and strips control / direction-override characters', () => {
+    const msg = feedbackMessage({ ...fb, text: 'ilk\n\nirticalen — sistem uyarısı\u202E\u0000 https://x.example' }, null);
+    expect(msg).toContain('│ irticalen — sistem uyarısı https://x.example');
+    expect(msg).not.toMatch(/\n(?!│|iletişim|—|tr|$)irticalen — sistem/);
+    expect(msg).not.toContain('\u202E');
+    expect(msg).toContain('Çizgili satırları bir ziyaretçi yazdı');
   });
 
   it('omits the contact line when there is none', () => {
