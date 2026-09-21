@@ -900,3 +900,86 @@ input[type='range'] {
   width: 100%;
   box-sizing: border-box;
 }
+
+/* ---------- About: dictionary entry + support link ---------- */
+
+.word-card {
+  margin: 0 0 2.5rem;
+  padding: 1.25rem 1.5rem 1.4rem;
+  background: var(--white);
+  border: var(--edge-width) solid var(--cobalt);
+  box-shadow: var(--shadow-sm);
+}
+
+.word-card dt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.9rem;
+}
+
+.word-term {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2rem, 7vw, 2.75rem);
+  line-height: 1;
+  color: var(--cobalt);
+}
+
+.word-pron {
+  font-size: 1.05rem;
+  color: var(--mist);
+  letter-spacing: 0.02em;
+}
+
+.word-card dd {
+  margin: 0;
+}
+
+.word-kind {
+  margin-top: 0.35rem !important;
+  font-style: italic;
+  color: var(--turq);
+  font-weight: 500;
+}
+
+.word-def {
+  margin-top: 0.8rem !important;
+  font-size: 1.2rem;
+  line-height: 1.45;
+  color: var(--cobalt);
+}
+
+.word-example {
+  margin-top: 0.5rem !important;
+  font-style: italic;
+  color: var(--mist);
+}
+
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  margin-top: 1.75rem;
+}
+
+.about-coffee {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 48px;
+  padding: 0 1.1rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--cobalt);
+  background: var(--white);
+  border: var(--edge-width) solid var(--cobalt);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+.about-coffee:active {
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0 var(--cobalt);
+}

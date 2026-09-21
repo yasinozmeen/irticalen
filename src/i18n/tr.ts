@@ -56,6 +56,14 @@ export const tr = {
     retry: 'Tekrar dene',
   },
   about: {
+    word: {
+      term: 'irticalen',
+      pronunciation: 'ir·ti·câ·len',
+      kind: 'zarf · eski dil · Arapça irticâl’den',
+      definition: 'Hazırlık yapmadan, o anda içine doğduğu gibi; doğaçlama olarak.',
+      example: '“Kürsüye kâğıtsız çıktı, yarım saat irticalen konuştu.”',
+    },
+    coffee: 'Bana kahve ısmarla',
     heading: 'İrticalen nedir?',
     paragraphs: [
       '“İrticalen konuşmak”, hazırlık yapmadan, o an aklına geleni derli toplu söylemek demek. Toplantıda söz sana geldiğinde, mülakatta beklemediğin bir soru sorulduğunda ya da kadeh kaldırman istendiğinde ihtiyacın olan beceri bu.',

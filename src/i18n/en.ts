@@ -58,6 +58,14 @@ export const en: Dictionary = {
     retry: 'Try again',
   },
   about: {
+    word: {
+      term: 'irticalen',
+      pronunciation: 'eer·tee·jah·LEN',
+      kind: 'adverb · old-fashioned Turkish · from Arabic irtijāl',
+      definition: 'Without preparation, on the spot, as it comes to you; extemporaneously.',
+      example: '“He walked up without notes and spoke irticalen for half an hour.”',
+    },
+    coffee: 'Buy me a coffee',
     heading: 'What is İrticalen?',
     paragraphs: [
       '“İrticalen” is the Turkish word for speaking extemporaneously — saying something coherent with no time to prepare. It is the skill you need when a meeting turns to you, an interviewer asks the question you did not expect, or someone hands you a glass and says “say a few words”.',

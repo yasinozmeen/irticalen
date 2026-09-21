@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import App from '../components/App';
+import About from '../components/About.astro';
 import { dictionaries } from '../i18n';
 
 const locale = 'tr' as const;
@@ -10,14 +11,5 @@ const dict = dictionaries[locale];
 <Base locale={locale}>
   <App client:load locale={locale} />
 
-  <section class="about-section" data-outside-app>
-    <h2 class="about-heading">{dict.about.heading}</h2>
-    {dict.about.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
-    <p class="about-inspired">{dict.about.inspiredBy}</p>
-    <p>
-      <a class="about-source" href="https://github.com/yasinozmeen/irticalen" rel="noopener noreferrer">
-        {dict.about.source}
-      </a>
-    </p>
-  </section>
+  <About dict={dict} />
 </Base>
