@@ -17,10 +17,10 @@ export function LanguageSwitch({ locale, dict }: Props) {
       href={href}
       hreflang={localeTag[target]}
       lang={localeTag[target]}
-      aria-label={dict.language.label}
       onClick={() => saveLocale(target)}
     >
       {dict.language.current} <span class="chip-dim">/ {dict.language.other}</span>
+      <span class="sr-only"> — {dict.language.switchTo}</span>
     </a>
   );
 }

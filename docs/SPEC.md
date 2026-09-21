@@ -13,7 +13,7 @@
 
 **Ayarlar (dialog, odak tuzağı, Esc kapatır):** "Konuşma" 1–10 dk, "Araştırma" 1–60 dk (adım 1; varsayılan 1 dk / 10 dk) · "Ses efektlerini kapat" · "Bir dahaki sefere kayıtlı." · `Tamam`.
 
-**Ses (Web Audio, dosyasız):** tık = bant geçiren beyaz gürültü ~18 ms · iniş = C5–E5–G5 sinüs · bitiş fanfarı = G4–C5–E5–G5 + C6 üçgen dalga · ilk tıklamada AudioContext ısıtma · sessiz bayrağı her fonksiyonun başında.
+**Ses (Web Audio, dosyasız):** tık = bant geçiren, sönümlü beyaz gürültü ~30 ms, tıklar arası en az 45 ms (üst üste binip cızırdamasın) · iniş = C5–E5–G5 sinüs · bitiş fanfarı = G4–C5–E5–G5 + C6 üçgen dalga · ilk tıklamada AudioContext ısıtma · sessiz bayrağı her fonksiyonun başında.
 
 **Kalıcılık:** `irticalen:speech`, `irticalen:research` (saniye), `irticalen:muted`, + bizde `irticalen:lang`. Hepsi try/catch; bozuk/eksik veri → varsayılan. Geçmiş/istatistik/seri **yok** (MVP'de de yok).
 

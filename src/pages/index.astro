@@ -10,7 +10,7 @@ const dict = dictionaries[locale];
 <Base locale={locale}>
   <App client:load locale={locale} />
 
-  <section class="about-section">
+  <section class="about-section" data-outside-app>
     <h2 class="about-heading">{dict.about.heading}</h2>
     {dict.about.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
     <p class="about-inspired">{dict.about.inspiredBy}</p>

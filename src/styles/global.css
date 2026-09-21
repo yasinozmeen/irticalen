@@ -172,7 +172,7 @@ a {
 }
 
 .chip-dim {
-  opacity: 0.45;
+  opacity: 0.72;
   font-weight: 500;
 }
 
@@ -440,15 +440,25 @@ a {
   padding: 0.4rem 0.8rem;
   font-size: 0.875rem;
   font-weight: 700;
-  border: var(--border-width-sm) solid var(--color-paper);
+  border: var(--border-width-sm) solid var(--color-ink);
   border-radius: 10px;
-  color: var(--color-paper);
-  transition: all 0.3s;
+  color: var(--color-ink);
+  transition: background-color 0.3s, color 0.3s;
 }
 
 .speech-arc li.is-hit {
-  background: var(--color-paper);
-  color: var(--color-tomato);
+  background: var(--color-ink);
+  color: var(--color-sun);
+}
+
+.timer-overlay.is-done .speech-arc li {
+  border-color: var(--color-sun);
+  color: var(--color-sun);
+}
+
+.timer-overlay.is-done .speech-arc li.is-hit {
+  background: var(--color-sun);
+  color: var(--color-ink);
 }
 
 .timer-ring {
@@ -459,8 +469,7 @@ a {
   display: grid;
   place-items: center;
   position: relative;
-  background: conic-gradient(var(--color-paper) calc(var(--p) * 360deg), rgba(255, 253, 245, 0.25) 0);
-  transition: background 0.2s linear;
+  background: conic-gradient(var(--color-ink) calc(var(--p) * 360deg), var(--color-sun) 0);
   border: var(--border-width-lg) solid var(--color-ink);
   box-shadow: var(--shadow-lg);
 }
@@ -470,18 +479,15 @@ a {
   position: absolute;
   inset: 20px;
   border-radius: 50%;
-  background: var(--color-tomato);
+  background: var(--color-paper);
   border: var(--border-width-lg) solid var(--color-ink);
 }
 
-.timer-overlay.is-done .timer-ring::before {
-  background: var(--color-ink);
-}
 
 .timer-clock {
   position: relative;
   font-variant-numeric: tabular-nums;
-  color: var(--color-paper);
+  color: var(--color-ink);
   font-weight: 800;
   font-size: clamp(2.75rem, 13vw, 4.75rem);
   letter-spacing: -0.03em;
@@ -496,7 +502,7 @@ a {
 .timer-up-next {
   font-size: 1rem;
   font-weight: 600;
-  opacity: 0.9;
+  color: var(--color-ink);
 }
 
 .timer-actions {

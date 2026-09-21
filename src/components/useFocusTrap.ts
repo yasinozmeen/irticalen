@@ -1,4 +1,4 @@
-import { useEffect } from 'preact/hooks';
+import { useEffect, useRef } from 'preact/hooks';
 import type { RefObject } from 'preact';
 
 const FOCUSABLE_SELECTOR =
@@ -7,15 +7,24 @@ const FOCUSABLE_SELECTOR =
 /**
  * Traps Tab focus inside a container while `active` is true, and calls
  * `onEscape` on the Escape key. Focuses the first focusable element on
- * activation. Used by the timer overlay and settings dialogs.
+ * activation and returns focus to the previously focused element on
+ * deactivation. Used by the timer overlay and settings dialogs.
+ *
+ * `onEscape` is read through a ref so that a new callback identity on every
+ * render (the timer re-renders several times a second) does not re-run the
+ * effect and yank focus back to the first element.
  */
 export function useFocusTrap(
   active: boolean,
   containerRef: RefObject<HTMLElement>,
   onEscape: () => void,
 ): void {
+  const onEscapeRef = useRef(onEscape);
+  onEscapeRef.current = onEscape;
+
   useEffect(() => {
     if (!active) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
     const root = containerRef.current;
     if (!root) return;
 
@@ -28,7 +37,7 @@ export function useFocusTrap(
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onEscape();
+        onEscapeRef.current();
         return;
       }
       if (event.key !== 'Tab') return;
@@ -46,6 +55,9 @@ export function useFocusTrap(
     };
 
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [active, containerRef, onEscape]);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+    };
+  }, [active, containerRef]);
 }

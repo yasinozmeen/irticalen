@@ -54,6 +54,7 @@ function AppContent({ locale }: Props) {
   const soundRef = useRef(createSoundEngine());
   const countdownRef = useRef<Countdown | null>(null);
   const wakeLockReleaseRef = useRef<ReleaseWakeLock | null>(null);
+  const wakeLockTokenRef = useRef(0);
   const lastCategoryIdRef = useRef<string>(DEFAULT_CATEGORY_ID);
   const rafRef = useRef<number | null>(null);
   const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,8 +103,22 @@ function AppContent({ locale }: Props) {
   };
 
   const releaseWakeLock = (): void => {
+    // Invalidate any acquisition still in flight so it is released as soon as it resolves.
+    wakeLockTokenRef.current += 1;
     wakeLockReleaseRef.current?.();
     wakeLockReleaseRef.current = null;
+  };
+
+  const holdWakeLock = (): void => {
+    releaseWakeLock();
+    const token = wakeLockTokenRef.current;
+    void acquireWakeLock().then((release) => {
+      if (token !== wakeLockTokenRef.current) {
+        release();
+        return;
+      }
+      wakeLockReleaseRef.current = release;
+    });
   };
 
   const beginCountdown = (phaseSeconds: number): void => {
@@ -123,9 +138,7 @@ function AppContent({ locale }: Props) {
         countdownRef.current = null;
       },
     });
-    void acquireWakeLock().then((release) => {
-      wakeLockReleaseRef.current = release;
-    });
+    holdWakeLock();
   };
 
   const handleModeChange = (mode: Mode): void => {
@@ -269,6 +282,19 @@ function AppContent({ locale }: Props) {
   const locked = isLocked(state);
   const sessionOpen = state.phase !== 'idle';
   const contentInert = sessionOpen || settingsOpen;
+
+  // The server-rendered "about" section lives outside this island; make it inert too while a dialog is open.
+  useEffect(() => {
+    const outside = document.querySelectorAll<HTMLElement>('[data-outside-app]');
+    outside.forEach((el) => {
+      el.inert = contentInert;
+    });
+    return () => {
+      outside.forEach((el) => {
+        el.inert = false;
+      });
+    };
+  }, [contentInert]);
   const speechMinutes = Math.round(settings.speechSec / 60);
   const researchMinutes = Math.round(settings.researchSec / 60);
 

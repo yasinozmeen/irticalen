@@ -21,7 +21,7 @@ export function TopicReel({ topic, spinning, landKey, dict }: Props) {
     .join(' ');
 
   return (
-    <section class="topic-stage" aria-live="polite">
+    <section class="topic-stage">
       <p class="reel-label">{label}</p>
       <p key={landKey} class={`${classes}${!spinning && topic ? ' is-landed' : ''}`} id="topic-display">
         {text}
