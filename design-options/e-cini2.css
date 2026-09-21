@@ -1,0 +1,70 @@
+/* E — Çini (bütünlüklü): C'nin sır renkleri + D'nin tırnaklı yazısı + B'nin tek yapım kuralı.
+   KURAL: her dokunulabilir parça bir "çini"dir → beyaz sır dolgu, 2px kobalt kenar, 4px sert kobalt gölge, 10px köşe.
+   Basılınca gölgesine doğru kayar. Seçili/birincil olan kobalt dolar. İstisna yok. */
+[data-design="e"] {
+  --glaze: #f3f7fb; --white: #ffffff; --cobalt: #173f8a; --cobalt-deep: #0f2c63; --turq: #0f7f83; --coral: #c9412b; --mist: #4f6388; --focus: #c9412b;
+  --edge: 2px solid var(--cobalt); --lift: 4px 4px 0 var(--cobalt); --r: 0;
+  --tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%23173f8a'/%3E%3Cg fill='%23f3f7fb'%3E%3Cpath d='M8 2l6 6-6 6-6-6zM24 2l6 6-6 6-6-6zM40 2l6 6-6 6-6-6zM8 18l6 6-6 6-6-6zM40 18l6 6-6 6-6-6zM8 34l6 6-6 6-6-6zM24 34l6 6-6 6-6-6zM40 34l6 6-6 6-6-6z'/%3E%3C/g%3E%3Cg fill='%230f7f83'%3E%3Ccircle cx='8' cy='8' r='2'/%3E%3Ccircle cx='24' cy='8' r='2'/%3E%3Ccircle cx='40' cy='8' r='2'/%3E%3Ccircle cx='8' cy='24' r='2'/%3E%3Ccircle cx='40' cy='24' r='2'/%3E%3Ccircle cx='8' cy='40' r='2'/%3E%3Ccircle cx='24' cy='40' r='2'/%3E%3Ccircle cx='40' cy='40' r='2'/%3E%3C/g%3E%3C/svg%3E");
+  color: var(--cobalt); background: var(--glaze); font-family: "EB Garamond", Georgia, serif; font-size: 1.125rem;
+}
+[data-design="e"] .bg {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M18 14l4 4-4 4-4-4z' fill='%23173f8a' opacity='.09'/%3E%3C/svg%3E"),
+    var(--glaze);
+}
+[data-design="e"] .brand { font-family: "Cormorant Garamond", serif; font-weight: 700; font-size: 1.75rem; letter-spacing: -.005em; gap: .5rem; }
+[data-design="e"] .logo-e { display: block; width: 34px; height: 34px; }
+
+/* tek yapım kuralı */
+[data-design="e"] .chip, [data-design="e"] .category, [data-design="e"] .modes, [data-design="e"] .btn, [data-design="e"] .arc li {
+  background: var(--white); border: var(--edge); border-radius: var(--r); box-shadow: var(--lift);
+}
+[data-design="e"] .chip, [data-design="e"] .category, [data-design="e"] .modes button { font-size: 1.05rem; font-weight: 600; }
+[data-design="e"] .chip { padding: 0 .75rem; }
+[data-design="e"] .chip-dim { color: var(--mist); font-weight: 500; }
+[data-design="e"] .modes { padding: 0; overflow: hidden; }
+[data-design="e"] .modes button + button { border-left: var(--edge); }
+[data-design="e"] .modes button[aria-checked="true"] { background: var(--cobalt); color: var(--white); }
+
+[data-design="e"] .reel {
+  align-items: center; text-align: center; background: var(--white); padding: clamp(1.75rem, 6vw, 2.75rem) 1rem;
+  border: 14px solid var(--cobalt); border-image: var(--tile) 16 round; box-shadow: 8px 8px 0 var(--cobalt);
+}
+[data-design="e"] .reel-label { font-family: "Cormorant Garamond", serif; font-style: italic; font-weight: 600; font-size: 1.35rem; color: var(--turq); }
+[data-design="e"] .topic { font-family: "Cormorant Garamond", serif; font-weight: 700; font-size: clamp(3rem, 12.5vw, 5.75rem); line-height: .98; letter-spacing: -.015em; }
+[data-design="e"] .topic.is-spinning { color: var(--mist); }
+[data-design="e"] .blurb { color: var(--mist); max-width: 30ch; line-height: 1.5; }
+
+[data-design="e"] .btn { font-family: "EB Garamond", serif; font-weight: 600; font-size: 1.15rem; padding: 0 .9rem; }
+[data-design="e"] .btn:active:not(:disabled), [data-design="e"] .chip:active, [data-design="e"] .category:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--cobalt); }
+[data-design="e"] .btn.primary { background: var(--cobalt); color: var(--white); box-shadow: 4px 4px 0 var(--turq); }
+[data-design="e"] .btn.primary:active:not(:disabled) { box-shadow: 1px 1px 0 var(--turq); }
+
+/* sayaç: zemin kobalta döner, kural aynı kalır (kenar ve gölge beyaza/turkuaza çevrilir) */
+[data-design="e"] .overlay { background: var(--cobalt); color: var(--white); --edge: 2px solid var(--white); --lift: 4px 4px 0 var(--cobalt-deep); }
+[data-design="e"] .overlay::before { content: ""; position: absolute; inset: 0; opacity: .5; pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M18 14l4 4-4 4-4-4z' fill='%23ffffff' opacity='.12'/%3E%3C/svg%3E"); }
+[data-design="e"] .overlay > * { position: relative; }
+[data-design="e"] .ov-topic { font-family: "Cormorant Garamond", serif; font-weight: 700; font-size: clamp(2rem, 7vw, 3rem); line-height: 1; }
+[data-design="e"] .arc { gap: .6rem; }
+[data-design="e"] .arc li { background: transparent; color: var(--white); font-style: italic; font-size: 1.05rem; padding: .3rem .65rem; border: var(--edge); box-shadow: var(--lift); }
+[data-design="e"] .arc li.hit { background: var(--white); color: var(--cobalt); }
+[data-design="e"] .ring {
+  background:
+    conic-gradient(rgba(23, 63, 138, .88) calc(var(--p) * 360deg), transparent 0),
+    repeating-conic-gradient(var(--white) 0 7.5deg, #7fd0d3 7.5deg 15deg);
+  border: 3px solid var(--white); box-shadow: 8px 8px 0 var(--cobalt-deep);
+}
+[data-design="e"] .ring::before { content: ""; position: absolute; inset: 24px; border-radius: 50%; background: var(--white); border: 3px solid var(--cobalt-deep); }
+[data-design="e"] .clock { font-family: "Cormorant Garamond", serif; font-weight: 700; font-variant-numeric: lining-nums tabular-nums; font-size: clamp(3.5rem, 16vw, 5.75rem); color: var(--cobalt); }
+[data-design="e"] .status { font-family: "Cormorant Garamond", serif; font-style: italic; font-weight: 600; font-size: 1.9rem; }
+[data-design="e"] .overlay .btn { color: var(--cobalt); border: var(--edge); border-color: var(--cobalt-deep); box-shadow: var(--lift); }
+[data-design="e"] .overlay.done { background: var(--coral); --lift: 4px 4px 0 #8a2a1a; }
+[data-design="e"] .overlay.done .ring { box-shadow: 8px 8px 0 #8a2a1a; }
+[data-design="e"] .overlay.done .clock { color: var(--coral); }
+[data-design="e"] .overlay.done .arc li.hit { color: var(--coral); }
+[data-design="e"] .arc { gap: .5rem; }
+[data-design="e"] .arc li { font-size: 1rem; padding: .25rem .5rem; }
+[data-design="e"] .brand { font-size: 1.5rem; gap: .4rem; }
+[data-design="e"] .logo-e { width: 30px; height: 30px; }
+[data-design="e"] .chip { padding: 0 .6rem; font-size: 1rem; }

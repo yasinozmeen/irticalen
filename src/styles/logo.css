@@ -1,0 +1,81 @@
+/* İrticalen mark — colours come from the design tokens in global.css. */
+.logo {
+  --logo-bubble: var(--color-cobalt, #173f8a);
+  --logo-shadow: var(--color-turq, #0f7f83);
+  --logo-mark: var(--color-white, #ffffff);
+  --logo-accent: #ff8b73;
+  display: block;
+  flex: none;
+  overflow: visible;
+}
+
+.logo-onDark {
+  --logo-bubble: var(--color-white, #ffffff);
+  --logo-shadow: rgba(0, 0, 0, 0.28);
+  --logo-mark: var(--color-cobalt, #173f8a);
+  --logo-accent: var(--color-coral, #c9412b);
+}
+
+.logo-shadow { fill: var(--logo-shadow); }
+.logo-bubble { fill: var(--logo-bubble); }
+
+.logo-diamond,
+.logo-bar,
+.logo-done {
+  fill: var(--logo-mark);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* idle: the middle tile carries the accent */
+.logo[data-state='idle'] .logo-diamond-1 { fill: var(--logo-accent); }
+
+/* spinning: tiles hop one after another, like a topic being drawn */
+.logo[data-state='spinning'] .logo-diamond { animation: logo-hop 0.48s ease-in-out infinite; }
+.logo[data-state='spinning'] .logo-diamond-1 { animation-delay: 0.16s; }
+.logo[data-state='spinning'] .logo-diamond-2 { animation-delay: 0.32s; }
+
+/* research: slow "thinking" pulse */
+.logo[data-state='research'] .logo-diamond { animation: logo-think 1.5s ease-in-out infinite; }
+.logo[data-state='research'] .logo-diamond-1 { animation-delay: 0.25s; }
+.logo[data-state='research'] .logo-diamond-2 { animation-delay: 0.5s; }
+
+/* ready: all lit, waiting for you */
+.logo[data-state='ready'] .logo-diamond { fill: var(--logo-accent); }
+
+/* speech: sound bars */
+.logo-bar { animation: logo-speak 0.62s ease-in-out infinite alternate; }
+.logo-bar-0 { animation-duration: 0.54s; }
+.logo-bar-1 { fill: var(--logo-accent); animation-delay: -0.3s; }
+.logo-bar-2 { animation-duration: 0.7s; animation-delay: -0.15s; }
+
+/* done: one solid line — time is up */
+.logo-done { fill: var(--logo-accent); animation: logo-settle 0.35s ease-out; }
+
+@keyframes logo-hop {
+  0%, 60%, 100% { translate: 0 0; fill: var(--logo-mark); }
+  30% { translate: 0 -9px; fill: var(--logo-accent); }
+}
+
+@keyframes logo-think {
+  0%, 100% { opacity: 0.28; scale: 0.8; }
+  40% { opacity: 1; scale: 1; }
+}
+
+@keyframes logo-speak {
+  from { scale: 1 0.28; }
+  to { scale: 1 1; }
+}
+
+@keyframes logo-settle {
+  from { scale: 0.2 1; }
+  to { scale: 1 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-diamond,
+  .logo-bar,
+  .logo-done { animation: none !important; }
+  .logo-bar-0 { scale: 1 0.55; }
+  .logo-bar-2 { scale: 1 0.75; }
+}

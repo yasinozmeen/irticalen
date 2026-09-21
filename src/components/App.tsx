@@ -8,6 +8,7 @@ import {
   isLocked,
   loadSettings,
   planSpin,
+  positionAt,
   randomIndex,
   saveSettings,
   sessionReducer,
@@ -24,11 +25,12 @@ import { dictionaries, fill, type Locale } from '../i18n';
 import { getCategories, getCategoryById } from '../data/topics';
 import { ModeSwitch } from './ModeSwitch';
 import { CategorySelect } from './CategorySelect';
-import { TopicReel } from './TopicReel';
+import { TopicReel, type TopicReelHandle } from './TopicReel';
 import { TimerOverlay } from './TimerOverlay';
 import { SettingsDialog } from './SettingsDialog';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LanguageSwitch } from './LanguageSwitch';
+import { Logo } from './Logo';
 
 interface Props {
   locale: Locale;
@@ -60,6 +62,8 @@ function AppContent({ locale }: Props) {
   const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const settingsTriggerRef = useRef<HTMLButtonElement>(null);
   const startTriggerRef = useRef<HTMLButtonElement>(null);
+  const wheelRef = useRef<TopicReelHandle>(null);
+  const spinBaseIndexRef = useRef(0);
 
   const categories: Category[] = useMemo(() => getCategories(locale), [locale]);
 
@@ -182,12 +186,14 @@ function AppContent({ locale }: Props) {
     }
 
     const baseIndex = state.topicIndex >= 0 ? state.topicIndex : 0;
+    spinBaseIndexRef.current = baseIndex;
     const start = performance.now();
     let lastStep = -1;
 
     const frame = (now: number): void => {
       const elapsed = now - start;
       const progress = Math.min(1, elapsed / SPIN_DURATION_MS);
+      wheelRef.current?.setPosition(positionAt(progress, plan.totalSteps));
       const step = Math.min(plan.totalSteps, stepAt(progress, plan.totalSteps));
       if (step !== lastStep) {
         lastStep = step;
@@ -310,6 +316,7 @@ function AppContent({ locale }: Props) {
         <header class="top-bar">
           <h1 class="brand-heading">
             <a class="brand-link" href="#top">
+              <Logo state={spinning ? 'spinning' : 'idle'} />
               {dict.brand}
             </a>
           </h1>
@@ -347,7 +354,15 @@ function AppContent({ locale }: Props) {
           )}
         </div>
 
-        <TopicReel topic={state.topic} spinning={spinning} landKey={landKey} dict={dict} />
+        <TopicReel
+          ref={wheelRef}
+          topics={topics}
+          startIndex={spinning ? spinBaseIndexRef.current : state.topicIndex}
+          topic={state.topic}
+          spinning={spinning}
+          landKey={landKey}
+          dict={dict}
+        />
 
         <div class="action-row">
           <button type="button" class="btn btn-secondary" disabled={locked} onClick={handleSpin}>

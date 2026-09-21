@@ -1,5 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="İrticalen">
-  <rect x="8" y="8" width="112" height="112" rx="28" fill="#ffd23f" stroke="#17122b" stroke-width="8" />
-  <circle cx="64" cy="27" r="11" fill="#17122b" />
-  <rect x="54" y="47" width="20" height="54" rx="7" fill="#17122b" />
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -3 108 108"><polygon points="0,0 92,0 92,70 40,70 14,94 14,70 0,70" fill="#0f7f83" transform="translate(8 8)"/><polygon points="0,0 92,0 92,70 40,70 14,94 14,70 0,70" fill="#173f8a"/><polygon points="22,25 32,35 22,45 12,35" fill="#fff"/><polygon points="46,25 56,35 46,45 36,35" fill="#ff8b73"/><polygon points="70,25 80,35 70,45 60,35" fill="#fff"/></svg>

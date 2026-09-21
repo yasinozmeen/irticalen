@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { easeOutCubic, planSpin, randomIndex, stepAt } from '../topicPicker';
+import {
+  easeOutCubic,
+  planSpin,
+  positionAt,
+  randomIndex,
+  stepAt,
+  wheelFaceStep,
+  wrapIndex,
+} from '../topicPicker';
 
 describe('planSpin', () => {
   it('10.000 rastgele denemede landIndex hiçbir zaman currentIndex olmaz (listLength >= 2)', () => {
@@ -96,5 +104,70 @@ describe('stepAt', () => {
       expect(v).toBeGreaterThanOrEqual(prev);
       prev = v;
     }
+  });
+});
+
+describe('positionAt', () => {
+  it('positionAt(0)=0, positionAt(1)=totalSteps, floor consistent with stepAt', () => {
+    const totalSteps = 137;
+    expect(positionAt(0, totalSteps)).toBe(0);
+    expect(positionAt(1, totalSteps)).toBe(totalSteps);
+
+    for (let p = 0; p <= 1; p += 0.02) {
+      expect(Math.floor(positionAt(p, totalSteps))).toBe(stepAt(p, totalSteps));
+    }
+    // stepAt(1) is defined as floor(eased*totalSteps) = totalSteps exactly, matching positionAt(1).
+    expect(Math.floor(positionAt(1, totalSteps))).toBe(stepAt(1, totalSteps));
+  });
+
+  it('clamps out-of-range progress like easeOutCubic does', () => {
+    const totalSteps = 50;
+    expect(positionAt(-0.5, totalSteps)).toBe(0);
+    expect(positionAt(1.5, totalSteps)).toBe(totalSteps);
+  });
+});
+
+describe('wheelFaceStep', () => {
+  const FACE_COUNT = 12;
+
+  it('position=0: yüz 0 -> 0, yüz 1 -> 1, yüz faceCount-1 -> -1', () => {
+    expect(wheelFaceStep(0, FACE_COUNT, 0)).toBe(0);
+    expect(wheelFaceStep(1, FACE_COUNT, 0)).toBe(1);
+    expect(wheelFaceStep(FACE_COUNT - 1, FACE_COUNT, 0)).toBe(-1);
+  });
+
+  it('position=37.4, faceCount=12: tüm n değerleri [position-6, position+6] aralığında ve n mod 12 === faceIndex', () => {
+    const position = 37.4;
+    for (let face = 0; face < FACE_COUNT; face++) {
+      const n = wheelFaceStep(face, FACE_COUNT, position);
+      expect(n).toBeGreaterThanOrEqual(position - 6);
+      expect(n).toBeLessThanOrEqual(position + 6);
+      expect(wrapIndex(n, FACE_COUNT)).toBe(face);
+    }
+  });
+
+  it('position arttıkça bir yüzün n değeri yalnız yüz arkadayken değişiyor', () => {
+    const face = 3;
+    let prevN = wheelFaceStep(face, FACE_COUNT, 0);
+    for (let position = 0; position <= 24; position += 0.1) {
+      const n = wheelFaceStep(face, FACE_COUNT, position);
+      if (n !== prevN) {
+        // A jump only happens when the face was at (or past) the back of the drum.
+        const distanceBeforeJump = Math.abs(prevN - (position - 0.1));
+        expect(distanceBeforeJump).toBeGreaterThanOrEqual(FACE_COUNT / 2 - 1);
+      }
+      prevN = n;
+    }
+  });
+});
+
+describe('wrapIndex', () => {
+  it('pozitif ve negatif indeksleri doğru sarar', () => {
+    expect(wrapIndex(0, 5)).toBe(0);
+    expect(wrapIndex(4, 5)).toBe(4);
+    expect(wrapIndex(5, 5)).toBe(0);
+    expect(wrapIndex(-1, 5)).toBe(4);
+    expect(wrapIndex(-5, 5)).toBe(0);
+    expect(wrapIndex(-6, 5)).toBe(4);
   });
 });

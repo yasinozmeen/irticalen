@@ -58,3 +58,31 @@ export function stepAt(progress01: number, totalSteps: number): number {
   const eased = easeOutCubic(progress01);
   return Math.floor(eased * totalSteps);
 }
+
+/**
+ * Fractional wheel position for a given progress (0..1) and total step count.
+ * `stepAt` is the floor of this value — they stay consistent by construction,
+ * and both equal `totalSteps` at progress = 1.
+ */
+export function positionAt(progress01: number, totalSteps: number): number {
+  const eased = easeOutCubic(progress01);
+  return eased * totalSteps;
+}
+
+/**
+ * The step number a given wheel face should display at a fractional `position`.
+ * Among all integers `n` congruent to `faceIndex` modulo `faceCount`, returns the
+ * one closest to `position` (a UIPickerView-style drum: each face shows whichever
+ * step wraps onto it nearest the current rotation).
+ */
+export function wheelFaceStep(faceIndex: number, faceCount: number, position: number): number {
+  const s = Math.round(position);
+  let d = (((faceIndex - s) % faceCount) + faceCount) % faceCount;
+  if (d > faceCount / 2) d -= faceCount;
+  return s + d;
+}
+
+/** Wraps an index into [0, length), correctly handling negative indices. */
+export function wrapIndex(i: number, length: number): number {
+  return ((i % length) + length) % length;
+}

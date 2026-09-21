@@ -120,7 +120,7 @@ describe('formatClock', () => {
 });
 
 describe('speechArcStep', () => {
-  it('süreyi üçe böler: Ne? / Ne olmuş yani? / Şimdi ne?', () => {
+  it('splits the duration into three speech-outline steps', () => {
     const total = 60;
     expect(speechArcStep(0, total)).toBe(0);
     expect(speechArcStep(19, total)).toBe(0);

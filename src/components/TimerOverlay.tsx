@@ -3,6 +3,7 @@ import type { Phase, Mode } from '../lib/types';
 import { formatClock, speechArcStep } from '../lib/timer';
 import { fill, type Dictionary } from '../i18n';
 import { useFocusTrap } from './useFocusTrap';
+import { Logo, type LogoState } from './Logo';
 
 interface Props {
   mode: Mode;
@@ -61,6 +62,10 @@ export function TimerOverlay({
       aria-modal="true"
       aria-label={dict.timer.dialogLabel}
     >
+      <div class="timer-logo">
+        <Logo state={phase as LogoState} variant="onDark" size={44} />
+      </div>
+
       {mode === 'deep-research' && phase === 'research' && (
         <p class="timer-research-badge">{dict.timer.researching}</p>
       )}

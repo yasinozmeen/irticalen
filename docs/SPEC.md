@@ -6,6 +6,8 @@
 - Kategori değişince otomatik yeni rastgele konu gelir.
 
 **Çevirme:** ~4800 ms, kübik ease-out, `requestAnimationFrame`; adım sayısı = (3 + 0–2 tam tur) × liste + 1..n-1 kaydırma → **bir öncekiyle aynı konuya inemez**. Her adımda azalan sesle tık; inişte 3 notalı akor. 5100 ms güvenlik zaman aşımı.
+- Görsel olarak gerçek bir çark döner: iPhone alarm saati seçici (UIPickerView) gibi, bize dönük yatay eksenli görünmez bir 12 yüzlü silindir; konular satır satır yüzeylerde yazılı, adım arttıkça alttan gelip ortaya oturuyor, üst/alt komşular silindir eğrisiyle küçülüp maskeyle soluyor. RAF döngüsü her karede tamburun rotasyonunu (CSS custom property, imperative ref ile) günceller — Preact state'i yalnız tamsayı adım değişince (ses/tık ve metin) tetiklenir, 60fps'de gereksiz re-render yok.
+- `prefers-reduced-motion: reduce` → 3B dönüş yok, sonuca anında inilir, çark statik üç satır görünümünde kalır.
 
 **Sayaç katmanı (tam ekran dialog):** üstte konu · Araştırmalı'da "Araştırılıyor" etiketi (turkuaz vurgu) · dairesel ilerleme halkası + `MM:SS` · `aria-live` durum metni: `Araştır.` / `Araştırma bitti.` / `Konuş.` / `Süre.` · ready'de "Sırada: {X} konuşma." · butonlar: `Araştırmam bitti` (research), `Konuşmaya hazırım` (ready), `Kapat` (her zaman; `Esc` aynı iş). **Duraklat yok.** Süre bitince fanfar + halka nabız animasyonu. Arka plan `inert`.
 

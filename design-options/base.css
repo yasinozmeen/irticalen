@@ -51,3 +51,4 @@ ol { list-style: none; }
 .brand { display: inline-flex; align-items: center; gap: .6rem; }
 .logo { display: none; }
 [data-design="d"] .logo { display: block; }
+.logo-e { display: none; }

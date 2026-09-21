@@ -22,7 +22,7 @@ Hazırlıksız konuşma pratiği için küçük, ücretsiz bir web uygulaması.
 2. **Çevir** — rastgele bir konu gelir: *İlk maaş*, *Bileşik faiz*, *Tutunamayanlar*…
 3. Sayacı başlat ve süre bitene kadar konuş.
 
-Takılırsan ekrandaki üç soruyu izle: **Ne? → Ne olmuş yani? → Şimdi ne?**
+Takılırsan ekrandaki üç soruyu izle: **Nedir? → Neden önemli? → Ne yapmalı?**
 
 ### İki mod
 
