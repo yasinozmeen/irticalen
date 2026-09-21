@@ -1,22 +1,20 @@
-/* İrticalen mark — colours come from the design tokens in global.css. */
+/* İrticalen mark — "kâğıt üstünde mürekkep": dolu mürekkep balon, kâğıt işaretler, kırmızı vurgu.
+   Gölge poligonu yok (gölge yasak kuralı); onDark artık ayrı bir renk seti değil — sayaç ekranı da kâğıt. */
 .logo {
-  --logo-bubble: var(--color-cobalt, #173f8a);
-  --logo-shadow: var(--color-turq, #0f7f83);
-  --logo-mark: var(--color-white, #ffffff);
-  --logo-accent: #ff8b73;
+  --logo-bubble: var(--ink, #1d1a16);
+  --logo-mark: var(--paper, #f3eee2);
+  --logo-accent: var(--red, #b8281c);
   display: block;
   flex: none;
   overflow: visible;
 }
 
 .logo-onDark {
-  --logo-bubble: var(--color-white, #ffffff);
-  --logo-shadow: rgba(0, 0, 0, 0.28);
-  --logo-mark: var(--color-cobalt, #173f8a);
-  --logo-accent: var(--color-coral, #c9412b);
+  --logo-bubble: var(--ink, #1d1a16);
+  --logo-mark: var(--paper, #f3eee2);
+  --logo-accent: var(--red, #b8281c);
 }
 
-.logo-shadow { fill: var(--logo-shadow); }
 .logo-bubble { fill: var(--logo-bubble); }
 
 .logo-diamond,

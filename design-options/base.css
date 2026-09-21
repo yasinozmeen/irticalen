@@ -52,3 +52,4 @@ ol { list-style: none; }
 .logo { display: none; }
 [data-design="d"] .logo { display: block; }
 .logo-e { display: none; }
+.dock, .sheet { display: none; }

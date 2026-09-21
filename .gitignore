@@ -25,3 +25,4 @@ pnpm-debug.log*
 
 # local agent notes
 CLAUDE.md
+.shots/

@@ -317,7 +317,7 @@ function AppContent({ locale }: Props) {
           <h1 class="brand-heading">
             <a class="brand-link" href="#top" aria-label={dict.brand}>
               <Logo state={spinning ? 'spinning' : 'idle'} />
-              {dict.wordmark}
+              <span class="wordmark">{dict.wordmark}</span>
             </a>
           </h1>
           <div class="top-actions">
@@ -340,9 +340,6 @@ function AppContent({ locale }: Props) {
 
         <div class="controls-row">
           <ModeSwitch mode={state.mode} disabled={locked} dict={dict} onChange={handleModeChange} />
-          <p class="mode-blurb">
-            {state.mode === 'off-the-cuff' ? dict.modes.offTheCuffBlurb : dict.modes.deepResearchBlurb}
-          </p>
           {state.mode === 'off-the-cuff' && (
             <CategorySelect
               categories={categories}
@@ -362,7 +359,12 @@ function AppContent({ locale }: Props) {
           spinning={spinning}
           landKey={landKey}
           dict={dict}
+          locale={locale}
         />
+
+        <p class="mode-blurb">
+          {state.mode === 'off-the-cuff' ? dict.modes.offTheCuffBlurb : dict.modes.deepResearchBlurb}
+        </p>
 
         <div class="action-row">
           <button type="button" class="btn btn-secondary" disabled={locked} onClick={handleSpin}>

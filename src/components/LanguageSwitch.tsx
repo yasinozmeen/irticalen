@@ -19,7 +19,7 @@ export function LanguageSwitch({ locale, dict }: Props) {
       lang={localeTag[target]}
       onClick={() => saveLocale(target)}
     >
-      {dict.language.current} <span class="chip-dim">/ {dict.language.other}</span>
+      <span class="lang-current">{dict.language.current}</span> <span class="chip-dim">/ {dict.language.other}</span>
       <span class="sr-only"> — {dict.language.switchTo}</span>
     </a>
   );

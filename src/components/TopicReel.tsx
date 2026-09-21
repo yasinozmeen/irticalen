@@ -1,7 +1,8 @@
 import { forwardRef, useImperativeHandle } from 'preact/compat';
-import { useEffect, useRef, useState } from 'preact/hooks';
-import type { Dictionary } from '../i18n';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import type { Dictionary, Locale } from '../i18n';
 import { fill } from '../i18n';
+import { paperLines } from '../lib/paperLines';
 import { wheelFaceStep, wrapIndex } from '../lib/topicPicker';
 
 /** Number of physical rows on the drum (iOS-picker style: an even ring of faces around a hidden cylinder). */
@@ -11,6 +12,8 @@ const FACE_ANGLE_DEG = 360 / FACE_COUNT;
 /** Above this character count the face text is scaled down so it keeps to one line. */
 const LONG_TEXT_THRESHOLD = 20;
 const MIN_TEXT_SCALE = 0.62;
+/** Minimum value for --len (the paper-lines longest-line length) so short topics don't blow up the font size. */
+const MIN_LEN = 7;
 
 /** Imperative handle so the 60fps spin loop can update rotation without re-rendering Preact state. */
 export interface TopicReelHandle {
@@ -26,7 +29,8 @@ interface Props {
   spinning: boolean;
   topic: string | null;
   dict: Dictionary;
-  /** Bumped on every SPIN_LAND; replays the "landed" emphasis on the centered face. */
+  locale: Locale;
+  /** Bumped on every SPIN_LAND; replays the "landed" emphasis on the big topic display. */
   landKey: number;
 }
 
@@ -37,13 +41,14 @@ function textScale(text: string): number {
 }
 
 /**
- * The topic display: a real rotating wheel (iOS UIPickerView style) while a category has topics.
- * A hidden, horizontal-axis cylinder faces the viewer; spinning moves it via `setPosition`
- * (imperative, called every animation frame) while topic text per-face only recomputes on
- * integer position changes, keeping the RAF loop cheap.
+ * The topic display, "kâğıt üstünde mürekkep" style:
+ * - while spinning: a real rotating wheel (iOS UIPickerView style), left-aligned, ink center row / pencil neighbours.
+ * - once landed: the wheel is replaced by a big lowercase, word-safe multi-line topic (paperLines), ending in the
+ *   red full stop.
+ * - no topic yet: a pencil-coloured empty-state line, no wheel, no dot.
  */
 export const TopicReel = forwardRef<TopicReelHandle, Props>(function TopicReel(
-  { topics, startIndex, spinning, topic, dict, landKey },
+  { topics, startIndex, spinning, topic, dict, locale, landKey },
   ref,
 ) {
   const drumRef = useRef<HTMLDivElement>(null);
@@ -73,7 +78,11 @@ export const TopicReel = forwardRef<TopicReelHandle, Props>(function TopicReel(
 
   const safeStartIndex = startIndex < 0 ? 0 : startIndex;
   const hasTopics = topics.length > 0;
-  const showWheel = hasTopics && (spinning || topic !== null);
+  const showWheel = hasTopics && spinning;
+  const showLanded = !spinning && topic !== null;
+
+  const lines = useMemo(() => (topic ? paperLines(topic, locale) : []), [topic, locale]);
+  const len = Math.max(MIN_LEN, ...lines.map((line) => line.length), MIN_LEN);
 
   const label = spinning ? dict.reel.spinning : topic ? dict.reel.landed : dict.reel.idle;
 
@@ -88,7 +97,6 @@ export const TopicReel = forwardRef<TopicReelHandle, Props>(function TopicReel(
                 const step = wheelFaceStep(face, FACE_COUNT, centerStep);
                 const text = topics[wrapIndex(safeStartIndex + step, topics.length)] ?? '';
                 const isCenterFace = face === 0;
-                const showLanded = isCenterFace && !spinning && topic !== null;
                 const scale = textScale(text);
                 return (
                   <div
@@ -96,11 +104,10 @@ export const TopicReel = forwardRef<TopicReelHandle, Props>(function TopicReel(
                     style={{ transform: `rotateX(${-face * FACE_ANGLE_DEG}deg) translateZ(var(--wheel-radius))` }}
                   >
                     <span
-                      key={showLanded ? `landed-${landKey}` : `face-${face}`}
-                      class={`topic-wheel-text${showLanded ? ' is-landed' : ''}`}
+                      class={`topic-wheel-text${isCenterFace ? ' is-center' : ''}`}
                       style={scale !== 1 ? { '--face-scale': String(scale) } as Record<string, string> : undefined}
                     >
-                      {text}
+                      {text.toLocaleLowerCase(locale)}
                     </span>
                   </div>
                 );
@@ -110,6 +117,20 @@ export const TopicReel = forwardRef<TopicReelHandle, Props>(function TopicReel(
           <div class="topic-wheel-band topic-wheel-band-top" />
           <div class="topic-wheel-band topic-wheel-band-bottom" />
         </div>
+      ) : showLanded ? (
+        <p
+          key={landKey}
+          class="topic-display"
+          id="topic-display"
+          style={{ '--len': String(len) } as Record<string, string>}
+        >
+          {lines.map((line, index) => (
+            <span key={`${landKey}-${index}`} class="topic-line">
+              {line}
+              {index === lines.length - 1 && <i class="dot">.</i>}
+            </span>
+          ))}
+        </p>
       ) : (
         <p class="topic-sheet is-empty" id="topic-display">
           {dict.reel.empty}

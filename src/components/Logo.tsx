@@ -30,7 +30,6 @@ export function Logo({ state, variant = 'onLight', size = 34 }: Props) {
       aria-hidden="true"
       focusable="false"
     >
-      <polygon class="logo-shadow" points={BUBBLE} transform="translate(8 8)" />
       <polygon class="logo-bubble" points={BUBBLE} />
       {state === 'speech' ? (
         MARK_X.map((x, i) => (

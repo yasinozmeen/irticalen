@@ -77,7 +77,7 @@ export const tr = {
     coffee: 'Bana kahve ısmarla',
     heading: 'İrticalen nedir?',
     paragraphs: [
-      '“İrticalen konuşmak”, hazırlık yapmadan, o an aklına geleni derli toplu söylemek demek. Toplantıda söz sana geldiğinde, mülakatta beklemediğin bir soru sorulduğunda ya da kadeh kaldırman istendiğinde ihtiyacın olan beceri bu.',
+      '“İrticalen konuşmak”, hazırlık yapmadan, o an aklına geleni derli toplu söylemek demek. Toplantıda söz sana geldiğinde, mülakatta beklemediğin bir soru sorulduğunda ya da bir düğünde mikrofon eline tutuşturulduğunda ihtiyacın olan beceri bu.',
       'Çalışması basit: bir kategori seç, konuyu çevir, sayacı başlat ve süre bitene kadar konuş. Takılırsan ekrandaki üç soruyu izle: Nedir? Neden önemli? Ne yapmalı?',
       'Araştırmalı modda önce konuyu araştırmak için süre tutarsın, sonra konuşursun. Ses kaydı alınmaz, üyelik yoktur; ayarların yalnızca kendi tarayıcında saklanır.',
     ],
