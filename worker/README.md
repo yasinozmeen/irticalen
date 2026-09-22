@@ -123,3 +123,16 @@ FROM feedback
 ORDER BY ts DESC
 LIMIT 50;
 ```
+
+---
+
+### 6. Telegram'dan yazdığım fikirler
+```sql
+SELECT id, datetime(ts / 1000, 'unixepoch', 'localtime') AS created_at, text
+FROM feedback
+WHERE kind = 'idea'
+ORDER BY ts DESC;
+```
+
+Kurulum (bir kez): `npx wrangler secret put TELEGRAM_WEBHOOK_SECRET`, `npx wrangler deploy`, sonra
+`curl -X POST -H "X-Telegram-Bot-Api-Secret-Token: <gizli>" https://irticalen.yasinozmeen.me/api/telegram/setup`.

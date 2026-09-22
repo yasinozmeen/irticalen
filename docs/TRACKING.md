@@ -42,6 +42,14 @@ SAKLANMAZ; yerine `SHA-256(IP + gizli tuz + günün tarihi)` özetinin ilk 12 ba
 bildirimde tutulur; olaylarda (`/api/e`) hiç yoktur. Saatte 20'den fazla kayıt gelirse Telegram bildirimi
 susar, kayıtlar yine saklanır.
 
+## POST /api/telegram — sahibin kendi fikir notları
+Telegram botuna yazılan mesajlar (webhook) aynı `feedback` tablosuna `kind = 'idea'`, `path = 'telegram'`,
+`session = 'tg:<update_id>'` ile yazılır; bot "kaydedildi ✓" diye cevap verir. Yalnız
+`X-Telegram-Bot-Api-Secret-Token` başlığı `TELEGRAM_WEBHOOK_SECRET` ile eşleşen ve sohbeti `TELEGRAM_CHAT_ID`
+olan mesajlar kaydedilir; başka sohbetler sessizce yok sayılır. `/` ile başlayan komutlar ve boş mesajlar
+kaydedilmez. Telegram yeniden denerse `update_id` aynı notun iki kez yazılmasını önler.
+`POST /api/telegram/setup` (aynı gizli başlıkla) botun webhook'unu bu adrese kurar; bot anahtarı Worker'dan çıkmaz.
+
 ## Diğer
 - `GET /api/health` → `200 {"ok":true}`.
 - `/api/*` dışındaki ve tanımsız yollar → `404`. Yalnız `POST`/`GET`; diğerleri `405`.

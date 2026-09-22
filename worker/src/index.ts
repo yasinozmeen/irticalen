@@ -1,9 +1,11 @@
 import { parseEvent, parseFeedback } from './validate.js';
 import { feedbackMessage, notifyTelegram, type NotifyEnv } from './notify.js';
+import { handleTelegramSetup, handleTelegramUpdate } from './telegram.js';
 
 export interface Env extends NotifyEnv {
   DB: D1Database;
   IP_SALT?: string;
+  TELEGRAM_WEBHOOK_SECRET?: string;
 }
 
 /**
@@ -68,6 +70,19 @@ export default {
         status: 200,
         headers: JSON_NO_STORE_HEADERS,
       });
+    }
+
+    // Route: POST /api/telegram — the owner's notes from the Telegram bot
+    if (pathname === '/api/telegram' || pathname === '/api/telegram/setup') {
+      if (method !== 'POST') {
+        return new Response(null, {
+          status: 405,
+          headers: { ...NO_STORE_HEADERS, Allow: 'POST' },
+        });
+      }
+      return pathname === '/api/telegram'
+        ? handleTelegramUpdate(request, env, ctx)
+        : handleTelegramSetup(request, env);
     }
 
     // Route: POST /api/e
@@ -184,10 +199,10 @@ export default {
       const country = (request as unknown as { cf?: { country?: string } }).cf?.country ?? null;
 
       try {
-        // Enforce 24h rate limit (cap of 300 entries)
+        // Enforce 24h rate limit; the owner's own Telegram notes (kind 'idea') never use up visitors' quota
         const oneDayAgo = ts - ONE_DAY_MS;
         const countRow = await env.DB.prepare(
-          `SELECT COUNT(*) AS count FROM feedback WHERE ts >= ?`
+          `SELECT COUNT(*) AS count FROM feedback WHERE ts >= ? AND kind != 'idea'`
         )
           .bind(oneDayAgo)
           .first<{ count: number }>();
@@ -218,7 +233,7 @@ export default {
           }
         }
 
-        const lastHour = await env.DB.prepare(`SELECT COUNT(*) AS count FROM feedback WHERE ts >= ?`)
+        const lastHour = await env.DB.prepare(`SELECT COUNT(*) AS count FROM feedback WHERE ts >= ? AND kind != 'idea'`)
           .bind(ts - ONE_HOUR_MS)
           .first<{ count: number }>();
         const quietPhone = Number(lastHour?.count ?? 0) >= NOTIFY_HOURLY_CAP;
