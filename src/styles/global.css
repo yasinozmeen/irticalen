@@ -708,6 +708,216 @@ a {
   justify-content: flex-start;
 }
 
+/* Süreyi gizle: rakam ve cetvel mürekkebi dağılmış gibi bulanıklaşır; dokununca geri gelir. */
+.timer-ring {
+  transition: filter 0.4s ease-out, opacity 0.4s ease-out;
+}
+
+.timer-overlay.is-clock-hidden .timer-ring {
+  filter: blur(6px);
+  opacity: 0.55;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Rakam büyüdükçe bulanıklık da büyür (em): masaüstündeki dev rakam da okunmaz. */
+.timer-clock {
+  transition: filter 0.4s ease-out;
+}
+
+.timer-overlay.is-clock-hidden .timer-clock {
+  filter: blur(0.14em);
+}
+
+.clock-toggle {
+  order: 2;
+  align-self: flex-end;
+  margin-top: -0.7rem;
+  min-height: 32px;
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--pencil);
+  text-transform: lowercase;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 0.28em;
+}
+
+.clock-toggle:hover {
+  color: var(--ink);
+  text-decoration-color: var(--ink);
+}
+
+/* Araştırma bölümleri: konuşma iskeletiyle aynı dizgi; geçilen bölüm mürekkep, sıradaki kurşun kalem. */
+.research-stages li.is-past {
+  color: var(--ink);
+  font-style: normal;
+}
+
+.research-guide {
+  order: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 34rem;
+}
+
+.research-hint {
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--pencil);
+  text-transform: lowercase;
+}
+
+.gather-list,
+.outline-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--rule);
+}
+
+.gather-list li,
+.outline-list li {
+  border-bottom: 1px solid var(--rule);
+}
+
+/* Beş şey: dokununca "buldum" diye işaretlenir; zorunlu değil. İşaretli = kırmızı tik + mürekkep. */
+.gather-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 40px;
+  padding: 0.35rem 0;
+  text-align: left;
+  text-transform: lowercase;
+}
+
+.gather-item::before {
+  content: '–';
+  flex: 0 0 1.1em;
+  color: var(--pencil);
+  font-weight: 600;
+}
+
+.gather-title {
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 0.28em;
+}
+
+.gather-hint {
+  font-size: 0.98rem;
+  font-style: italic;
+  color: var(--pencil);
+}
+
+.gather-item.is-key .gather-hint {
+  color: var(--red);
+}
+
+.gather-item.is-checked::before {
+  content: '✓';
+  color: var(--red);
+}
+
+.gather-item.is-checked .gather-title {
+  font-weight: 700;
+  text-decoration-color: var(--red);
+}
+
+.gather-item:hover .gather-title {
+  text-decoration-color: var(--ink);
+}
+
+/* İskelet: konuşmanın üç başlığı + her birine giden bulgular (bulunmuşsa mürekkep, değilse kurşun). */
+.outline-list li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 0.7rem;
+  padding: 0.45rem 0;
+  text-transform: lowercase;
+}
+
+.outline-heading {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.outline-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.75rem;
+}
+
+/* Topla'daki listeyle aynı dil: işaretsiz = kurşun kalem italik, işaretli = kırmızı tik + mürekkep. */
+.outline-source {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  min-height: 36px;
+  font-size: 1rem;
+  font-style: italic;
+  color: var(--pencil);
+  text-transform: lowercase;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 0.28em;
+}
+
+.outline-source::before {
+  content: '–';
+  font-style: normal;
+  font-weight: 600;
+}
+
+.outline-source.is-checked {
+  color: var(--ink);
+  font-style: normal;
+  font-weight: 600;
+  text-decoration-color: var(--red);
+}
+
+.outline-source.is-checked::before {
+  content: '✓';
+  color: var(--red);
+}
+
+.outline-source:hover {
+  text-decoration-color: var(--ink);
+}
+
+/* Araştırma ekranı daha kalabalık: aralıklar sıkışır; yine sığmazsa sayfa kayar (üst kısım kesilmez). */
+.timer-overlay:has(.research-guide) {
+  gap: 0.8rem;
+  justify-content: safe flex-end;
+  overflow-y: auto;
+}
+
+@media (max-height: 740px) {
+  .timer-overlay:has(.research-guide) .timer-logo {
+    display: none;
+  }
+
+  .timer-overlay:has(.research-guide) .timer-clock {
+    font-size: clamp(4.5rem, 22vw, 10rem);
+  }
+
+  .timer-overlay:has(.research-guide) {
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+  }
+}
+
 /* Süre bitince rakam + durum kırmızı olur; zemin değişmez. */
 .timer-overlay.is-done .timer-clock,
 .timer-overlay.is-done .timer-status {

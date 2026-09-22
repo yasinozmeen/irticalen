@@ -78,7 +78,7 @@ export function formatClock(totalSeconds: number): string {
   return `${mm}:${ss}`;
 }
 
-/** The speech duration is split into thirds: 0 = What?, 1 = So what?, 2 = Now what? */
+/** The speech duration is split into thirds: 0 = What is it?, 1 = An example, 2 = What do I think? */
 export function speechArcStep(elapsedSec: number, totalSec: number): 0 | 1 | 2 {
   if (totalSec <= 0) return 0;
   const ratio = Math.min(1, Math.max(0, elapsedSec / totalSec));

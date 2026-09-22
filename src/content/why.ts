@@ -68,7 +68,7 @@ export const why: Record<Locale, WhyContent> = {
       items: [
         { title: 'Yüksek sesle konuş.', text: 'İçinden geçirmek sayılmaz. Kulağın kendi cümleni duymalı; boşluklar ancak o zaman ortaya çıkar.' },
         { title: 'Konuyu beğenmesen de değiştirme.', text: 'Hayat da konu seçtirmiyor. “Bu konuda söyleyecek bir şeyim yok” dediğin an, antrenmanın başladığı an.' },
-        { title: 'Takılınca üç soruya dön.', text: 'Nedir? Neden önemli? Ne yapmalı? Ekranda yazıyor. Bu üçü, hemen her konuda bir dakikalık iskelet kurar.' },
+        { title: 'Takılınca üç adıma dön.', text: 'Nedir? Bir örnek. Ne düşünüyorum? Ekranda yazıyor. Anlat, göster, yorumla: bu üçü her konuda bir dakikalık iskelet kurar.' },
         { title: 'Haftada bir Araştırmalı modu dene.', text: 'On dakika oku, sonra anlat. Okuduğunu bir dakikaya sığdırmak, en iyi özet çıkarma alıştırması.' },
         { title: 'Her gün bir tur.', text: 'Uzun seanslar değil, tekrar işe yarıyor. Günde bir dakika, ayda otuz farklı konuda düşünmüş olmak demek.' },
       ],
@@ -78,7 +78,7 @@ export const why: Record<Locale, WhyContent> = {
       items: [
         { q: 'İrticalen ne demek?', a: '“İrticalen”, Arapça irticâl kökünden gelen eski bir Türkçe zarftır; hazırlık yapmadan, o anda içine doğduğu gibi, doğaçlama olarak demektir. “İrticalen konuşmak” hazırlıksız konuşmak anlamına gelir.' },
         { q: 'Brainrot nedir?', a: 'Brainrot (brain rot), sürekli kısa ve değersiz içerik tüketmenin dikkati ve düşünme alışkanlığını köreltmesi hissini anlatan gündelik bir terimdir. Tıbbi bir teşhis değildir. Oxford University Press, “brain rot”u 2024’te yılın kelimesi seçti.' },
-        { q: 'Hazırlıksız konuşma nasıl geliştirilir?', a: 'Düzenli ve kısa tekrarla: rastgele bir konu seç, süre tut, yüksek sesle konuş. Takıldığında basit bir iskelet kullan: Nedir? Neden önemli? Ne yapmalı? Günde bir dakika, haftada bir uzun seanstan daha çok işe yarar.' },
+        { q: 'Hazırlıksız konuşma nasıl geliştirilir?', a: 'Düzenli ve kısa tekrarla: rastgele bir konu seç, süre tut, yüksek sesle konuş. Takıldığında basit bir iskelet kullan: Nedir? Bir örnek. Ne düşünüyorum? Günde bir dakika, haftada bir uzun seanstan daha çok işe yarar.' },
         { q: 'İrticalen ücretli mi, üyelik gerekiyor mu?', a: 'Hayır. İrticalen ücretsizdir, üyelik istemez, ses kaydı almaz, çerez kullanmaz. Yalnız isimsiz kullanım sayıları tutulur; kim olduğun bilinmez. Ayarların yalnızca kendi tarayıcında saklanır. Kaynak kodu GitHub’da açıktır.' },
         { q: 'Günde ne kadar pratik yapmalıyım?', a: 'Bir dakikalık tek bir tur yeterli bir başlangıçtır. Önemli olan süre değil, her gün yapılmasıdır. Rahatlayınca süreyi ayarlardan 10 dakikaya kadar uzatabilirsin.' },
         { q: 'Kimler için uygun?', a: 'Toplantıda söz alınca tutulanlar, mülakata hazırlananlar, sunum yapanlar, öğrenciler, yabancı dilde akıcılık çalışanlar ve genel olarak “aklımdakini anlatamıyorum” diyen herkes için.' },
@@ -140,7 +140,7 @@ export const why: Record<Locale, WhyContent> = {
       items: [
         { title: 'Speak out loud.', text: 'Thinking it through silently does not count. Your ear has to hear your own sentence; only then do the gaps show.' },
         { title: 'Don’t swap a topic you dislike.', text: 'Life does not let you pick topics either. The moment you think “I have nothing to say about this” is the moment the training starts.' },
-        { title: 'When you stall, go back to three questions.', text: 'What? So what? Now what? They are on the screen, and they build a one-minute skeleton for almost any subject.' },
+        { title: 'When you stall, go back to three steps.', text: 'What is it? An example. What do I think? They are on the screen. Explain, show, give your take: together they build a one-minute skeleton for any subject.' },
         { title: 'Try Researched mode once a week.', text: 'Read for ten minutes, then explain. Fitting what you read into one minute is the best summarising exercise there is.' },
         { title: 'One round every day.', text: 'Repetition works, long sessions don’t. A minute a day means having thought about thirty different subjects in a month.' },
       ],
@@ -150,7 +150,7 @@ export const why: Record<Locale, WhyContent> = {
       items: [
         { q: 'What does “irticalen” mean?', a: '“İrticalen” is an old Turkish adverb from the Arabic irtijāl. It means without preparation, on the spot, extemporaneously. “İrticalen konuşmak” means to speak impromptu.' },
         { q: 'What is brain rot?', a: 'Brain rot is an informal term for the feeling that constantly consuming short, low-value content dulls attention and the habit of thinking. It is not a medical diagnosis. Oxford University Press chose “brain rot” as its Word of the Year for 2024.' },
-        { q: 'How do you get better at impromptu speaking?', a: 'With short, regular repetition: draw a random topic, set a timer and speak out loud. When you stall, use a simple skeleton: What? So what? Now what? One minute a day beats one long session a week.' },
+        { q: 'How do you get better at impromptu speaking?', a: 'With short, regular repetition: draw a random topic, set a timer and speak out loud. When you stall, use a simple skeleton: What is it? An example. What do I think? One minute a day beats one long session a week.' },
         { q: 'Is İrticalen free? Do I need an account?', a: 'It is free, needs no account, records no audio and uses no cookies. Only anonymous usage counts are kept; nobody knows who you are. Your settings stay in your own browser. The source code is open on GitHub.' },
         { q: 'How much should I practise per day?', a: 'A single one-minute round is a good start. What matters is doing it daily, not the length. You can extend the timer up to 10 minutes in settings.' },
         { q: 'Who is it for?', a: 'Anyone who freezes when a meeting turns to them, people preparing for interviews or presentations, students, language learners working on fluency, and anyone who feels “I can’t put what’s in my head into words”.' },

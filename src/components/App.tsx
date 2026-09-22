@@ -23,6 +23,8 @@ import {
   topicPageUrl,
   getTracker,
   buildTopicIndex,
+  planResearchStages,
+  researchStageAt,
   type Countdown,
   type ReleaseWakeLock,
   type Settings,
@@ -60,6 +62,7 @@ function AppContent({ locale }: Props) {
     speechSec: DEFAULT_SPEECH_SEC,
     researchSec: DEFAULT_RESEARCH_SEC,
     muted: false,
+    hideClock: false,
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sharePanelOpen, setSharePanelOpen] = useState(false);
@@ -67,6 +70,12 @@ function AppContent({ locale }: Props) {
   const [remainingSec, setRemainingSec] = useState(0);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [timerTotalSec, setTimerTotalSec] = useState(0);
+  // Research stages: the clock moves the stage forward; "sonraki bölüm" can only jump ahead of it.
+  const [researchStage, setResearchStage] = useState(0);
+  // The stage already decided on — set synchronously, because the state itself only lands once the
+  // view transition's update runs, and a clock tick in between must not advance (and chime) twice.
+  const researchStageRef = useRef(0);
+  const [gatherChecked, setGatherChecked] = useState<boolean[]>([false, false, false, false, false]);
 
   const soundRef = useRef(createSoundEngine());
   const countdownRef = useRef<Countdown | null>(null);
@@ -412,6 +421,9 @@ function AppContent({ locale }: Props) {
       dispatch({ type: 'START' });
     });
     beginCountdown(nextPhase === 'research' ? settings.researchSec : settings.speechSec);
+    setResearchStage(0);
+    researchStageRef.current = 0;
+    setGatherChecked([false, false, false, false, false]);
     researchDoneSentRef.current = false;
     speechDoneSentRef.current = false;
     tracker.track(nextPhase === 'research' ? 'start_research' : 'start_speech', {
@@ -466,6 +478,38 @@ function AppContent({ locale }: Props) {
     );
   };
 
+  const researchPlan = useMemo(() => planResearchStages(settings.researchSec), [settings.researchSec]);
+  const researchStageIds = useMemo(() => researchPlan.map((entry) => entry.stage), [researchPlan]);
+
+  // Time crossing a stage boundary moves the stage forward (never back — a skipped-ahead stage
+  // stays). The new stage's guide arrives inside a view transition, with a soft chord as the cue.
+  useEffect(() => {
+    if (state.phase !== 'research') return;
+    const byTime = researchStageAt(researchPlan, elapsedSec);
+    if (byTime <= researchStageRef.current) return;
+    researchStageRef.current = byTime;
+    soundRef.current.land();
+    void runViewTransition(() => setResearchStage(byTime));
+  }, [state.phase, elapsedSec, researchPlan]);
+
+  const handleNextStage = (): void => {
+    if (state.phase !== 'research' || researchStageRef.current >= researchPlan.length - 1) return;
+    const next = researchStageRef.current + 1;
+    researchStageRef.current = next;
+    soundRef.current.land();
+    void runViewTransition(() => setResearchStage(next));
+  };
+
+  const handleToggleGather = (index: number): void => {
+    setGatherChecked((prev) => prev.map((checked, i) => (i === index ? !checked : checked)));
+  };
+
+  const handleToggleClock = (): void => {
+    const hideClock = !settings.hideClock;
+    setSettings((prev) => ({ ...prev, hideClock }));
+    saveSettings({ hideClock });
+  };
+
   const shareTextValue = buildShareText(dict.share.text, {
     topic: state.topic ?? '',
     minutes: Math.round(settings.speechSec / 60),
@@ -514,6 +558,11 @@ function AppContent({ locale }: Props) {
     const researchSec = minutes * 60;
     setSettings((prev) => ({ ...prev, researchSec }));
     saveSettings({ researchSec });
+  };
+
+  const handleHideClockChange = (hideClock: boolean): void => {
+    setSettings((prev) => ({ ...prev, hideClock }));
+    saveSettings({ hideClock });
   };
 
   const handleMutedChange = (muted: boolean): void => {
@@ -659,6 +708,13 @@ function AppContent({ locale }: Props) {
         shareUrl={shareUrlValue}
         onShareBack={handleShareBack}
         onShareTrack={handleShareTrack}
+        researchStages={researchStageIds}
+        researchStage={researchStage}
+        gatherChecked={gatherChecked}
+        onToggleGather={handleToggleGather}
+        onNextStage={handleNextStage}
+        hideClock={settings.hideClock}
+        onToggleClock={handleToggleClock}
       />
 
       <SettingsDialog
@@ -666,10 +722,12 @@ function AppContent({ locale }: Props) {
         speechMinutes={speechMinutes}
         researchMinutes={researchMinutes}
         muted={settings.muted}
+        hideClock={settings.hideClock}
         dict={dict}
         onSpeechChange={handleSpeechMinutesChange}
         onResearchChange={handleResearchMinutesChange}
         onMutedChange={handleMutedChange}
+        onHideClockChange={handleHideClockChange}
         onClose={closeSettings}
       />
     </>

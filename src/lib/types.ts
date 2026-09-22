@@ -19,4 +19,6 @@ export interface Settings {
   speechSec: number;
   researchSec: number;
   muted: boolean;
+  /** Clock and ruler are blurred while the timer runs (the visitor chose not to watch the time). */
+  hideClock: boolean;
 }

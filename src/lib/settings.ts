@@ -14,6 +14,7 @@ const KEY_SPEECH = 'irticalen:speech';
 const KEY_RESEARCH = 'irticalen:research';
 const KEY_MUTED = 'irticalen:muted';
 const KEY_LANG = 'irticalen:lang';
+const KEY_HIDE_CLOCK = 'irticalen:hideClock';
 
 /** Minimal storage interface (localStorage-compatible, injectable). */
 export interface StorageLike {
@@ -72,7 +73,13 @@ export function loadSettings(storage: StorageLike | undefined = defaultStorage()
   } catch {
     muted = false;
   }
-  return { speechSec, researchSec, muted };
+  let hideClock = false;
+  try {
+    hideClock = storage?.getItem(KEY_HIDE_CLOCK) === 'true';
+  } catch {
+    hideClock = false;
+  }
+  return { speechSec, researchSec, muted, hideClock };
 }
 
 /** Saves settings partially (fields not provided are left untouched). Never throws. */
@@ -93,6 +100,9 @@ export function saveSettings(
     }
     if (partial.muted !== undefined) {
       storage.setItem(KEY_MUTED, partial.muted ? 'true' : 'false');
+    }
+    if (partial.hideClock !== undefined) {
+      storage.setItem(KEY_HIDE_CLOCK, partial.hideClock ? 'true' : 'false');
     }
   } catch {
     // sessizce yok say

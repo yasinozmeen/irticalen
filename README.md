@@ -22,7 +22,7 @@ Hazırlıksız konuşma pratiği için küçük, ücretsiz bir web uygulaması.
 2. **Çevir** — rastgele bir konu gelir: *İlk maaş*, *Bileşik faiz*, *Tutunamayanlar*…
 3. Sayacı başlat ve süre bitene kadar konuş.
 
-Takılırsan ekrandaki üç soruyu izle: **Nedir? → Neden önemli? → Ne yapmalı?**
+Takılırsan ekrandaki üç adımı izle: **Nedir? → Bir örnek → Ne düşünüyorum?**
 
 ### İki mod
 
@@ -101,7 +101,7 @@ Fikir ve akış, [@bitterbuilds](https://www.instagram.com/bitterbuilds/) taraf�
 
 ## English
 
-**İrticalen** (Turkish for *extemporaneously*) is a tiny, free impromptu-speaking trainer: pick a category, spin for a random topic, start the timer and talk until it runs out. Stuck? Follow the three prompts on screen: **What? → So what? → Now what?**
+**İrticalen** (Turkish for *extemporaneously*) is a tiny, free impromptu-speaking trainer: pick a category, spin for a random topic, start the timer and talk until it runs out. Stuck? Follow the three steps on screen: **What is it? → An example → What do I think?**
 
 - **Off the cuff** — the topic lands and the clock starts.
 - **Researched** — a harder concept lands; time your research first, then speak.

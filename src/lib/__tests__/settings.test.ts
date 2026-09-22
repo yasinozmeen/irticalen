@@ -123,6 +123,17 @@ describe('saveSettings', () => {
     expect(settings.researchSec).toBe(900);
     expect(settings.muted).toBe(true);
   });
+
+  it('süreyi gizleme tercihi kaydedilir; kayıt yoksa ya da bozuksa görünür kalır', () => {
+    expect(loadSettings(memoryStorage()).hideClock).toBe(false);
+    expect(loadSettings(memoryStorage({ 'irticalen:hideClock': 'evet' })).hideClock).toBe(false);
+    expect(loadSettings(throwingStorage()).hideClock).toBe(false);
+    const storage = memoryStorage();
+    saveSettings({ hideClock: true }, storage);
+    expect(loadSettings(storage).hideClock).toBe(true);
+    saveSettings({ hideClock: false }, storage);
+    expect(loadSettings(storage).hideClock).toBe(false);
+  });
 });
 
 describe('locale', () => {

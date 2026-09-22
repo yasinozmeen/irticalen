@@ -8,10 +8,12 @@ interface Props {
   speechMinutes: number;
   researchMinutes: number;
   muted: boolean;
+  hideClock: boolean;
   dict: Dictionary;
   onSpeechChange: (minutes: number) => void;
   onResearchChange: (minutes: number) => void;
   onMutedChange: (muted: boolean) => void;
+  onHideClockChange: (hideClock: boolean) => void;
   onClose: () => void;
 }
 
@@ -21,10 +23,12 @@ export function SettingsDialog({
   speechMinutes,
   researchMinutes,
   muted,
+  hideClock,
   dict,
   onSpeechChange,
   onResearchChange,
   onMutedChange,
+  onHideClockChange,
   onClose,
 }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -84,6 +88,16 @@ export function SettingsDialog({
             onChange={(event) => onMutedChange((event.target as HTMLInputElement).checked)}
           />
           <label for="settings-mute">{dict.settings.mute}</label>
+        </div>
+
+        <div class="settings-mute-row">
+          <input
+            id="settings-hide-clock"
+            type="checkbox"
+            checked={hideClock}
+            onChange={(event) => onHideClockChange((event.target as HTMLInputElement).checked)}
+          />
+          <label for="settings-hide-clock">{dict.settings.hideClock}</label>
         </div>
 
         <p class="settings-saved">{dict.settings.saved}</p>
