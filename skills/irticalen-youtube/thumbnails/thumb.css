@@ -1,0 +1,65 @@
+/* Shared by every thumbnail template: the irticalen "paper" palette at YouTube's 1280×720. */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&display=block');
+
+:root {
+  --paper: #f3eee2;
+  --ink: #1d1a16;
+  --pencil: #6f695c;
+  --rule: #d6cfbf;
+  --red: #b8281c;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Newsreader', Georgia, serif;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 46px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.brand svg {
+  width: 58px;
+  height: 59px;
+}
+
+.dot {
+  color: var(--red);
+}
+
+/* The topic: whole words only — never broken, never hyphenated. */
+[data-topic] {
+  display: block;
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  hyphens: none;
+  text-wrap: balance;
+}
+
+.caption {
+  font-size: 40px;
+  font-style: italic;
+  color: var(--pencil);
+}

@@ -1,0 +1,15 @@
+<!doctype html>
+<!-- Şablon "mürekkep": sitenin tek dolu yüzeyi (mürekkep blok) tüm kareyi kaplar; en yüksek kontrast. -->
+<html><head><meta charset="utf-8"><title>mürekkep</title><link rel="stylesheet" href="thumb.css">
+<style>
+  body { background: var(--ink); color: var(--paper); --bubble: var(--paper); --mark: var(--ink); }
+  .page { position: absolute; inset: 0; padding: 52px 72px 48px; display: flex; flex-direction: column; }
+  .topic-box { flex: 1; display: flex; align-items: center; min-height: 0; margin: 24px 0; }
+  [data-topic] { width: 100%; }
+  .caption { color: #b9b2a3; border-top: 2px solid #3a352d; padding-top: 22px; }
+</style></head>
+<body><div class="page">
+  <div class="brand"><svg viewBox="0 0 100 102" aria-hidden="true"><polygon points="0,0 92,0 92,70 40,70 14,94 14,70 0,70" fill="var(--bubble, #1d1a16)"/><polygon points="22,25 32,35 22,45 12,35" fill="var(--mark, #f3eee2)"/><polygon points="46,25 56,35 46,45 36,35" fill="#b8281c"/><polygon points="70,25 80,35 70,45 60,35" fill="var(--mark, #f3eee2)"/></svg><span>irticalen<span class="dot">.</span></span></div>
+  <div class="topic-box"><span data-topic data-max="220"></span></div>
+  <p class="caption" data-caption></p>
+</div><script src="thumb.js"></script></body></html>

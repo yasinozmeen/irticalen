@@ -978,6 +978,14 @@ a {
   align-items: center;
 }
 
+.share-panel-hint {
+  font-size: 1rem;
+  font-style: italic;
+  line-height: 1.45;
+  color: var(--pencil);
+  max-width: 34rem;
+}
+
 .share-panel-back {
   margin-left: auto;
 }

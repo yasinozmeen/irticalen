@@ -2,13 +2,15 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { xIntentUrl, whatsappUrl } from '../lib/share';
 import type { Dictionary } from '../i18n';
 
-export type ShareChannel = 'x' | 'whatsapp' | 'copy_link' | 'copy_image' | 'download_image' | 'native';
+export type ShareChannel = 'x' | 'whatsapp' | 'copy_link' | 'copy_image' | 'download_image' | 'native' | 'youtube';
 
 interface Props {
   dict: Dictionary;
   imageUrl: string;
   text: string;
   url: string;
+  /** Ask + skill link + session block for an AI agent that prepares the YouTube upload. */
+  youtubePrompt: string;
   onBack: () => void;
   onTrack: (channel: ShareChannel) => void;
 }
@@ -25,8 +27,9 @@ function clipboardImageSupported(): boolean {
  * Our own share panel — replaces the timer overlay's content in place (same dialog, same focus
  * trap root) instead of calling `navigator.share` directly. See docs SPEC part B.
  */
-export function SharePanel({ dict, imageUrl, text, url, onBack, onTrack }: Props) {
+export function SharePanel({ dict, imageUrl, text, url, youtubePrompt, onBack, onTrack }: Props) {
   const [copyState, setCopyState] = useState<'idle' | 'done' | 'failed'>('idle');
+  const [youtubeState, setYoutubeState] = useState<'idle' | 'done' | 'failed'>('idle');
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [imageCopySupported] = useState(clipboardImageSupported);
   const [nativeSupported] = useState(() => {
@@ -83,6 +86,17 @@ export function SharePanel({ dict, imageUrl, text, url, onBack, onTrack }: Props
     }, 2500);
   };
 
+  // Stays "copied" (with the one-line hint) — the visitor now switches to their agent and back.
+  const handleYoutube = async (): Promise<void> => {
+    onTrack('youtube');
+    try {
+      await navigator.clipboard.writeText(youtubePrompt);
+      if (mountedRef.current) setYoutubeState('done');
+    } catch {
+      if (mountedRef.current) setYoutubeState('failed');
+    }
+  };
+
   const downloadImage = (): void => {
     onTrack('download_image');
     try {
@@ -135,6 +149,9 @@ export function SharePanel({ dict, imageUrl, text, url, onBack, onTrack }: Props
         <button type="button" class="btn btn-secondary" onClick={handleWhatsapp}>
           {dict.share.whatsapp}
         </button>
+        <button type="button" class="btn btn-secondary" onClick={() => void handleYoutube()}>
+          {youtubeState === 'done' ? dict.share.youtubeDone : youtubeState === 'failed' ? dict.share.copyLinkFailed : dict.share.youtube}
+        </button>
         <button type="button" class="btn btn-secondary" onClick={() => void handleCopyLink()}>
           {copyState === 'done' ? dict.share.copyLinkDone : copyState === 'failed' ? dict.share.copyLinkFailed : dict.share.copyLink}
         </button>
@@ -151,6 +168,11 @@ export function SharePanel({ dict, imageUrl, text, url, onBack, onTrack }: Props
         </button>
       </div>
 
+      {youtubeState === 'done' && <p class="share-panel-hint timer-rise">{dict.share.youtubeHint}</p>}
+
+      <p class="sr-only" aria-live="polite">
+        {youtubeState === 'done' ? dict.share.youtubeDone : youtubeState === 'failed' ? dict.share.copyLinkFailed : ''}
+      </p>
       <p class="sr-only" aria-live="polite">
         {copyState === 'done' ? dict.share.copyLinkDone : copyState === 'failed' ? dict.share.copyLinkFailed : ''}
       </p>

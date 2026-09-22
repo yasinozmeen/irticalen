@@ -68,6 +68,12 @@ export const tr = {
     more: 'diğer…',
     back: 'geri',
     imageAlt: 'konu önizleme görseli',
+    youtube: 'YouTube için kopyala',
+    youtubeDone: 'kopyalandı',
+    youtubeHint: 'Videonu çektiysen: kopyala, Claude Code, Codex ya da Gemini CLI gibi bir AI ajanına yapıştır. Bölümleri, küçük resimleri ve açıklamayı o hazırlar.',
+    youtubeIntro: "irticalen'de bir konuşma yaptım ve videosunu YouTube'a hazırlamak istiyorum. Şu skill'i oku ve adımlarını izle: {skill}",
+    chapterResearch: 'Araştırma: {stage}',
+    chapterSpeech: 'Konuşma: {step}',
   },
   settings: {
     open: 'Ayarlar',

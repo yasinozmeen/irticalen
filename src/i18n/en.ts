@@ -69,6 +69,12 @@ export const en: Dictionary = {
     downloadImage: 'download image',
     more: 'more…',
     back: 'back',
+    youtube: 'copy for YouTube',
+    youtubeDone: 'copied',
+    youtubeHint: 'Filmed yourself? Copy this and paste it to an AI agent such as Claude Code, Codex or Gemini CLI. It prepares the chapters, thumbnails and description.',
+    youtubeIntro: 'I did a talk on irticalen and want to prepare the video for YouTube. Read this skill and follow its steps: {skill}',
+    chapterResearch: 'Research: {stage}',
+    chapterSpeech: 'Speech: {step}',
     imageAlt: 'topic preview image',
   },
   settings: {

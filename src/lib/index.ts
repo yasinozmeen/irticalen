@@ -13,3 +13,4 @@ export * from './slug';
 export * from './ogLayout';
 export * from './viewTransition';
 export * from './researchStages';
+export * from './youtube';

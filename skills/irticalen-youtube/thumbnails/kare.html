@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- Şablon "kare": solda kâğıt + konu, sağda videodan bir kare (yüz olan küçük resimler daha çok tıklanır). -->
+<html><head><meta charset="utf-8"><title>kare</title><link rel="stylesheet" href="thumb.css">
+<style>
+  .paper { position: absolute; left: 0; top: 0; bottom: 0; width: 700px; padding: 52px 56px 48px 72px;
+           display: flex; flex-direction: column; border-right: 6px solid var(--ink); }
+  .topic-box { flex: 1; display: flex; align-items: center; min-height: 0; margin: 20px 0; }
+  [data-topic] { width: 100%; }
+  .caption { font-size: 34px; border-top: 2px solid var(--rule); padding-top: 18px; }
+  [data-frame] { position: absolute; left: 700px; right: 0; top: 0; bottom: 0; background: center / cover no-repeat #cfc7b5; }
+  [data-frame].is-empty::after { content: attr(data-empty); position: absolute; inset: 0; display: grid; place-items: center;
+           font-size: 36px; font-style: italic; color: var(--pencil); }
+</style></head>
+<body>
+  <div class="paper">
+    <div class="brand"><svg viewBox="0 0 100 102" aria-hidden="true"><polygon points="0,0 92,0 92,70 40,70 14,94 14,70 0,70" fill="var(--bubble, #1d1a16)"/><polygon points="22,25 32,35 22,45 12,35" fill="var(--mark, #f3eee2)"/><polygon points="46,25 56,35 46,45 36,35" fill="#b8281c"/><polygon points="70,25 80,35 70,45 60,35" fill="var(--mark, #f3eee2)"/></svg><span>irticalen<span class="dot">.</span></span></div>
+    <div class="topic-box"><span data-topic data-max="150"></span></div>
+    <p class="caption" data-caption></p>
+  </div>
+  <div data-frame></div>
+<script src="thumb.js"></script></body></html>

@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- Şablon "cetvel": sayaç ekranının mürekkep cetveli altta, dolmuş hâliyle — "süre bitti, konuştum". -->
+<html><head><meta charset="utf-8"><title>cetvel</title><link rel="stylesheet" href="thumb.css">
+<style>
+  .page { position: absolute; inset: 0; padding: 52px 72px 56px; display: flex; flex-direction: column; }
+  .label { margin-top: 40px; font-size: 40px; font-style: italic; color: var(--pencil); }
+  .topic-box { flex: 1; display: flex; align-items: flex-end; min-height: 0; margin: 8px 0 30px; }
+  [data-topic] { width: 100%; }
+  .ruler { height: 34px; background:
+      linear-gradient(var(--ink), var(--ink)) left bottom / 100% 10px no-repeat,
+      repeating-linear-gradient(90deg, var(--pencil) 0 2px, transparent 2px calc(100% / 12)) left bottom / 100% 26px no-repeat,
+      linear-gradient(var(--rule), var(--rule)) left bottom / 100% 2px no-repeat; }
+  .caption { margin-top: 18px; }
+</style></head>
+<body><div class="page">
+  <div class="brand"><svg viewBox="0 0 100 102" aria-hidden="true"><polygon points="0,0 92,0 92,70 40,70 14,94 14,70 0,70" fill="var(--bubble, #1d1a16)"/><polygon points="22,25 32,35 22,45 12,35" fill="var(--mark, #f3eee2)"/><polygon points="46,25 56,35 46,45 36,35" fill="#b8281c"/><polygon points="70,25 80,35 70,45 60,35" fill="var(--mark, #f3eee2)"/></svg><span>irticalen<span class="dot">.</span></span></div>
+  <p class="label" data-your-topic></p>
+  <div class="topic-box"><span data-topic data-max="200"></span></div>
+  <div class="ruler"></div>
+  <p class="caption" data-caption></p>
+</div><script src="thumb.js"></script></body></html>

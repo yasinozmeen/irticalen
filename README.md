@@ -36,6 +36,7 @@ Takılırsan ekrandaki üç adımı izle: **Nedir? → Bir örnek → Ne düşü
 - 11 kategoride 260'tan fazla konu; Türkçe liste çeviri değil, buralı: *altın günü*, *esnaf aklı*, *Harf Devrimi*, *Kürk Mantolu Madonna*.
 - Türkçe ve İngilizce arayüz.
 - Süreler ayarlanabilir (konuşma 1–10 dk, araştırma 1–60 dk). Ses efektleri kapatılabilir.
+- Konuşurken kendini çekiyorsan: paylaş ekranındaki **YouTube için kopyala** bir AI ajanına videonu YouTube'a hazırlatır (bölümler, küçük resimler, açıklama, kısa konuşma karnesi). Ayrıntı: [`skills/irticalen-youtube`](skills/irticalen-youtube/).
 - Klavyeyle tam kullanım, ekran okuyucu desteği, “hareketi azalt” tercihine saygı.
 - **Ses kaydı yok, üyelik yok, çerez yok.** Ayarların yalnızca kendi tarayıcında durur. Siteyi iyileştirmek için yalnız isimsiz kullanım sayıları tutulur (hangi adımda bırakıldığı, hata oluştu mu); IP adresi, tarayıcı kimliği ya da kalıcı kullanıcı numarası saklanmaz. Ayrıntı: [`docs/TRACKING.md`](docs/TRACKING.md).
 

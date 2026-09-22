@@ -35,3 +35,5 @@
 **Konuşma iskeleti:** Nedir? → Bir örnek → Ne düşünüyorum? (süre üçe bölünür). Her iki modda konuşma sırasında görünür.
 
 **Süreyi gizle:** sayaçta `süreyi gizle`/`süreyi göster` bağlantısı (ve ayarlarda onay kutusu). Gizliyken rakam ve cetvel bulanıklaşır, dokununca açılır; "Süre." ekranında süre yine görünür. Varsayılan: görünür. Tercih kalıcıdır.
+
+**YouTube için kopyala (2026-09-22):** paylaş ekranında bir düğme; bir AI ajanına verilecek metni panoya kopyalar: kısa istek + skill bağlantısı (`skills/irticalen-youtube/SKILL.md`, raw GitHub) + oturum bloğu (`topic`, `lang`, `mode`, `research_min` — gerçekte geçen, `speech_min`, `topic_url`, `timer_chapters` — sayacın başladığı ana göre gerçek bölüm başlangıçları, YouTube kurallarına uydurulmuş: ilk 0:00, en az 3, her biri ≥10 sn). Kopyalanınca düğme "kopyalandı" olur ve altında tek satır açıklama çıkar. Asıl iş (yazıya dökme, bölümler, düzenleme önerileri, konuşma karnesi, başlık/açıklama/etiket, 5 küçük resim şablonu, yükleme rehberi) skill'dedir; site video görmez.

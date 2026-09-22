@@ -24,6 +24,7 @@ interface Props {
   shareImageUrl: string;
   shareText: string;
   shareUrl: string;
+  youtubePrompt: string;
   onShareBack: () => void;
   onShareTrack: (channel: ShareChannel) => void;
   /** Research stages in order (from the plan) and the index of the current one. */
@@ -67,6 +68,7 @@ export function TimerOverlay({
   shareImageUrl,
   shareText,
   shareUrl,
+  youtubePrompt,
   onShareBack,
   onShareTrack,
   researchStages,
@@ -139,6 +141,7 @@ export function TimerOverlay({
           imageUrl={shareImageUrl}
           text={shareText}
           url={shareUrl}
+          youtubePrompt={youtubePrompt}
           onBack={onShareBack}
           onTrack={onShareTrack}
         />

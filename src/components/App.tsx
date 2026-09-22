@@ -25,6 +25,10 @@ import {
   buildTopicIndex,
   planResearchStages,
   researchStageAt,
+  sessionChapters,
+  researchMinutes as spentResearchMinutes,
+  youtubePrompt as buildYoutubePrompt,
+  type SessionMarks,
   type Countdown,
   type ReleaseWakeLock,
   type Settings,
@@ -75,6 +79,8 @@ function AppContent({ locale }: Props) {
   // The stage already decided on — set synchronously, because the state itself only lands once the
   // view transition's update runs, and a clock tick in between must not advance (and chime) twice.
   const researchStageRef = useRef(0);
+  // Wall-clock marks of the running session — the YouTube prompt turns them into chapter hints.
+  const marksRef = useRef<SessionMarks | null>(null);
   const [gatherChecked, setGatherChecked] = useState<boolean[]>([false, false, false, false, false]);
 
   const soundRef = useRef(createSoundEngine());
@@ -282,6 +288,7 @@ function AppContent({ locale }: Props) {
         const wasSpeech = stateRef.current.phase === 'speech';
         dispatch({ type: 'TIME_UP' });
         countdownRef.current = null;
+        if (wasResearch && marksRef.current) marksRef.current.researchEndAt = Date.now();
         // Natural time-out counts the same as the matching manual action below.
         if (wasResearch && !researchDoneSentRef.current) {
           researchDoneSentRef.current = true;
@@ -423,6 +430,14 @@ function AppContent({ locale }: Props) {
     beginCountdown(nextPhase === 'research' ? settings.researchSec : settings.speechSec);
     setResearchStage(0);
     researchStageRef.current = 0;
+    const startedAt = Date.now();
+    marksRef.current = {
+      startedAt,
+      stages: nextPhase === 'research' ? [{ stage: 'gather', at: startedAt }] : [],
+      researchEndAt: null,
+      speechAt: nextPhase === 'speech' ? startedAt : null,
+      speechSec: settings.speechSec,
+    };
     setGatherChecked([false, false, false, false, false]);
     researchDoneSentRef.current = false;
     speechDoneSentRef.current = false;
@@ -437,6 +452,7 @@ function AppContent({ locale }: Props) {
     if (state.phase !== 'research') return;
     stopCountdown();
     soundRef.current.land();
+    if (marksRef.current) marksRef.current.researchEndAt = Date.now();
     dispatch({ type: 'RESEARCH_DONE' });
     setTimerTotalSec(settings.speechSec);
     setRemainingSec(settings.speechSec);
@@ -450,6 +466,7 @@ function AppContent({ locale }: Props) {
   const handleReadyToSpeak = (): void => {
     if (state.phase !== 'ready') return;
     dispatch({ type: 'READY_TO_SPEAK' });
+    if (marksRef.current) marksRef.current.speechAt = Date.now();
     beginCountdown(settings.speechSec);
     tracker.track('start_speech', { m: state.mode, t: state.topic ?? undefined });
   };
@@ -488,6 +505,7 @@ function AppContent({ locale }: Props) {
     const byTime = researchStageAt(researchPlan, elapsedSec);
     if (byTime <= researchStageRef.current) return;
     researchStageRef.current = byTime;
+    marksRef.current?.stages.push({ stage: researchPlan[byTime].stage, at: Date.now() });
     soundRef.current.land();
     void runViewTransition(() => setResearchStage(byTime));
   }, [state.phase, elapsedSec, researchPlan]);
@@ -496,6 +514,7 @@ function AppContent({ locale }: Props) {
     if (state.phase !== 'research' || researchStageRef.current >= researchPlan.length - 1) return;
     const next = researchStageRef.current + 1;
     researchStageRef.current = next;
+    marksRef.current?.stages.push({ stage: researchPlan[next].stage, at: Date.now() });
     soundRef.current.land();
     void runViewTransition(() => setResearchStage(next));
   };
@@ -516,6 +535,26 @@ function AppContent({ locale }: Props) {
   });
   const shareUrlValue = currentSlug ? topicPageUrl(locale, currentSlug) : shareUrl(locale);
   const shareImageUrl = currentSlug ? `/og/${locale}/${currentSlug}.png` : '';
+
+  const marks = marksRef.current;
+  const youtubePromptValue =
+    state.phase === 'done' && marks && state.topic
+      ? buildYoutubePrompt({
+          intro: dict.share.youtubeIntro,
+          topic: state.topic,
+          lang: locale,
+          mode: state.mode,
+          researchMin: spentResearchMinutes(marks),
+          speechMin: Math.round(marks.speechSec / 60),
+          topicUrl: shareUrlValue,
+          chapters: sessionChapters(marks, {
+            stages: dict.timer.stages,
+            arc: dict.timer.arc,
+            research: dict.share.chapterResearch,
+            speech: dict.share.chapterSpeech,
+          }),
+        })
+      : '';
 
   const handleShareOpen = (): void => {
     tracker.track('share_click', { t: 'open' });
@@ -706,6 +745,7 @@ function AppContent({ locale }: Props) {
         shareImageUrl={shareImageUrl}
         shareText={shareTextValue}
         shareUrl={shareUrlValue}
+        youtubePrompt={youtubePromptValue}
         onShareBack={handleShareBack}
         onShareTrack={handleShareTrack}
         researchStages={researchStageIds}
