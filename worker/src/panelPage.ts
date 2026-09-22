@@ -112,7 +112,9 @@ export const PANEL_HTML = String.raw`<!doctype html>
   @media (min-width: 40rem) { .page { padding-top: 2.5rem; } }
   .status { margin-top: 2rem; color: var(--pencil); }
   .note-contact { color: var(--pencil); font-size: .9375rem; margin-top: .25rem; overflow-wrap: anywhere; }
-  .note-text { overflow-wrap: anywhere; }
+  .note-text { overflow-wrap: anywhere; white-space: pre-line; }
+  .note-more { color: var(--ink); font-size: 1rem; line-height: 1.55; margin-top: .6rem; white-space: pre-line; overflow-wrap: anywhere; }
+  .note-foot .more { color: var(--ink); }
   .empty { margin-top: 1.5rem; }
   .flash {
     position: fixed; left: 50%; bottom: calc(1rem + env(safe-area-inset-bottom)); transform: translate(-50%, 1.5rem);
@@ -421,7 +423,17 @@ export const PANEL_HTML = String.raw`<!doctype html>
         if (where) meta += ' · ' + where;
       }
       head.append(el('span', { class: 'note-kind' + (n.kind === 'idea' ? ' mine' : '') }, meta), el('time', null, when(n.ts, d.now)));
-      li.append(head, el('p', { class: 'note-text' }, n.text));
+      // Long ideas (moved over from GitHub) show their title; the rest opens under "devamı".
+      var split = n.text.indexOf('\n\n');
+      var title = split > 0 ? n.text.slice(0, split) : n.text;
+      var rest = split > 0 ? n.text.slice(split + 2) : '';
+      li.append(head, el('p', { class: 'note-text' }, title));
+      var moreText = null;
+      if (rest) {
+        moreText = el('div', { class: 'note-more', id: 'more-' + n.id }, rest);
+        moreText.hidden = true;
+        li.append(moreText);
+      }
       if (n.contact) li.append(el('p', { class: 'note-contact' }, 'iletişim: ' + n.contact));
 
       var foot = el('div', { class: 'note-foot' });
@@ -453,6 +465,15 @@ export const PANEL_HTML = String.raw`<!doctype html>
           flash('Silinemedi, yeniden dene.');
         });
       });
+      if (moreText) {
+        var more = el('button', { class: 'more', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'more-' + n.id }, 'devamı');
+        more.addEventListener('click', function () {
+          moreText.hidden = !moreText.hidden;
+          more.setAttribute('aria-expanded', String(!moreText.hidden));
+          more.textContent = moreText.hidden ? 'devamı' : 'kapat';
+        });
+        foot.append(more);
+      }
       foot.append(mark, hide);
       li.append(foot);
       list.append(li);
