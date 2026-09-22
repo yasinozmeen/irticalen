@@ -7,6 +7,8 @@ export interface TelegramEnv extends NotifyEnv {
 }
 
 const WEBHOOK_URL = 'https://irticalen.yasinozmeen.me/api/telegram';
+const PANEL_URL = 'https://irticalen.yasinozmeen.me/api/panel';
+const OPEN_PANEL = { inline_keyboard: [[{ text: 'defteri aç', web_app: { url: PANEL_URL } }]] };
 const MAX_NOTE_CHARS = 4000;
 
 const NO_STORE: HeadersInit = { 'Cache-Control': 'no-store' };
@@ -62,9 +64,9 @@ export async function handleTelegramUpdate(
     return new Response(null, { status: 200, headers: NO_STORE });
   }
 
-  const reply = (text: string) =>
+  const reply = (text: string, extra: Record<string, unknown> = {}) =>
     ctx.waitUntil(
-      callTelegram(env, 'sendMessage', { chat_id: chatId, text, reply_to_message_id: msg.message_id }, fetchImpl)
+      callTelegram(env, 'sendMessage', { chat_id: chatId, text, reply_to_message_id: msg.message_id, ...extra }, fetchImpl)
         .then(() => undefined)
         .catch(() => undefined),
     );
@@ -75,7 +77,9 @@ export async function handleTelegramUpdate(
     return new Response(null, { status: 200, headers: NO_STORE });
   }
   if (text.startsWith('/')) {
-    reply('Buraya yazdığın her mesaj irticalen için fikir olarak kaydedilir.');
+    reply('Buraya yazdığın her mesaj irticalen için fikir olarak kaydedilir. Sayılar ve mesajlar defterde:', {
+      reply_markup: OPEN_PANEL,
+    });
     return new Response(null, { status: 200, headers: NO_STORE });
   }
 
@@ -98,7 +102,7 @@ export async function handleTelegramUpdate(
 }
 
 /**
- * POST /api/telegram/setup — points the bot's webhook here. Guarded by the same secret, so the bot token
+ * POST /api/telegram/setup — points the bot's webhook here and puts the notebook button in the owner's chat. Guarded by the same secret, so the bot token
  * never has to leave the Worker. Safe to call again.
  */
 export async function handleTelegramSetup(
@@ -115,8 +119,16 @@ export async function handleTelegramSetup(
     { url: WEBHOOK_URL, secret_token: env.TELEGRAM_WEBHOOK_SECRET, allowed_updates: ['message'] },
     fetchImpl,
   );
-  return new Response(await res.text(), {
-    status: res.ok ? 200 : 502,
+  // The "defter" button next to the message box — set only in the owner's chat, nobody else sees it.
+  const menu = await callTelegram(
+    env,
+    'setChatMenuButton',
+    { chat_id: env.TELEGRAM_CHAT_ID?.trim(), menu_button: { type: 'web_app', text: 'defter', web_app: { url: PANEL_URL } } },
+    fetchImpl,
+  );
+  const ok = res.ok && menu.ok;
+  return new Response(JSON.stringify({ webhook: await res.json(), menu: await menu.json() }), {
+    status: ok ? 200 : 502,
     headers: { 'Content-Type': 'application/json', ...NO_STORE },
   });
 }

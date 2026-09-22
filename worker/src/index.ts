@@ -1,6 +1,7 @@
 import { parseEvent, parseFeedback } from './validate.js';
 import { feedbackMessage, notifyTelegram, type NotifyEnv } from './notify.js';
 import { handleTelegramSetup, handleTelegramUpdate } from './telegram.js';
+import { handlePanel } from './panel.js';
 
 export interface Env extends NotifyEnv {
   DB: D1Database;
@@ -70,6 +71,11 @@ export default {
         status: 200,
         headers: JSON_NO_STORE_HEADERS,
       });
+    }
+
+    // Route: /api/panel — the owner's notebook (Telegram Mini App); every data call checks Telegram's signature
+    if (pathname === '/api/panel' || pathname.startsWith('/api/panel/')) {
+      return handlePanel(request, env, pathname);
     }
 
     // Route: POST /api/telegram — the owner's notes from the Telegram bot

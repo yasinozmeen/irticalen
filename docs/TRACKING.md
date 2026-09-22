@@ -50,6 +50,14 @@ olan mesajlar kaydedilir; başka sohbetler sessizce yok sayılır. `/` ile başl
 kaydedilmez. Telegram yeniden denerse `update_id` aynı notun iki kez yazılmasını önler.
 `POST /api/telegram/setup` (aynı gizli başlıkla) botun webhook'unu bu adrese kurar; bot anahtarı Worker'dan çıkmaz.
 
+## /api/panel — sahibin defteri (Telegram Mini App)
+Botta mesaj kutusunun yanındaki "defter" düğmesi (yalnız sahibin sohbetinde kurulur) `GET /api/panel` sayfasını
+açar; sayfada veri yoktur. Veri `POST /api/panel/data` (`{ init, range: today|7|30|all }`) ve
+`POST /api/panel/note` (`{ init, id, action: done|undone|hide|unhide }`) ile gelir. `init`, Telegram'ın imzaladığı
+açılış verisidir: imza bot anahtarıyla doğrulanır, 24 saatten eskisi ve `user.id` ≠ `TELEGRAM_CHAT_ID` olanı `403`.
+"sil" kaydı silmez, `hidden_at` ile gizler; "yapıldı" `done_at` yazar. Telegram'ın tarayıcı sürümünde
+(web.telegram.org) açılmaz — sitenin `frame-ancestors 'none'` kuralı yüzünden; telefon ve bilgisayar uygulamasında açılır.
+
 ## Diğer
 - `GET /api/health` → `200 {"ok":true}`.
 - `/api/*` dışındaki ve tanımsız yollar → `404`. Yalnız `POST`/`GET`; diğerleri `405`.

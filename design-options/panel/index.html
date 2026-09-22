@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>irticalen defteri</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f3eee2;
+    --ink: #1d1a16;
+    --pencil: #6f695c;
+    --rule: #d6cfbf;
+    --red: #b8281c;
+    --paper-tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='389' height='389'%3E%3Cfilter id='d' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .33 0 0 0 0 .28 0 0 0 0 .2 3.2 0 0 0 -1.45'/%3E%3C/filter%3E%3Crect width='389' height='389' filter='url%28%23d%29' opacity='.34'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='557' height='557'%3E%3Cfilter id='l' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='17' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 .97 3 0 0 0 -1.5'/%3E%3C/filter%3E%3Crect width='557' height='557' filter='url%28%23l%29' opacity='.55'/%3E%3C/svg%3E");
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--paper-tex), var(--paper);
+    color: var(--ink);
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 1.0625rem;
+    line-height: 1.5;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: contain;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  h1, h2, h3, p, ol, ul { margin: 0; padding: 0; }
+  ol, ul { list-style: none; }
+  :focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+
+  .page { max-width: 34rem; margin: 0 auto; padding: 1.25rem 1.25rem calc(4rem + env(safe-area-inset-bottom)); }
+
+  /* Başlık satırı: defterin adı solda, dönem seçimi sağda — ikisi de yazı */
+  .masthead { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding-bottom: .75rem; border-bottom: 1px solid var(--rule); }
+  .masthead h1 { font-size: 1.0625rem; font-weight: 600; letter-spacing: .005em; }
+  .masthead h1 .dot { color: var(--red); }
+  .tabs { display: flex; gap: 1.25rem; }
+  .tab {
+    color: var(--pencil); text-decoration: underline; text-decoration-color: var(--rule);
+    text-underline-offset: .3em; text-decoration-thickness: 1px; padding: .5rem 0; min-height: 44px;
+  }
+  .tab[aria-selected="true"] { color: var(--ink); font-weight: 600; text-decoration-color: var(--ink); text-decoration-thickness: 2px; }
+  .tab .count { font-variant-numeric: tabular-nums; }
+
+  .range { display: flex; gap: 1rem; margin-top: 1.25rem; font-size: .9375rem; }
+  .range button { color: var(--pencil); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: .3em; min-height: 44px; }
+  .range button[aria-pressed="true"] { color: var(--ink); font-weight: 600; text-decoration-color: var(--ink); text-decoration-thickness: 2px; }
+
+  /* Açılış: sayılar cümlenin içinde */
+  .lede { font-size: clamp(1.625rem, 6.2vw, 2.125rem); line-height: 1.22; font-weight: 400; letter-spacing: -.01em; margin-top: 1rem; text-wrap: pretty; }
+  .lede b { font-weight: 600; font-variant-numeric: lining-nums tabular-nums; }
+  .lede-note { color: var(--pencil); font-size: .9375rem; margin-top: .75rem; }
+
+  section { margin-top: 2.75rem; }
+  h2 { font-size: 1.0625rem; font-weight: 600; margin-bottom: 1rem; }
+  h2 small { font-weight: 400; color: var(--pencil); font-size: .9375rem; margin-left: .35rem; }
+
+  /* Huni: mürekkep cetvel — çizgi uzunluğu = o adıma gelen kişi */
+  .funnel li { display: grid; grid-template-columns: 1fr auto; column-gap: 1rem; align-items: baseline; padding: .55rem 0 .7rem; }
+  .funnel .label { font-size: 1rem; }
+  .funnel .n { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .funnel .pct { color: var(--pencil); font-weight: 400; font-size: .875rem; margin-left: .4rem; }
+  .funnel .bar { grid-column: 1 / -1; height: 3px; background: var(--rule); margin-top: .45rem; position: relative; }
+  .funnel .bar i { position: absolute; inset: 0 auto 0 0; background: var(--ink); width: var(--w); transform-origin: left; animation: draw .9s cubic-bezier(.2,.7,.2,1) both; animation-delay: var(--d, 0s); }
+  .funnel .drop { grid-column: 1 / -1; color: var(--red); font-size: .875rem; margin-top: .35rem; }
+  .funnel .drop::before { content: ''; display: inline-block; width: .4rem; height: .4rem; background: var(--red); border-radius: 50%; margin-right: .45rem; vertical-align: .12em; }
+  @keyframes draw { from { transform: scaleX(0); } }
+
+  /* Günler: çetele gibi ince dikey çizgiler */
+  .days { display: grid; grid-template-columns: repeat(14, 1fr); gap: .35rem; align-items: end; height: 5.5rem; border-bottom: 1px solid var(--ink); }
+  .days span { background: var(--ink); height: var(--h); min-height: 1px; width: 3px; justify-self: center; }
+  .days span.today { background: var(--red); }
+  .days-axis { display: flex; justify-content: space-between; color: var(--pencil); font-size: .8125rem; margin-top: .4rem; }
+
+  /* İki sütunlu küçük tablolar: nereden, cihaz, ülke */
+  .ledger { width: 100%; border-collapse: collapse; font-size: 1rem; }
+  .ledger td { padding: .5rem 0; border-bottom: 1px solid var(--rule); }
+  .ledger td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .ledger td.muted { color: var(--pencil); font-weight: 400; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1.75rem; }
+  .pair h3 { font-size: .9375rem; font-weight: 600; margin-bottom: .25rem; }
+
+  .quiet { color: var(--pencil); font-size: .9375rem; }
+
+  /* Mesajlar */
+  .filters { display: flex; flex-wrap: wrap; column-gap: 1rem; margin-top: 1.25rem; font-size: .9375rem; }
+  .filters button { color: var(--pencil); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: .3em; min-height: 44px; }
+  .filters button[aria-pressed="true"] { color: var(--ink); font-weight: 600; text-decoration-color: var(--ink); text-decoration-thickness: 2px; }
+
+  .notes { margin-top: .5rem; }
+  .note { padding: 1.1rem 0 1rem; border-bottom: 1px solid var(--rule); }
+  .note-head { display: flex; justify-content: space-between; gap: 1rem; color: var(--pencil); font-size: .875rem; }
+  .note-kind.mine { color: var(--red); }
+  .note-kind.mine::before { content: ''; display: inline-block; width: .4rem; height: .4rem; background: var(--red); border-radius: 50%; margin-right: .45rem; vertical-align: .12em; }
+  .note-text { font-size: 1.1875rem; line-height: 1.42; margin-top: .35rem; text-wrap: pretty; }
+  .note-foot { display: flex; gap: 1.25rem; margin-top: .5rem; font-size: .9375rem; }
+  .note-foot button { color: var(--pencil); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: .3em; min-height: 36px; }
+  .note.done .note-text { color: var(--pencil); text-decoration: line-through; text-decoration-color: var(--pencil); text-decoration-thickness: 1px; }
+  .note.done .mark { color: var(--ink); text-decoration-color: var(--ink); }
+
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { .funnel .bar i { animation: none; } }
+  @media (min-width: 40rem) { .page { padding-top: 2.5rem; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="masthead">
+    <h1>irticalen<span class="dot">.</span> defteri</h1>
+    <nav class="tabs" role="tablist" aria-label="Bölümler">
+      <button class="tab" role="tab" aria-selected="true" aria-controls="p-stats" id="t-stats">sayılar</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="p-notes" id="t-notes">mesajlar <span class="count">(4)</span></button>
+    </nav>
+  </header>
+
+  <div id="p-stats" role="tabpanel" aria-labelledby="t-stats">
+    <div class="range" role="group" aria-label="Dönem">
+      <button aria-pressed="false">bugün</button>
+      <button aria-pressed="true">7 gün</button>
+      <button aria-pressed="false">30 gün</button>
+      <button aria-pressed="false">hepsi</button>
+    </div>
+
+    <p class="lede">Son 7 günde <b>38</b> kişi geldi. <b>17</b>'si çarkı çevirdi, <b>12</b>'si konuşmaya başladı, <b>9</b>'u sonuna kadar konuştu.</p>
+    <p class="lede-note">Önceki 7 güne göre yeni; karşılaştıracak veri yok.</p>
+
+    <section aria-labelledby="h-funnel">
+      <h2 id="h-funnel">Nerede bırakıyorlar</h2>
+      <ol class="funnel">
+        <li><span class="label">siteyi açtı</span><span class="n">38</span><span class="bar"><i style="--w:100%"></i></span></li>
+        <li><span class="label">çarkı çevirdi</span><span class="n">17<span class="pct">%45</span></span><span class="bar"><i style="--w:44.7%;--d:.08s"></i></span>
+          <span class="drop">en büyük kayıp burada: 21 kişi çarkı hiç çevirmeden çıktı</span></li>
+        <li><span class="label">konuşmaya başladı</span><span class="n">12<span class="pct">%71</span></span><span class="bar"><i style="--w:31.6%;--d:.16s"></i></span></li>
+        <li><span class="label">sonuna kadar konuştu</span><span class="n">9<span class="pct">%75</span></span><span class="bar"><i style="--w:23.7%;--d:.24s"></i></span></li>
+      </ol>
+      <p class="quiet">Yüzdeler bir önceki adıma göre. 3 kişi süre bitmeden kapattı; ortalama 24 saniye kalmıştı.</p>
+    </section>
+
+    <section aria-labelledby="h-days">
+      <h2 id="h-days">Günlere göre <small>gelen kişi</small></h2>
+      <div class="days" aria-hidden="true">
+        <span style="--h:1px"></span><span style="--h:1px"></span><span style="--h:1px"></span><span style="--h:1px"></span>
+        <span style="--h:1px"></span><span style="--h:1px"></span><span style="--h:1px"></span><span style="--h:1px"></span>
+        <span style="--h:1px"></span><span style="--h:1px"></span><span style="--h:1px"></span><span style="--h:1px"></span>
+        <span style="--h:100%"></span><span class="today" style="--h:6%"></span>
+      </div>
+      <div class="days-axis"><span>9 Eylül</span><span>21 Eylül: 36</span><span>bugün: 2</span></div>
+    </section>
+
+    <section aria-labelledby="h-where">
+      <h2 id="h-where">Nereden geldiler</h2>
+      <table class="ledger">
+        <tr><td>doğrudan adres</td><td>33</td></tr>
+        <tr><td>youtube.com</td><td>2</td></tr>
+        <tr><td>facebook.com</td><td>2</td></tr>
+        <tr><td>yasinozmeen.me</td><td>1</td></tr>
+      </table>
+    </section>
+
+    <section class="pair" aria-label="Cihaz ve ülke">
+      <div>
+        <h3>Cihaz</h3>
+        <table class="ledger">
+          <tr><td>bilgisayar</td><td>35</td></tr>
+          <tr><td>telefon</td><td>6</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3>Ülke</h3>
+        <table class="ledger">
+          <tr><td>Türkiye</td><td>38</td></tr>
+          <tr><td>ABD</td><td>2</td></tr>
+          <tr><td>Norveç</td><td>1</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="h-more">
+      <h2 id="h-more">Başka hareketler</h2>
+      <table class="ledger">
+        <tr><td>paylaş'a bastı</td><td>8 kişi</td></tr>
+        <tr><td>"bize yaz"ı açtı</td><td>3 kişi</td></tr>
+        <tr><td>modu değiştirdi</td><td>4 kişi</td></tr>
+        <tr><td>"irticalen ne demek?"i okudu</td><td>2 kişi</td></tr>
+        <tr><td>sayfa hatası</td><td class="muted">yok</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <div id="p-notes" role="tabpanel" aria-labelledby="t-notes" hidden>
+    <div class="filters" role="group" aria-label="Süzgeç">
+      <button aria-pressed="true">hepsi</button>
+      <button aria-pressed="false">fikirlerim</button>
+      <button aria-pressed="false">konu</button>
+      <button aria-pressed="false">sorun</button>
+      <button aria-pressed="false">yapılanlar</button>
+    </div>
+
+    <ol class="notes">
+      <li class="note">
+        <div class="note-head"><span class="note-kind mine">senin fikrin</span><time>bugün 14:17</time></div>
+        <p class="note-text">süre ve slider blurlansın çünkü kişiyi geriyor yada bu seçeneği kişiye bırakalım</p>
+        <div class="note-foot"><button class="mark">yapıldı</button><button>sil</button></div>
+      </li>
+      <li class="note">
+        <div class="note-head"><span class="note-kind">konu önerisi · bilgisayar, Türkiye</span><time>dün 12:27</time></div>
+        <p class="note-text">dsada</p>
+        <div class="note-foot"><button class="mark">yapıldı</button><button>sil</button></div>
+      </li>
+      <li class="note done">
+        <div class="note-head"><span class="note-kind">sorun bildirimi · telefon, Türkiye</span><time>dün 12:19</time></div>
+        <p class="note-text">teset</p>
+        <div class="note-foot"><button class="mark">yapıldı ✓</button><button>sil</button></div>
+      </li>
+      <li class="note">
+        <div class="note-head"><span class="note-kind">başka · bilgisayar, Türkiye</span><time>dün 12:19</time></div>
+        <p class="note-text">test</p>
+        <div class="note-foot"><button class="mark">yapıldı</button><button>sil</button></div>
+      </li>
+    </ol>
+  </div>
+</main>
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach((t) => t.addEventListener('click', () => {
+    tabs.forEach((o) => {
+      const on = o === t;
+      o.setAttribute('aria-selected', String(on));
+      document.getElementById(o.getAttribute('aria-controls')).hidden = !on;
+    });
+  }));
+  document.querySelectorAll('.range, .filters').forEach((g) => g.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    g.querySelectorAll('button').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+  }));
+  document.querySelectorAll('.note .mark').forEach((b) => b.addEventListener('click', () => {
+    const n = b.closest('.note'); n.classList.toggle('done');
+    b.textContent = n.classList.contains('done') ? 'yapıldı ✓' : 'yapıldı';
+  }));
+</script>
+</body>
+</html>
