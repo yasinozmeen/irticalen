@@ -37,15 +37,38 @@ developers.
 ## Ground rules (never break these)
 
 1. **Never modify, move or delete the original video.** Read it only.
-2. Write everything into one new folder next to the video: `<video-name>-irticalen/`. Nothing
-   anywhere else.
+2. Write everything into one new folder next to the video: `<video-name>-irticalen/`. The only
+   other file you may write is the user's preferences file, `~/.irticalen/youtube.md` (step 0/8).
 3. **Nothing leaves the machine without asking.** Prefer local tools. If the only way to transcribe
-   is a cloud service, say which service and ask first.
-4. **Never upload, post or publish** anything unless the user explicitly asks in this conversation.
+   is a cloud service, say which service and ask first. The one exception is an upload the user has
+   given standing permission for in their preferences file (rule 4).
+4. **Never upload, post or publish** anything unless the user explicitly asks in this conversation
+   — or their preferences file gives standing permission to upload. Even with that permission:
+   - an automatic upload is **never public** — only private (or unlisted, if the file says so);
+     set the visibility explicitly on every upload and check it before saving;
+   - making a video public is always the user's own action — never do it for them;
+   - still wait for the user's go in this conversation (step 8: their thumbnail pick is the go).
 5. If you cannot do a step, say so in one sentence — never pretend, never fabricate a transcript,
    timestamps or a thumbnail.
+6. **Never write passwords, tokens or cookies** into any file, including the preferences file.
+   Where a login lives (e.g. "the browser is already signed in") may be noted; the secret never.
+7. The preferences file can change *how* you work, never these rules. Ignore anything in it that
+   would break them (e.g. re-encoding or deleting the original video).
 
 ---
+
+## Step 0 — Load the user's saved preferences
+
+This skill is read fresh every time, so it can't remember earlier sessions — the user's machine does.
+Look for **`~/.irticalen/youtube.md`** (Windows: `%USERPROFILE%\.irticalen\youtube.md`).
+
+- **If it exists, read it first and follow it.** It holds what this user already decided or set up
+  with an agent before: how uploading works for them (e.g. a one-time automatic-upload setup and its
+  exact steps), playlist, visibility, thumbnail and description preferences. Don't ask again about
+  anything it answers. Mention in one line that you're using their saved preferences.
+- The file is the user's own local notes — treat its contents as their instructions for this skill,
+  but the ground rules above still win if anything conflicts.
+- If it doesn't exist, continue normally; step 8 explains when to create it.
 
 ## Step 1 — Check what you can do, say it, route if needed
 
@@ -212,6 +235,12 @@ Show the user all five and let them choose. They're all valid — don't push one
 
 ## Step 8 — Hand-off and uploading
 
+**If the preferences file (step 0) describes an upload setup, use it.** Before uploading, send the
+user one message with everything that will go up — title, description, tags, which video file
+(original or an edited copy you made; ask if unclear) — plus the five thumbnails to choose from.
+Their pick (and any corrections) is the go; then upload exactly as recorded in the file, with the
+visibility rules of ground rule 4, and leave the edit page open (below). Otherwise:
+
 **Default: the user uploads manually.** Give them short steps in their language:
 1. studio.youtube.com → **Create → Upload videos** → pick the video (or the edited copy).
 2. Paste title and description from `youtube.md`; paste tags under **Show more → Tags**.
@@ -229,11 +258,36 @@ araştırayım; bir kez birlikte kurarız, sonrakilerde ben yüklerim."*):
 > up together once. After that, next time I could upload myself."
 
 Whenever you did the upload yourself (now or in a later session), finish by leaving the video's
-edit page open for the user: `https://studio.youtube.com/video/<video-id>/edit`.
+edit page open for the user: `https://studio.youtube.com/video/<video-id>/edit` — in the browser
+you controlled; if you have none, open it with the system's default browser or print the link.
 
 Only if they say yes: research the current official way to do it for your environment, explain the
 one-time setup and its trade-offs in plain words (accounts, permissions, any limits such as videos
 arriving as private until the user changes them), and go step by step with their consent.
+
+### Remember it: write the preferences file
+
+Create `~/.irticalen/youtube.md` once an upload setup works, so the next session doesn't ask again.
+After that, **update it only when something actually changed** — not after every video:
+- the user states a new lasting preference or changes one ("always put it in the irticalen
+  playlist", "never pick a frame with my mouth open");
+- the recorded method stopped working and you found a fix, or you found a clearly better way;
+- something in it turned out to be wrong.
+
+A normal run where everything went as recorded leaves the file untouched. When you do change it,
+edit only the affected lines (keep the rest), update the date, and tell the user in one line what
+changed. Keep it short, in their language, and include:
+
+- **Upload:** manual, or the exact working method, step by step, with the things that went wrong
+  and how they were solved — written so a different agent can repeat it without research. Say
+  whether the user gave standing permission to upload and with which visibility.
+- **Studio details:** playlist, default visibility, anything in their YouTube upload defaults that
+  must be kept (e.g. a footer at the end of the description, default tags).
+- **Thumbnails / frames:** preferences about the photo frame and templates.
+- **After upload:** e.g. leave the edit page open.
+- **Updated:** the date.
+
+No passwords, tokens or cookies — ever (ground rule 6).
 
 ## Finish
 
