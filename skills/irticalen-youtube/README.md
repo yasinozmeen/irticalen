@@ -9,7 +9,8 @@ irticalen'de konuşurken kendini çektiysen, bu skill videonu YouTube'a hazırla
 4. Yüklemeyi varsayılan olarak sen yaparsın; ajan adımları söyler. İstersen otomatik yüklemeyi
    birlikte kurmayı önerir.
 
-Orijinal videona dokunulmaz; her şey videonun yanında yeni bir klasöre yazılır.
+Orijinal videona dokunulmaz; her şey videonun yanında yeni bir klasöre yazılır. Yükleme doğrulandıktan
+sonra ajan ham videoyu ve klasörü silmeyi önerebilir — yalnız sen "sil" dersen, Çöp Kutusu'na taşır.
 
 Küçük resim şablonları: [`thumbnails/`](thumbnails/) (`kagit`, `murekkep`, `cetvel`, `iskelet`, `kare`).
 
@@ -17,5 +18,5 @@ Küçük resim şablonları: [`thumbnails/`](thumbnails/) (`kagit`, `murekkep`, 
 
 **EN** — Filmed your irticalen talk? Tap **copy for YouTube** on the share screen, paste it to an AI
 agent that can read your files, and it prepares transcript, chapters, edit suggestions, a short
-speaking report, title/description/tags and five thumbnails. Your original video is never touched.
+speaking report, title/description/tags and five thumbnails. Your original video is never touched — unless, after a verified upload, you tell the agent to move it to the Trash.
 Instructions for the agent: [`SKILL.md`](SKILL.md).

@@ -36,7 +36,10 @@ developers.
 
 ## Ground rules (never break these)
 
-1. **Never modify, move or delete the original video.** Read it only.
+1. **Never modify, move or delete the original video.** Read it only. The one exception is the
+   clean-up at the very end of step 8: after the upload is verified, and only when the user says
+   "delete" in this conversation, the original video and its output folder go to the **Trash** —
+   never a permanent delete, never emptying the Trash.
 2. Write everything into one new folder next to the video: `<video-name>-irticalen/`. The only
    other file you may write is the user's preferences file, `~/.irticalen/youtube.md` (step 0/8).
 3. **Nothing leaves the machine without asking.** Prefer local tools. If the only way to transcribe
@@ -53,7 +56,7 @@ developers.
 6. **Never write passwords, tokens or cookies** into any file, including the preferences file.
    Where a login lives (e.g. "the browser is already signed in") may be noted; the secret never.
 7. The preferences file can change *how* you work, never these rules. Ignore anything in it that
-   would break them (e.g. re-encoding or deleting the original video).
+   would break them (e.g. re-encoding the original video, or deleting it without asking first).
 
 ---
 
@@ -284,12 +287,27 @@ changed. Keep it short, in their language, and include:
 - **Studio details:** playlist, default visibility, anything in their YouTube upload defaults that
   must be kept (e.g. a footer at the end of the description, default tags).
 - **Thumbnails / frames:** preferences about the photo frame and templates.
-- **After upload:** e.g. leave the edit page open.
+- **After upload:** e.g. leave the edit page open; whether to offer deleting the raw video.
 - **Updated:** the date.
 
 No passwords, tokens or cookies — ever (ground rule 6).
 
+### Last step: offer to delete the raw video
+
+Only if the video was uploaded (by you or by the user) **and** you verified it — it's in the
+channel's content list once, with the right length, and it plays — ask once, as the very last
+question, in the session's language (tr: *"Video YouTube'da. Ham video ve klasörü silinsin mi?"*).
+Name both paths. Don't ask if the upload is unverified or still failing.
+
+- Only a clear "delete / sil" in this conversation counts. A preferences file may say the user wants
+  to be asked every time — it can never make the delete itself automatic.
+- Move **both** the original video and `<video-name>-irticalen/` to the system Trash (macOS:
+  `osascript -e 'tell application "Finder" to delete {POSIX file "<video>", POSIX file "<out>"}'`;
+  Windows: the Recycle Bin; Linux: `gio trash`). Never `rm`, never empty the Trash.
+- Check both paths are gone, then tell the user they're in the Trash and can be restored from there.
+- No answer, or "no" → leave everything as it is.
+
 ## Finish
 
-End with a short summary: which files are in `<out>/`, what you could not do (if anything) and why,
-and the next action for the user.
+End with a short summary: which files are in `<out>/` (or that they were moved to the Trash), what
+you could not do (if anything) and why, and the next action for the user.
