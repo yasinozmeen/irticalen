@@ -1,14 +1,14 @@
 ---
 name: irticalen-hazirlik
-description: İrticalen'in Araştırmalı modunda çıkan bir terim (ör. "Pareto ilkesi", "Sahne ışığı etkisi") için hazırlık sürecinin "topla" bölümünde gereken SAF BİLGİYİ verir — öz, nasıl çalışır, şaşırtıcı detay, somut örnek, sık karıştırılanlar, tartışmalı yanlar. Yorum yapmaz, konuşma kurgulamaz, "senin fikrin" kısmını boş bırakır. Kullanıcı "/irticalen-hazirlik <terim>" yazdığında ya da "şu terim için hazırlık bilgisi ver" dediğinde kullan.
+description: İrticalen'in Araştırmalı modunda çıkan bir terim (ör. "Pareto ilkesi", "Sahne ışığı etkisi") için hazırlık sürecinin "topla" bölümünde gereken SAF BİLGİYİ verir — öz, nasıl çalışır, şaşırtıcı detay, somut örnek, sık karıştırılanlar, tartışmalı yanlar. Yorum yapmaz, konuşma kurgulamaz; "senin fikrin" maddesi tamamen kullanıcıya kalır, çıktıda yer almaz. Kullanıcı "/irticalen-hazirlik <terim>" yazdığında ya da "şu terim için hazırlık bilgisi ver" dediğinde kullan.
 ---
 
 # irticalen → hazırlık bilgisi
 
 Kullanıcı [irticalen](https://irticalen.yasinozmeen.me) sitesinde Araştırmalı modda bir terim çekti.
 Araştırma süresi üç bölüm: **topla → kur → ısın**. Bu skill yalnız **topla** bölümüne hizmet eder:
-kullanıcının "beş şeyi ara" listesindeki dört olgusal maddeyi doldurur, beşincisini (senin fikrin)
-kullanıcıya bırakır.
+kullanıcının "beş şeyi ara" listesindeki dört olgusal maddeyi doldurur. Beşincisi (senin fikrin)
+çıktıda HİÇ yer almaz — o tamamen kullanıcının işidir.
 
 Amaç: kullanıcı bilgiyi hızla alsın, beynini zorlayan kısım (fikir üretmek, iskeleti kurmak,
 konuşmayı kurgulamak) **tamamen ona kalsın**.
@@ -19,7 +19,7 @@ konuşmayı kurgulamak) **tamamen ona kalsın**.
    yargısı ve çıkarım cümlesi yazma. Yalnız kaynaklara dayanan olgular.
 2. **Konuşma kurgusu yok.** Giriş cümlesi önerme, "şöyle bağlayabilirsin", "iyi bir kapanış olur",
    "Nedir? / Bir örnek / Ne düşünüyorum?" iskeletine yerleştirme, retorik tavsiye — hiçbiri.
-3. **"Senin fikrin" maddesi BOŞ kalır.** Oraya soru bile yazma; tek satır "—" bırak.
+3. **"Senin fikrin" başlığı çıktıda yok.** Boş bile bırakma, soru da sorma; dört olgusal maddeden sonra doğrudan çizgiye geç.
 4. **Fikir sunan ifadeleri alıntı olarak ver.** Bir yazarın, araştırmacının görüşü olgudur
    ("Kahneman'a göre…"); kendi görüşün olgu değildir.
 5. **Uydurma yok.** Sayı, yıl, isim, deney sonucu veriyorsan kaynağı olsun. Emin olmadığın
@@ -48,8 +48,6 @@ konuşmayı kurgulamak) **tamamen ona kalsın**.
 
 **somut örnek** — 1–2 gerçek, tarihli/isimli örnek (uydurma senaryo değil).
 
-**senin fikrin** — —
-
 ---
 sık karıştırılan: <benzer 1–2 terim ve tek cümlelik fark>
 tartışmalı / dikkat: <tekrarlanamayan deney, çürütülmüş iddia, yanlış atıf — yoksa "bilinen bir tartışma yok">
@@ -75,8 +73,6 @@ sanması; terimi 2000'de Thomas Gilovich, Victoria Medvec ve Kenneth Savitsky or
   fark ettiğini tahmin etti; gerçek oran ~%25'ti (Gilovich ve ark., 2000).
 
 **somut örnek** — …
-
-**senin fikrin** — —
 
 ---
 sık karıştırılan: Hayali seyirci (Elkind, 1967) — ergenlik odaklı, daha eski kavram.
