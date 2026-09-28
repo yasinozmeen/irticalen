@@ -21,7 +21,8 @@ export type SessionAction =
   | { type: 'READY_TO_SPEAK' }
   | { type: 'TIME_UP' }
   | { type: 'CLOSE' }
-  | { type: 'PRESET_TOPIC'; mode: Mode; categoryId: string; topicIndex: number; topic: string };
+  | { type: 'PRESET_TOPIC'; mode: Mode; categoryId: string; topicIndex: number; topic: string }
+  | { type: 'CLEAR_TOPIC' };
 
 /** Initial session: off-the-cuff mode, no category/topic selected yet. */
 export function initialSession(): SessionState {
@@ -123,6 +124,15 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
         topic: action.topic,
         topicIndex: action.topicIndex,
       };
+    }
+
+    // Clears the current topic without touching mode/categoryId — used when a research "field"
+    // (a group within the deep-research pool) changes, the same way a category change empties the
+    // topic in off-the-cuff mode. Never interrupts a spin or an open timer.
+    case 'CLEAR_TOPIC': {
+      if (isLocked(state)) return state;
+      if (state.topic === null && state.topicIndex === -1) return state;
+      return { ...state, topic: null, topicIndex: -1 };
     }
 
     default:

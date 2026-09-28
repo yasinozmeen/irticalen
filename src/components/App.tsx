@@ -10,10 +10,16 @@ import {
   planSpinFrom,
   drawFromBag,
   loadSeen,
+  recordPractice,
   saveSeen,
   positionFrom,
   saveSettings,
   sessionReducer,
+  ALL_FIELD_ID,
+  loadResearchField,
+  saveResearchField,
+  topicsForField,
+  researchBagKey,
   SPIN_DURATION_MS,
   SPIN_SAFETY_MS,
   acquireWakeLock,
@@ -82,6 +88,9 @@ function AppContent({ locale }: Props) {
   // Wall-clock marks of the running session — the YouTube prompt turns them into chapter hints.
   const marksRef = useRef<SessionMarks | null>(null);
   const [gatherChecked, setGatherChecked] = useState<boolean[]>([false, false, false, false, false]);
+  // The selected "field" (a group within the deep-research pool) — 'all' means every topic in the
+  // pool, unfiltered. SSR-safe default; the saved value loads on the client below.
+  const [researchField, setResearchField] = useState<string>(ALL_FIELD_ID);
 
   const soundRef = useRef(createSoundEngine());
   const countdownRef = useRef<Countdown | null>(null);
@@ -163,6 +172,14 @@ function AppContent({ locale }: Props) {
     soundRef.current.setMuted(loaded.muted);
   }, []);
 
+  // Load the persisted research field the same way — runs before the `?konu=` preset effect below,
+  // which may override it (unsaved) for a single preset topic.
+  useEffect(() => {
+    const validIds = (getCategoryById(locale, 'deep-research')?.groups ?? []).map((group) => group.id);
+    setResearchField(loadResearchField(validIds));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // `/?konu=<slug>` (tr) or `/en/?topic=<slug>` (en): preset the topic from a shared link, mark it
   // seen, then strip the param from the address bar. Runs once, mount-only; an invalid/missing slug
   // is silently ignored.
@@ -175,6 +192,11 @@ function AppContent({ locale }: Props) {
         const entry = buildTopicIndex(locale).find((item) => item.slug === slugParam);
         if (entry) {
           const mode: Mode = entry.categoryId === 'deep-research' ? 'deep-research' : 'off-the-cuff';
+          // A link-preset research topic must land in the currently displayed wheel — the simplest
+          // way to guarantee that is to show it against the unfiltered pool ('all'), same as the
+          // index below (computed from the whole category, not a group). Not saved: the visitor's
+          // own field preference is untouched for next time.
+          if (mode === 'deep-research') setResearchField(ALL_FIELD_ID);
           const category = getCategoryById(locale, entry.categoryId);
           const idx = category ? category.topics.indexOf(entry.topic) : -1;
           dispatch({ type: 'PRESET_TOPIC', mode, categoryId: entry.categoryId, topicIndex: idx, topic: entry.topic });
@@ -210,10 +232,28 @@ function AppContent({ locale }: Props) {
   const effectiveCategoryId =
     state.mode === 'deep-research' ? 'deep-research' : state.categoryId ?? lastCategoryIdRef.current;
 
-  const topics = useMemo(
-    () => getCategoryById(locale, effectiveCategoryId)?.topics ?? [],
-    [locale, effectiveCategoryId],
-  );
+  const deepResearchCategory = useMemo(() => getCategoryById(locale, 'deep-research'), [locale]);
+
+  // The field options shown in the (reused) category select while in deep-research mode: "Hepsi"
+  // first, then one option per group. `topics` is unused by CategorySelect itself but keeps these
+  // objects shaped like `Category`.
+  const researchFieldOptions: Category[] = useMemo(() => {
+    const groups = deepResearchCategory?.groups ?? [];
+    return [
+      { id: ALL_FIELD_ID, label: dict.category.all, topics: deepResearchCategory?.topics ?? [] },
+      ...groups.map((group) => ({ id: group.id, label: group.label, topics: group.topics })),
+    ];
+  }, [deepResearchCategory, dict.category.all]);
+
+  const topics = useMemo(() => {
+    if (state.mode === 'deep-research') return topicsForField(deepResearchCategory, researchField);
+    return getCategoryById(locale, effectiveCategoryId)?.topics ?? [];
+  }, [locale, effectiveCategoryId, state.mode, deepResearchCategory, researchField]);
+
+  // The topic-bag (seen-list) key: per-field in deep-research mode (so switching fields doesn't
+  // burn the other field's topics), the plain category id everywhere else.
+  const bagKey =
+    state.mode === 'deep-research' ? researchBagKey(effectiveCategoryId, researchField) : effectiveCategoryId;
 
   const topicIndex = useMemo(() => buildTopicIndex(locale), [locale]);
   const currentSlug = useMemo(() => {
@@ -296,6 +336,8 @@ function AppContent({ locale }: Props) {
         } else if (wasSpeech && !speechDoneSentRef.current) {
           speechDoneSentRef.current = true;
           tracker.track('speech_done');
+          // The day counts for the practice streak (kept only in this browser; no UI reads it yet).
+          recordPractice(stateRef.current.mode);
           // The speech is over — after the "süre." beat, move on to the share screen by itself.
           if (autoShareTimerRef.current !== null) clearTimeout(autoShareTimerRef.current);
           autoShareTimerRef.current = setTimeout(() => {
@@ -328,16 +370,28 @@ function AppContent({ locale }: Props) {
     tracker.track('category_change', { c: categoryId });
   };
 
+  // Field change in deep-research mode: behaves like `handleCategoryChange` above (empties the
+  // topic, never touches the bag), but the session's categoryId stays 'deep-research' — only the
+  // App-level field selection changes, so it uses CLEAR_TOPIC instead of SET_CATEGORY.
+  const handleResearchFieldChange = (fieldId: string): void => {
+    if (isLocked(state)) return;
+    if (fieldId === researchField) return;
+    setResearchField(fieldId);
+    saveResearchField(fieldId);
+    dispatch({ type: 'CLEAR_TOPIC' });
+    tracker.track('category_change', { m: 'deep-research', c: fieldId });
+  };
+
   const handleSpin = (): void => {
     // `state.spinning` only flips a render later (and, on a re-spin, inside a view transition), so a
     // fast double tap would pass the state check twice — the ref is the real lock.
     if (spinBusyRef.current || isLocked(state) || topics.length === 0) return;
     spinBusyRef.current = true;
     soundRef.current.warmUp();
-    const draw = drawFromBag(topics, loadSeen(locale, effectiveCategoryId), state.topicIndex);
+    const draw = drawFromBag(topics, loadSeen(locale, bagKey), state.topicIndex);
     tracker.track('spin', {
       m: state.mode,
-      c: state.mode === 'off-the-cuff' ? effectiveCategoryId : undefined,
+      c: state.mode === 'off-the-cuff' ? effectiveCategoryId : researchField,
     });
 
     let reduced = false;
@@ -352,7 +406,7 @@ function AppContent({ locale }: Props) {
       clearSpinTimers();
       const index = draw.index;
       // Marked as seen only once it is actually shown — an interrupted spin does not burn a topic.
-      saveSeen(locale, effectiveCategoryId, draw.seen);
+      saveSeen(locale, bagKey, draw.seen);
       soundRef.current.land();
       // Landing hands the topic word's view-transition name from the wheel's center face to the
       // big topic display — the dispatch itself is the swap moment the transition captures.
@@ -363,7 +417,7 @@ function AppContent({ locale }: Props) {
       tracker.track('land', {
         t: topics[index],
         m: state.mode,
-        c: state.mode === 'off-the-cuff' ? effectiveCategoryId : undefined,
+        c: state.mode === 'off-the-cuff' ? effectiveCategoryId : researchField,
       });
     };
 
@@ -444,7 +498,7 @@ function AppContent({ locale }: Props) {
     tracker.track(nextPhase === 'research' ? 'start_research' : 'start_speech', {
       m: state.mode,
       t: state.topic,
-      c: state.mode === 'off-the-cuff' ? effectiveCategoryId : undefined,
+      c: state.mode === 'off-the-cuff' ? effectiveCategoryId : researchField,
     });
   };
 
@@ -677,13 +731,23 @@ function AppContent({ locale }: Props) {
 
         <div class="controls-row">
           <ModeSwitch mode={state.mode} disabled={locked} dict={dict} onChange={handleModeChange} />
-          {state.mode === 'off-the-cuff' && (
+          {/* Same component in both modes, at the same position — only its options/value/handler
+              change, so switching modes never mounts/unmounts it (no "pat" pop-in/out). */}
+          {state.mode === 'off-the-cuff' ? (
             <CategorySelect
               categories={categories}
               value={effectiveCategoryId}
               disabled={locked}
               dict={dict}
               onChange={handleCategoryChange}
+            />
+          ) : (
+            <CategorySelect
+              categories={researchFieldOptions}
+              value={researchField}
+              disabled={locked}
+              dict={dict}
+              onChange={handleResearchFieldChange}
             />
           )}
         </div>

@@ -10,15 +10,20 @@ interface Props {
   topic: string;
   categoryName: string;
   slug: string;
+  /** Deep-research topics are researched first, so the prompt must not say "unprepared". */
+  research: boolean;
 }
 
-const { dict, locale, topic, categoryName, slug } = Astro.props;
+const { dict, locale, topic, categoryName, slug, research } = Astro.props;
 const homePath = locale === 'tr' ? '/' : '/en/';
 const startHref = locale === 'tr' ? `/?konu=${slug}` : `/en/?topic=${slug}`;
 const startLabel = locale === 'tr' ? 'Bu konuyla başla' : 'Start with this topic';
 const anotherLabel = locale === 'tr' ? 'başka bir konu çevir' : 'spin for another topic';
-const oneMinuteLine =
-  locale === 'tr'
+const oneMinuteLine = research
+  ? locale === 'tr'
+    ? 'Biraz araştırıp bu konuyu bir dakika anlatabilir misin?'
+    : 'Could you research this a little, then explain it in one minute?'
+  : locale === 'tr'
     ? 'Bu konuda hazırlıksız bir dakika konuşabilir misin?'
     : 'Could you speak about this for one minute, unprepared?';
 const lines = paperLines(topic, locale, 12);

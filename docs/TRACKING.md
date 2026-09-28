@@ -16,7 +16,7 @@ Gövde JSON (sendBeacon `text/plain` de yollayabilir; gövde her durumda JSON ol
 | `n` | string | olay adı, aşağıdaki listeden (zorunlu) |
 | `l` | `tr` \| `en` | dil |
 | `m` | `off-the-cuff` \| `deep-research` | mod |
-| `c` | string ≤40 | kategori kimliği |
+| `c` | string ≤40 | kategori kimliği (Hazırlıksız) ya da araştırmalı alan kimliği/`all` (Araştırmalı) |
 | `t` | string ≤200 | konu ya da hata mesajı |
 | `v` | number | sayısal değer (saniye) |
 | `ph` | string ≤20 | o anki evre: `idle` `spinning` `research` `ready` `speech` `done` |

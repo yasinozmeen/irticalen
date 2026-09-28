@@ -257,3 +257,38 @@ describe('session: PRESET_TOPIC', () => {
     expect(after).toBe(before);
   });
 });
+
+describe('CLEAR_TOPIC (araştırmalı alan değişimi)', () => {
+  it("konuyu ve topicIndex'i boşaltır, mode/categoryId/phase'e dokunmaz", () => {
+    let state = initialSession();
+    state = sessionReducer(state, { type: 'SET_MODE', mode: 'deep-research' });
+    state = sessionReducer(state, { type: 'SPIN_START' });
+    state = sessionReducer(state, { type: 'SPIN_LAND', index: 4, topic: 'Bilişsel yanlılık' });
+    expect(state.topic).toBe('Bilişsel yanlılık');
+
+    const after = sessionReducer(state, { type: 'CLEAR_TOPIC' });
+    expect(after.topic).toBeNull();
+    expect(after.topicIndex).toBe(-1);
+    expect(after.mode).toBe('deep-research');
+    expect(after.categoryId).toBe('deep-research');
+    expect(after.phase).toBe('idle');
+  });
+
+  it('zaten boşsa aynı referansı döner', () => {
+    const state = initialSession();
+    expect(sessionReducer(state, { type: 'CLEAR_TOPIC' })).toBe(state);
+  });
+
+  it('kilitli oturumda (spin sırasında ya da açık fazda) etkisiz', () => {
+    let state = initialSession();
+    state = sessionReducer(state, { type: 'SET_MODE', mode: 'deep-research' });
+    state = sessionReducer(state, { type: 'SPIN_START' });
+    const duringSpin = sessionReducer(state, { type: 'CLEAR_TOPIC' });
+    expect(duringSpin).toBe(state);
+
+    state = sessionReducer(state, { type: 'SPIN_LAND', index: 0, topic: 'X' });
+    state = sessionReducer(state, { type: 'START' });
+    const duringPhase = sessionReducer(state, { type: 'CLEAR_TOPIC' });
+    expect(duringPhase).toBe(state);
+  });
+});

@@ -100,7 +100,35 @@ function detectPath(): string | undefined {
   }
 }
 
+/** Owner opt-out: `?ben=1` marks this browser as the owner's (never counted), `?ben=0` clears it. */
+export const OWNER_KEY = 'irticalen:ben';
+
+export function isOwnerBrowser(): boolean {
+  let flag: string | null = null;
+  try {
+    if (typeof location === 'undefined') return false;
+    const url = new URL(location.href);
+    flag = url.searchParams.get('ben');
+    if (flag !== null) {
+      // Strip the flag first so it never lingers in the address bar, even if storage is blocked.
+      url.searchParams.delete('ben');
+      history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+    }
+  } catch {
+    // ignore: fall through to the stored mark
+  }
+  try {
+    if (flag === '0') localStorage.removeItem(OWNER_KEY);
+    else if (flag !== null) localStorage.setItem(OWNER_KEY, '1');
+    return localStorage.getItem(OWNER_KEY) === '1';
+  } catch {
+    // Storage blocked: an explicit `?ben=1` still keeps this page view out of the counts.
+    return flag !== null && flag !== '0';
+  }
+}
+
 function autoEnabled(): boolean {
+  if (isOwnerBrowser()) return false;
   try {
     if (typeof navigator !== 'undefined' && navigator.doNotTrack === '1') return false;
   } catch {

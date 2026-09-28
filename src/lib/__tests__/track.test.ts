@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createTracker, sendFeedback, type FeedbackPayload } from '../track';
+import { createTracker, isOwnerBrowser, OWNER_KEY, sendFeedback, type FeedbackPayload } from '../track';
 
 function fakeStorage() {
   const data = new Map<string, string>();
@@ -184,5 +184,44 @@ describe('detectDevice', () => {
     expect(detectDevice()).toBe('mobile');
     vi.stubGlobal('innerWidth', 1200);
     expect(detectDevice()).toBe('desktop');
+  });
+});
+
+describe('isOwnerBrowser (?ben=1)', () => {
+  afterEach(() => {
+    localStorage.removeItem(OWNER_KEY);
+    history.replaceState(null, '', '/');
+  });
+
+  it('işaret yoksa sahip sayılmaz', () => {
+    expect(isOwnerBrowser()).toBe(false);
+  });
+
+  it('?ben=1 tarayıcıyı kalıcı işaretler ve parametreyi adresten siler', () => {
+    history.replaceState(null, '', '/?konu=x&ben=1#a');
+    expect(isOwnerBrowser()).toBe(true);
+    expect(location.search).toBe('?konu=x');
+    expect(location.hash).toBe('#a');
+    expect(isOwnerBrowser()).toBe(true);
+  });
+
+  it('depolama engelliyken ?ben=1 yine sayım dışı tutar ve adresten silinir', () => {
+    history.replaceState(null, '', '/?ben=1');
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    try {
+      expect(isOwnerBrowser()).toBe(true);
+      expect(location.search).toBe('');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('?ben=0 işareti kaldırır', () => {
+    localStorage.setItem(OWNER_KEY, '1');
+    history.replaceState(null, '', '/?ben=0');
+    expect(isOwnerBrowser()).toBe(false);
+    expect(localStorage.getItem(OWNER_KEY)).toBeNull();
   });
 });

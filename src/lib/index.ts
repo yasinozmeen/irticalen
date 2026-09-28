@@ -1,4 +1,6 @@
 export * from './types';
+export * from './categoryGroups';
+export * from './researchField';
 export * from './session';
 export * from './topicPicker';
 export * from './topicBag';
@@ -13,4 +15,5 @@ export * from './slug';
 export * from './ogLayout';
 export * from './viewTransition';
 export * from './researchStages';
+export * from './streak';
 export * from './youtube';

@@ -16,9 +16,9 @@ export const en: Dictionary = {
     offTheCuff: 'Off the cuff',
     deepResearch: 'Researched',
     offTheCuffBlurb: 'No prep. The topic lands, the floor is yours.',
-    deepResearchBlurb: 'Draw a topic, set a research timer, then start the speech timer when you are ready.',
+    deepResearchBlurb: 'Spin a topic, set a research timer, then start the speech timer when you are ready.',
   },
-  category: { label: 'Category' },
+  category: { label: 'Category', all: 'All' },
   reel: { idle: 'Ready', spinning: 'Drawing…', landed: 'Your topic', empty: 'Spin to draw a topic', announce: 'Your topic: {topic}' },
   actions: {
     spin: 'Spin',

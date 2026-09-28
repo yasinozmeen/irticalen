@@ -14,9 +14,9 @@ export const tr = {
     offTheCuff: 'Hazırlıksız',
     deepResearch: 'Araştırmalı',
     offTheCuffBlurb: 'Hazırlık yok. Konu gelir, söz sende.',
-    deepResearchBlurb: 'Konuyu çek, araştırma sayacını kur; hazır olunca konuşma sayacını başlat.',
+    deepResearchBlurb: 'Konuyu çevir, araştırma sayacını kur; hazır olunca konuşma sayacını başlat.',
   },
-  category: { label: 'Kategori' },
+  category: { label: 'Kategori', all: 'Hepsi' },
   reel: { idle: 'Hazır', spinning: 'Çekiliyor…', landed: 'Konun', empty: 'Çevir, konun gelsin', announce: 'Konun: {topic}' },
   actions: {
     spin: 'Çevir',

@@ -1,12 +1,17 @@
 import type { Category, Locale } from '../../lib/types';
+import { flattenAllCategoryGroups } from '../../lib/categoryGroups';
 // Topic data is authored elsewhere (see docs/SPEC.md ownership notes). If these
 // JSON files are missing, the build fails here on purpose — see project report.
 import trTopics from './tr.json';
 import enTopics from './en.json';
 
+// A category authored with `groups` (currently only `deep-research`) has no `topics` of its own in
+// the JSON — it's filled in here as the groups' topics concatenated in group order, so every other
+// consumer (topic pages, OG cards, buildTopicIndex, the wheel) keeps reading `category.topics` and
+// never has to know about groups.
 const byLocale: Record<Locale, Category[]> = {
-  tr: trTopics as Category[],
-  en: enTopics as Category[],
+  tr: flattenAllCategoryGroups(trTopics as Category[]),
+  en: flattenAllCategoryGroups(enTopics as Category[]),
 };
 
 /** Returns the category list for a locale, excluding the deep-research pool. */

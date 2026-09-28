@@ -7,11 +7,21 @@ export type Phase = 'idle' | 'research' | 'ready' | 'speech' | 'done';
 /** UI language. */
 export type Locale = 'tr' | 'en';
 
-/** A topic category (selectable only in off-the-cuff mode). */
+/** A sub-group inside a category's topic pool (e.g. the deep-research pool's "fields"). */
+export interface CategoryGroup {
+  id: string;
+  label: string;
+  topics: string[];
+}
+
+/** A topic category (selectable only in off-the-cuff mode). `topics` is always the flat list to
+ * spin from; a category authored with `groups` instead has its `topics` filled in by the loader
+ * (see `flattenCategoryGroups`) as the groups' topics concatenated in order. */
 export interface Category {
   id: string;
   label: string;
   topics: string[];
+  groups?: CategoryGroup[];
 }
 
 /** User settings (persisted). */

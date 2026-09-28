@@ -9,6 +9,8 @@
 :root {
   --paper: #f3eee2;
   --ink: #1d1a16;
+  /* hover/pressed ink: same warm hue, never pure black */
+  --ink-deep: #0f0d0a;
   --pencil: #6f695c;
   --rule: #d6cfbf;
   --red: #b8281c;
@@ -557,7 +559,7 @@ a {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #000;
+  background: var(--ink-deep);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -1570,7 +1572,9 @@ body.is-frame .app-shell {
   display: inline-flex;
   align-items: center;
   color: var(--ink);
-  padding: 0.75rem 0;
+  /* horizontal padding cancelled by negative margin: wider tap area, same visual position */
+  padding: 0.75rem 0.35rem;
+  margin-inline: -0.35rem;
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.28em;
@@ -1592,7 +1596,9 @@ body.is-frame .app-shell {
   color: var(--ink);
   display: inline-grid;
   place-items: center;
-  min-width: 32px;
+  /* 44px tap area; the negative margin keeps the icons where a 32px box put them */
+  min-width: 44px;
+  margin-inline: -6px;
   min-height: 44px;
 }
 
@@ -1844,7 +1850,7 @@ html::-webkit-scrollbar-thumb:hover,
 .category-listbox::-webkit-scrollbar-thumb:hover,
 .settings-dialog::-webkit-scrollbar-thumb:hover,
 .sheet-page::-webkit-scrollbar-thumb:hover {
-  background-color: #000;
+  background-color: var(--ink-deep);
 }
 
 html::-webkit-scrollbar-corner,

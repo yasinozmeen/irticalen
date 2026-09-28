@@ -47,6 +47,8 @@ Kod bilmen gerekmiyor. Konular düz JSON dosyalarında:
 - Türkçe: [`src/data/topics/tr.json`](src/data/topics/tr.json)
 - İngilizce: [`src/data/topics/en.json`](src/data/topics/en.json)
 
+Araştırmalı moddaki konu havuzu (`deep-research`) düz `topics` yerine `groups` (alanlara bölünmüş alt listeler) ile yazılır; site açılışta bunları tek listede birleştirir.
+
 İyi bir konu:
 
 - 1–4 kelimelik bir **kavram** (soru ya da cümle değil): `"Konfor alanı"`, `"İlk müşteri"`.
