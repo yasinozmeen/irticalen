@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   VIDEO_MIME_CANDIDATES,
+  buildCompositeFileName,
   buildRecordingFileName,
   classifyMediaError,
   downgradeRecordMode,
   isRecordingFeatureAvailable,
   mimeExtension,
+  normalizeRecordFormat,
   normalizeRecordMode,
   pickSupportedMimeType,
   recordingPlanForMode,
@@ -178,6 +180,52 @@ describe('buildRecordingFileName', () => {
       date: new Date(2026, 8, 28),
     });
     expect(name).toBe('irticalen-konu-2026-09-28-kamera.webm');
+  });
+});
+
+describe('normalizeRecordFormat', () => {
+  it('bilinen değerleri aynen döner', () => {
+    expect(normalizeRecordFormat('template')).toBe('template');
+    expect(normalizeRecordFormat('raw')).toBe('raw');
+  });
+
+  it('bilinmeyen/bozuk/eksik değer "template"e düşer', () => {
+    expect(normalizeRecordFormat('xx')).toBe('template');
+    expect(normalizeRecordFormat(null)).toBe('template');
+    expect(normalizeRecordFormat(undefined)).toBe('template');
+    expect(normalizeRecordFormat(1)).toBe('template');
+  });
+});
+
+describe('buildCompositeFileName', () => {
+  it('varyant eki olmadan tr slug + tarih', () => {
+    const name = buildCompositeFileName({
+      topic: 'Yapay Zeka',
+      locale: 'tr',
+      mimeType: 'video/webm',
+      date: new Date(2026, 8, 28),
+    });
+    expect(name).toBe('irticalen-yapay-zeka-2026-09-28.webm');
+  });
+
+  it('en slug + mp4 uzantısı', () => {
+    const name = buildCompositeFileName({
+      topic: 'Artificial Intelligence',
+      locale: 'en',
+      mimeType: 'audio/mp4',
+      date: new Date(2026, 0, 5),
+    });
+    expect(name).toBe('irticalen-artificial-intelligence-2026-01-05.mp4');
+  });
+
+  it('slug boşa düşerse "konu" yedeğini kullanır', () => {
+    const name = buildCompositeFileName({
+      topic: '???',
+      locale: 'tr',
+      mimeType: 'video/webm',
+      date: new Date(2026, 8, 28),
+    });
+    expect(name).toBe('irticalen-konu-2026-09-28.webm');
   });
 });
 

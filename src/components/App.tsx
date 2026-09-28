@@ -39,20 +39,18 @@ import {
   researchMinutes as spentResearchMinutes,
   youtubePrompt as buildYoutubePrompt,
   downgradeRecordMode,
-  loadView,
-  saveView,
-  broadcastViewChange,
+  normalizeStyleId,
+  getStyle,
+  resolveAspectForStyle,
   RICH_VIEW_MIN_WIDTH,
-  DEFAULT_VIEW,
   type SessionMarks,
   type Countdown,
   type ReleaseWakeLock,
   type Settings,
   type DayLog,
-  type ViewMode,
 } from '../lib';
 import type { ShareChannel } from './SharePanel';
-import type { Category, Mode, RecordMode } from '../lib/types';
+import type { Category, Mode, RecordAspect, RecordFormat, RecordMode } from '../lib/types';
 import { useSelfRecording } from './useSelfRecording';
 import { dictionaries, fill, type Locale } from '../i18n';
 import { getCategories, getCategoryById } from '../data/topics';
@@ -90,11 +88,13 @@ function AppContent({ locale }: Props) {
     muted: false,
     hideClock: false,
     record: 'off',
+    recordFormat: 'template',
+    recordStyle: normalizeStyleId(undefined),
+    recordAspect: 'wide',
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // Desktop "rich" (open-book) view: SSR-safe defaults (minimal / not wide) — the real saved
-  // preference and the actual viewport width both only become known on the client, below.
-  const [view, setView] = useState<ViewMode>(DEFAULT_VIEW);
+  // Desktop "rich" (open-book) view is purely a function of viewport width (no setting any more) —
+  // SSR-safe default (not wide); the real width is only known on the client, below.
   const [isWide, setIsWide] = useState(false);
   const [sharePanelOpen, setSharePanelOpen] = useState(false);
   const [streakSheetOpen, setStreakSheetOpen] = useState(false);
@@ -103,6 +103,11 @@ function AppContent({ locale }: Props) {
   const [landKey, setLandKey] = useState(0);
   const [remainingSec, setRemainingSec] = useState(0);
   const [elapsedSec, setElapsedSec] = useState(0);
+  // Read by the composite recording engine's per-tick callback, which runs outside React's render
+  // cycle — the same "ref mirrors state for a closure that can't wait for the next render" pattern
+  // used elsewhere in this file (e.g. `stateRef`).
+  const elapsedSecRef = useRef(0);
+  elapsedSecRef.current = elapsedSec;
   const [timerTotalSec, setTimerTotalSec] = useState(0);
   // Research stages: the clock moves the stage forward; "sonraki bölüm" can only jump ahead of it.
   const [researchStage, setResearchStage] = useState(0);
@@ -217,20 +222,19 @@ function AppContent({ locale }: Props) {
     setDays(loadDays());
   }, []);
 
-  // Same for the saved view preference — client only (see the `view` state above).
-  useEffect(() => {
-    setView(loadView());
-  }, []);
-
-  // The rich view is only ever offered/applied at >=1100px — a narrow window (or a phone) always
-  // gets the minimalist layout regardless of the saved preference. Tracks live resizes too, not just
-  // the initial width, so dragging a window across the threshold switches layouts immediately.
+  // The rich view is only ever applied at >=1100px — a narrow window (or a phone) always gets the
+  // minimalist layout. Tracks live resizes too, not just the initial width, so dragging a window
+  // across the threshold switches layouts immediately — but only once per crossing (matchMedia's
+  // `change` event fires exactly at the threshold, never per resize frame), and through a view
+  // transition so the switch slides instead of popping (see CLAUDE.md's "Geçişler" rule).
   useEffect(() => {
     let mql: MediaQueryList | undefined;
     try {
       mql = matchMedia(`(min-width: ${RICH_VIEW_MIN_WIDTH}px)`);
       setIsWide(mql.matches);
-      const onChange = (event: MediaQueryListEvent): void => setIsWide(event.matches);
+      const onChange = (event: MediaQueryListEvent): void => {
+        void runViewTransition(() => setIsWide(event.matches));
+      };
       mql.addEventListener('change', onChange);
       return () => mql?.removeEventListener('change', onChange);
     } catch {
@@ -542,6 +546,21 @@ function AppContent({ locale }: Props) {
     }
   };
 
+  // Shared by both places a speech-timer session can begin (`handleStart` directly into speech,
+  // `handleReadyToSpeak` after a research phase) — resolves the saved style/aspect against the
+  // browser's capabilities and hands the composite engine a live read of the running timer.
+  const startRecording = (topic: string): Promise<void> =>
+    recording.start({
+      mode: settings.record,
+      format: settings.recordFormat,
+      style: getStyle(settings.recordStyle),
+      aspect: resolveAspectForStyle(getStyle(settings.recordStyle), settings.recordAspect),
+      topic,
+      locale,
+      totalSec: settings.speechSec,
+      getElapsedSec: () => elapsedSecRef.current,
+    });
+
   const handleStart = async (): Promise<void> => {
     if (isLocked(state) || state.topic === null) return;
     soundRef.current.warmUp();
@@ -550,8 +569,10 @@ function AppContent({ locale }: Props) {
     // A previous session's finished recording (if not yet downloaded) is gone once a new one starts.
     recording.discardDownload();
     // Only the speech timer records — never the research timer (see CLAUDE.md task spec #3). A
-    // screen-share pick, if any, must resolve before the clock starts — camera/mic never block it.
-    if (nextPhase === 'speech') await recording.start(settings.record, topic, locale);
+    // screen-share pick, if any, must resolve before the clock starts — camera/mic never block it
+    // ('raw' format) or, for 'template' format, every requested source is awaited (see
+    // `acquireTemplateStreams` in `useSelfRecording.ts`).
+    if (nextPhase === 'speech') await startRecording(topic);
     // Opening the timer hands the topic word's view-transition name from the big landed display to
     // `.timer-topic` — the dispatch is the swap moment the transition captures.
     void runViewTransition(() => {
@@ -597,8 +618,8 @@ function AppContent({ locale }: Props) {
     if (state.phase !== 'ready') return;
     const topic = state.topic;
     const mode = state.mode;
-    // Same rule as handleStart: only a screen-share pick blocks the clock, never camera/mic.
-    await recording.start(settings.record, topic ?? '', locale);
+    // Same rule as handleStart.
+    await startRecording(topic ?? '');
     dispatch({ type: 'READY_TO_SPEAK' });
     if (marksRef.current) marksRef.current.speechAt = Date.now();
     beginCountdown(settings.speechSec);
@@ -767,6 +788,21 @@ function AppContent({ locale }: Props) {
     saveSettings({ record });
   };
 
+  const handleRecordFormatChange = (recordFormat: RecordFormat): void => {
+    setSettings((prev) => ({ ...prev, recordFormat }));
+    saveSettings({ recordFormat });
+  };
+
+  const handleRecordStyleChange = (recordStyle: string): void => {
+    setSettings((prev) => ({ ...prev, recordStyle, recordAspect: resolveAspectForStyle(getStyle(recordStyle), prev.recordAspect) }));
+    saveSettings({ recordStyle, recordAspect: resolveAspectForStyle(getStyle(recordStyle), settings.recordAspect) });
+  };
+
+  const handleRecordAspectChange = (recordAspect: RecordAspect): void => {
+    setSettings((prev) => ({ ...prev, recordAspect }));
+    saveSettings({ recordAspect });
+  };
+
   const openSettings = (): void => {
     void runViewTransition(() => setSettingsOpen(true));
     tracker.track('settings_open');
@@ -776,15 +812,6 @@ function AppContent({ locale }: Props) {
       () => setSettingsOpen(false),
       () => settingsTriggerRef.current?.focus(),
     );
-  };
-
-  // The word (topic) currently holding the view-transition name stays put — only the column around
-  // it slides into its new spot (see CLAUDE.md's "Geçişler" rule and runViewTransition itself).
-  const handleViewChange = (next: ViewMode): void => {
-    if (next === view) return;
-    saveView(next);
-    broadcastViewChange(next);
-    void runViewTransition(() => setView(next));
   };
 
   // The top-bar streak indicator: hidden until at least one day is on record, dimmed (pencil) when
@@ -812,9 +839,8 @@ function AppContent({ locale }: Props) {
   const locked = isLocked(state);
   const sessionOpen = state.phase !== 'idle';
   const contentInert = sessionOpen || settingsOpen;
-  // The rich (open-book) layout only actually applies once both the preference AND the viewport are
-  // there — a saved 'rich' preference on a phone (or a resized-down window) still renders minimalist.
-  const richActive = view === 'rich' && isWide;
+  // The rich (open-book) layout is purely the viewport-width check — no user setting any more.
+  const richActive = isWide;
 
   // The bottom dock (and, on article pages, the site footer) lives outside this island; make it inert too while a dialog is open.
   useEffect(() => {
@@ -1057,6 +1083,7 @@ function AppContent({ locale }: Props) {
         recordingScreenFailed={recording.screenFailed}
         recordingCameraFile={recording.cameraFile}
         recordingScreenFile={recording.screenFile}
+        recordingCompositeFile={recording.compositeFile}
       />
 
       <StreakSheet open={streakSheetOpen} onClose={closeStreakSheet} dict={dict} locale={locale} days={days} />
@@ -1070,15 +1097,19 @@ function AppContent({ locale }: Props) {
         hideClock={settings.hideClock}
         record={settings.record}
         recordModes={recording.visibleModes}
+        recordFormat={settings.recordFormat}
+        recordStyle={settings.recordStyle}
+        recordAspect={resolveAspectForStyle(getStyle(settings.recordStyle), settings.recordAspect)}
         isWide={isWide}
-        view={view}
         dict={dict}
         onSpeechChange={handleSpeechMinutesChange}
         onResearchChange={handleResearchMinutesChange}
         onMutedChange={handleMutedChange}
         onHideClockChange={handleHideClockChange}
         onRecordChange={handleRecordChange}
-        onViewChange={handleViewChange}
+        onRecordFormatChange={handleRecordFormatChange}
+        onRecordStyleChange={handleRecordStyleChange}
+        onRecordAspectChange={handleRecordAspectChange}
         onClose={closeSettings}
       />
     </>

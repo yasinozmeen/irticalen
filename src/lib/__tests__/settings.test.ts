@@ -148,6 +148,35 @@ describe('saveSettings', () => {
     saveSettings({ record: 'off' }, storage);
     expect(loadSettings(storage).record).toBe('off');
   });
+
+  it('kayıt biçimi kaydedilir; kayıt yoksa ya da bozuksa "şablonlu"da kalır', () => {
+    expect(loadSettings(memoryStorage()).recordFormat).toBe('template');
+    expect(loadSettings(memoryStorage({ 'irticalen:recordFormat': 'xx' })).recordFormat).toBe('template');
+    expect(loadSettings(throwingStorage()).recordFormat).toBe('template');
+    const storage = memoryStorage();
+    saveSettings({ recordFormat: 'raw' }, storage);
+    expect(loadSettings(storage).recordFormat).toBe('raw');
+    saveSettings({ recordFormat: 'template' }, storage);
+    expect(loadSettings(storage).recordFormat).toBe('template');
+  });
+
+  it('şablon stili kaydedilir; bilinmeyen id varsayılan stile düşer', () => {
+    expect(loadSettings(memoryStorage()).recordStyle).toBe('kagit');
+    expect(loadSettings(memoryStorage({ 'irticalen:recordStyle': 'bilinmeyen' })).recordStyle).toBe('kagit');
+    const storage = memoryStorage();
+    saveSettings({ recordStyle: 'kagit' }, storage);
+    expect(loadSettings(storage).recordStyle).toBe('kagit');
+  });
+
+  it('şablon oranı kaydedilir; bozuk değer "wide"a düşer', () => {
+    expect(loadSettings(memoryStorage()).recordAspect).toBe('wide');
+    expect(loadSettings(memoryStorage({ 'irticalen:recordAspect': 'xx' })).recordAspect).toBe('wide');
+    const storage = memoryStorage();
+    saveSettings({ recordAspect: 'tall' }, storage);
+    expect(loadSettings(storage).recordAspect).toBe('tall');
+    saveSettings({ recordAspect: 'wide' }, storage);
+    expect(loadSettings(storage).recordAspect).toBe('wide');
+  });
 });
 
 describe('locale', () => {

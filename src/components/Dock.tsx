@@ -7,11 +7,8 @@ import {
   type FeedbackKind,
   type FeedbackResult,
   runViewTransition,
-  loadView,
   saveLocale,
   RICH_VIEW_MIN_WIDTH,
-  VIEW_CHANGE_EVENT,
-  type ViewMode,
   loadLangHintSeen,
   saveLangHintSeen,
   shouldShowLangHint,
@@ -47,30 +44,21 @@ export function Dock({ locale, dict }: Props) {
   const trackerRef = useRef(getTracker(locale));
   const tracker = trackerRef.current;
 
-  // The rich (open-book) view is chosen inside the App island's settings dialog — this island only
-  // needs to know about it to hide the now-redundant "ne demek?" link (the word card lives on the
-  // rich view's own page) and to line the dock up with the wider column. SSR-safe default (false):
-  // both `view` and `isWide` only become real on the client, same rule App.tsx follows for `isWide`.
-  const [view, setView] = useState<ViewMode>('minimal');
+  // The rich (open-book) layout is purely the viewport-width check (no setting any more) — this
+  // island only needs to know about it to hide the now-redundant "ne demek?" link (the word card
+  // lives on the rich view's own page) and to line the dock up with the wider column. SSR-safe
+  // default (false): the real width only becomes known on the client, same rule App.tsx follows.
   const [isWide, setIsWide] = useState(false);
-  const richActive = view === 'rich' && isWide;
-
-  useEffect(() => {
-    setView(loadView());
-    const onViewChange = (event: Event): void => {
-      const detail = (event as CustomEvent<ViewMode>).detail;
-      if (detail) setView(detail);
-    };
-    window.addEventListener(VIEW_CHANGE_EVENT, onViewChange);
-    return () => window.removeEventListener(VIEW_CHANGE_EVENT, onViewChange);
-  }, []);
+  const richActive = isWide;
 
   useEffect(() => {
     let mql: MediaQueryList | undefined;
     try {
       mql = matchMedia(`(min-width: ${RICH_VIEW_MIN_WIDTH}px)`);
       setIsWide(mql.matches);
-      const onChange = (event: MediaQueryListEvent): void => setIsWide(event.matches);
+      const onChange = (event: MediaQueryListEvent): void => {
+        void runViewTransition(() => setIsWide(event.matches));
+      };
       mql.addEventListener('change', onChange);
       return () => mql?.removeEventListener('change', onChange);
     } catch {

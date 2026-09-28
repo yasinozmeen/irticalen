@@ -20,3 +20,4 @@ export * from './youtube';
 export * from './recorder';
 export * from './view';
 export * from './langHint';
+export * from './compositor';

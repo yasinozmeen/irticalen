@@ -25,10 +25,21 @@ export interface Category {
 }
 
 /**
- * "Kendini kaydet": off (default), camera+mic, screen+mic, or both (two separate files, started and
- * stopped together). Entirely device-local — nothing is ever uploaded anywhere.
+ * "Kendini kaydet": off (default), camera+mic, screen+mic, or both. Entirely device-local — nothing
+ * is ever uploaded anywhere.
  */
 export type RecordMode = 'off' | 'camera' | 'screen' | 'both';
+
+/**
+ * How a non-'off' recording ends up as file(s): 'template' composites everything (camera/screen,
+ * topic label, progress line, …) into a single styled file (see `src/lib/compositor`); 'raw' keeps
+ * today's behavior of plain, uncomposited file(s) (two, for 'both').
+ */
+export type RecordFormat = 'template' | 'raw';
+
+/** Composite recording output aspect — 16:9 landscape or 9:16 portrait. Only meaningful for
+ * `recordFormat: 'template'`; see `src/lib/compositor`. */
+export type RecordAspect = 'wide' | 'tall';
 
 /** User settings (persisted). */
 export interface Settings {
@@ -38,4 +49,8 @@ export interface Settings {
   /** Clock and ruler are blurred while the timer runs (the visitor chose not to watch the time). */
   hideClock: boolean;
   record: RecordMode;
+  recordFormat: RecordFormat;
+  /** An id from the compositor's style registry (`src/lib/compositor/styles`). */
+  recordStyle: string;
+  recordAspect: RecordAspect;
 }

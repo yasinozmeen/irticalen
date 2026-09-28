@@ -1371,6 +1371,28 @@ input[type='range']::-moz-range-thumb {
   background: var(--ink);
 }
 
+.template-settings .mode-switch {
+  margin-top: 0.1rem;
+}
+
+/* Settings choice rows (record mode, format, style, aspect): same underlined words as the language
+   row, wrapping instead of overflowing a narrow column. */
+.settings-dialog .choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 1.1rem;
+  row-gap: 0;
+}
+
+/* The canvas paints its own `--paper` fill, which would otherwise blend invisibly into the dialog's
+   own paper background — a thin `--rule` line (used the same way by `.settings-sep`) is enough to
+   read as "a preview area" without a box/shadow. */
+.template-preview {
+  display: block;
+  border: 1px solid var(--rule);
+  margin-top: 0.6rem;
+}
+
 .settings-saved {
   font-size: 1rem;
   color: var(--pencil);
@@ -1899,8 +1921,8 @@ body.is-frame .app-shell {
 }
 
 /* ======================================================================
- * Desktop "rich" view — "F: açık kitap" (open book). Opt-in (`irticalen:view`),
- * offered only from ≥1100px; below that width the page is always the minimalist layout above.
+ * Desktop "rich" view — "F: açık kitap" (open book). Automatic (no setting) — applied only from
+ * ≥1100px; below that width the page is always the minimalist layout above.
  * Reference: design-options/desktop/zengin-a.html + desktop.css.
  * ====================================================================== */
 

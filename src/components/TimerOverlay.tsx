@@ -46,8 +46,12 @@ interface Props {
   recordingStartFailed: boolean;
   /** 'both' mode only: screen half failed/declined but the camera half kept recording. */
   recordingScreenFailed: boolean;
+  /** 'raw' format only. */
   recordingCameraFile: { url: string; name: string } | null;
+  /** 'raw' format only. */
   recordingScreenFile: { url: string; name: string } | null;
+  /** 'template' format only — the single composited file. */
+  recordingCompositeFile: { url: string; name: string } | null;
 }
 
 const STAGE_INDEX: Record<ResearchStage, number> = { gather: 0, shape: 1, warm: 2 };
@@ -99,6 +103,7 @@ export function TimerOverlay({
   recordingScreenFailed,
   recordingCameraFile,
   recordingScreenFile,
+  recordingCompositeFile,
 }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const open = phase !== 'idle';
@@ -273,9 +278,14 @@ export function TimerOverlay({
             </p>
           )}
 
-          {isDone && (recordingCameraFile || recordingScreenFile) && (
+          {isDone && (recordingCameraFile || recordingScreenFile || recordingCompositeFile) && (
             <div class="timer-record-download timer-rise" style={{ animationDelay: '190ms' } as Record<string, string>}>
               <div class="timer-record-download-links">
+                {recordingCompositeFile && (
+                  <a class="btn btn-secondary" href={recordingCompositeFile.url} download={recordingCompositeFile.name}>
+                    {dict.record.downloadRecording}
+                  </a>
+                )}
                 {recordingCameraFile && (
                   <a class="btn btn-secondary" href={recordingCameraFile.url} download={recordingCameraFile.name}>
                     {dict.record.downloadCamera}

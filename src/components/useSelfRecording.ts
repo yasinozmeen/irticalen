@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { Locale, RecordMode } from '../lib/types';
+import type { Locale, RecordAspect, RecordFormat, RecordMode } from '../lib/types';
 import {
   CAMERA_CONSTRAINTS,
   MIC_ONLY_CONSTRAINTS,
   SCREEN_CONSTRAINTS,
   VIDEO_MIME_CANDIDATES,
+  buildCompositeFileName,
   buildRecordingFileName,
   downgradeRecordMode,
   isRecordingFeatureAvailable,
@@ -17,6 +18,7 @@ import {
   type RecordingCapabilities,
   type RecordingVariant,
 } from '../lib/recorder';
+import { CompositorEngine, compositeModeFor, type CompositeMode, type StyleDefinition } from '../lib/compositor';
 
 export interface RecordingFile {
   url: string;
@@ -56,7 +58,8 @@ function hasMediaRecorder(): boolean {
 
 /**
  * One recorder + its own file — used twice (once for the camera file, once for the screen file) so
- * "both" mode can run two independent MediaRecorders that start and stop together.
+ * "both" mode can run two independent MediaRecorders that start and stop together. Only used for
+ * `recordFormat: 'raw'` — see `useTemplateRecording` for `'template'`.
  */
 function useRecordingSlot(variant: RecordingVariant) {
   const [state, setState] = useState<SlotState>(SLOT_IDLE);
@@ -183,26 +186,211 @@ function useRecordingSlot(variant: RecordingVariant) {
   return { state, previewStream, startWithStream, markFailed, stop, hardStop, reset };
 }
 
+/** What `acquireTemplateStreams` got for a 'template'-format session — the exact streams the
+ * `CompositorEngine` should composite/record, plus whether a secondary source (screen, in 'both')
+ * failed while the primary one still succeeded. */
+interface TemplateAcquisition {
+  cameraStream?: MediaStream;
+  screenStream?: MediaStream;
+  audioStream?: MediaStream;
+  /** 'both' mode only: the screen half failed/was declined but the camera half is usable. */
+  screenFailed: boolean;
+}
+
+/**
+ * Acquires the stream(s) a composited ('template' format) session needs, for a given mode. Unlike
+ * the 'raw' path's `start` (below), this always awaits every permission prompt before returning —
+ * the composited frame needs every source it will ever have before it draws its very first frame, so
+ * there is no equivalent of "camera negotiates in the background while the clock already started".
+ * That is a deliberate, documented trade-off (see CLAUDE.md's task notes): a template recording can
+ * delay the speech timer's start by however long the visitor takes to answer a permission prompt.
+ */
+async function acquireTemplateStreams(mode: CompositeMode): Promise<TemplateAcquisition | null> {
+  if (mode === 'camera') {
+    const cameraStream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS).catch(() => null);
+    if (!cameraStream) return null;
+    return { cameraStream, audioStream: cameraStream, screenFailed: false };
+  }
+  if (mode === 'screen') {
+    // getDisplayMedia must be the first call in this tick (Safari/Firefox only allow it inside the
+    // gesture that triggered `start`) — same rule the 'raw' path follows below.
+    const screenStream = await navigator.mediaDevices.getDisplayMedia(SCREEN_CONSTRAINTS).catch(() => null);
+    if (!screenStream) return null;
+    const micStream = await navigator.mediaDevices.getUserMedia(MIC_ONLY_CONSTRAINTS).catch(() => null);
+    return { screenStream, audioStream: micStream ?? undefined, screenFailed: false };
+  }
+  // 'both': screen first (the same gesture rule), camera right after — both must settle before the
+  // engine starts, so there is no benefit to requesting them concurrently here.
+  const screenStream = await navigator.mediaDevices.getDisplayMedia(SCREEN_CONSTRAINTS).catch(() => null);
+  const cameraStream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS).catch(() => null);
+  if (!cameraStream && !screenStream) return null;
+  return {
+    cameraStream: cameraStream ?? undefined,
+    screenStream: screenStream ?? undefined,
+    audioStream: cameraStream ?? undefined,
+    screenFailed: !screenStream && Boolean(cameraStream),
+  };
+}
+
+interface TemplateStartParams {
+  mode: CompositeMode;
+  style: StyleDefinition;
+  aspect: RecordAspect;
+  topic: string;
+  locale: Locale;
+  totalSec: number;
+  getElapsedSec: () => number;
+}
+
+/** The 'template'-format counterpart of `useRecordingSlot`: a single `CompositorEngine` session
+ * producing one composited file instead of one-file-per-slot. See `../lib/compositor/engine.ts` for
+ * the actual drawing/recording orchestration — this hook only wires it into Preact state. */
+function useTemplateRecording() {
+  const [status, setStatus] = useState<'idle' | 'active' | 'failed'>('idle');
+  const [screenFailed, setScreenFailed] = useState(false);
+  const [file, setFile] = useState<RecordingFile | null>(null);
+  const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
+
+  const engineRef = useRef<CompositorEngine | null>(null);
+  const fileRef = useRef<RecordingFile | null>(null);
+  const topicRef = useRef('');
+  const localeRef = useRef<Locale>('tr');
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      engineRef.current?.hardStop();
+      revokeObjectUrl(fileRef.current?.url ?? null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const start = async (params: TemplateStartParams): Promise<void> => {
+    topicRef.current = params.topic;
+    localeRef.current = params.locale;
+    if (mountedRef.current) {
+      setScreenFailed(false);
+      setPreviewStream(null);
+    }
+    const acquired = await acquireTemplateStreams(params.mode);
+    if (!acquired) {
+      if (mountedRef.current) setStatus('failed');
+      return;
+    }
+    if (mountedRef.current) {
+      setScreenFailed(acquired.screenFailed);
+      // See CLAUDE.md's task notes for why this mirrors the raw camera preview rather than a second
+      // live decode of the composited canvas — cheapest option that still shows what's being recorded.
+      setPreviewStream(acquired.cameraStream ?? null);
+    }
+    const engine = new CompositorEngine(
+      {},
+      {
+        onFailed: () => {
+          if (mountedRef.current) setStatus('failed');
+        },
+        onFinished: ({ blob, mimeType }) => {
+          try {
+            const url = URL.createObjectURL(blob);
+            const name = buildCompositeFileName({ topic: topicRef.current, locale: localeRef.current, mimeType });
+            fileRef.current = { url, name };
+            if (mountedRef.current) {
+              setFile(fileRef.current);
+              setStatus('idle');
+              setPreviewStream(null);
+            }
+          } catch {
+            if (mountedRef.current) setStatus('failed');
+          }
+        },
+      },
+    );
+    engineRef.current = engine;
+    const ok = await engine.start({
+      mode: params.mode,
+      aspect: params.aspect,
+      style: params.style,
+      topic: params.topic,
+      locale: params.locale,
+      totalSec: params.totalSec,
+      cameraStream: acquired.cameraStream,
+      screenStream: acquired.screenStream,
+      audioStream: acquired.audioStream,
+      getElapsedSec: params.getElapsedSec,
+    });
+    if (ok && mountedRef.current) setStatus('active');
+  };
+
+  const stop = (keep: boolean): void => {
+    engineRef.current?.requestStop(keep);
+    // A discard resolves synchronously inside the engine; a kept stop plays out an outro first and
+    // reports back through `onFinished` — `active` (derived from `status`) must stay true until then
+    // so the "still recording" UI doesn't disappear before the file is actually ready.
+    if (!keep && mountedRef.current) {
+      setStatus('idle');
+      setPreviewStream(null);
+    }
+  };
+
+  const hardStop = (): void => {
+    engineRef.current?.hardStop();
+  };
+
+  const reset = (): void => {
+    revokeObjectUrl(fileRef.current?.url ?? null);
+    fileRef.current = null;
+    if (mountedRef.current) {
+      setFile(null);
+      setStatus('idle');
+      setScreenFailed(false);
+      setPreviewStream(null);
+    }
+  };
+
+  return { status, screenFailed, file, previewStream, start, stop, hardStop, reset };
+}
+
+export interface StartOptions {
+  mode: RecordMode;
+  format: RecordFormat;
+  style: StyleDefinition;
+  aspect: RecordAspect;
+  topic: string;
+  locale: Locale;
+  /** Speech timer's total length (seconds) — only used by the 'template' path's progress line. */
+  totalSec: number;
+  /** Only used by the 'template' path — read live every draw tick. */
+  getElapsedSec: () => number;
+}
+
 export interface SelfRecordingApi {
   /** Both MediaRecorder and getUserMedia exist — otherwise the whole setting/UI must stay hidden. */
   available: boolean;
   capabilities: RecordingCapabilities;
   /** The record-mode options Settings should actually offer, given this browser's capabilities. */
   visibleModes: readonly RecordMode[];
-  /** The effective mode of the current/last session (after any capability downgrade). */
+  /** The effective mode/format of the current/last session (after any capability downgrade). */
   mode: RecordMode;
+  format: RecordFormat;
   active: boolean;
-  /** Camera preview only — screen capture is never shown as a live preview. */
+  /** Camera preview only — screen capture is never shown as a live preview, in either format. */
   previewStream: MediaStream | null;
   /** Nothing could be recorded at all; the talk continues unrecorded. */
   startFailed: boolean;
   /** 'both' mode only: the screen half failed/was declined but the camera half is still recording. */
   screenFailed: boolean;
+  /** 'raw' format only. */
   cameraFile: RecordingFile | null;
+  /** 'raw' format only. */
   screenFile: RecordingFile | null;
+  /** 'template' format only — the single composited file. */
+  compositeFile: RecordingFile | null;
   /** Resolves once the screen-share picker (if any) has settled — camera/mic negotiation continues
-   * in the background either way, matching "the timer never waits on camera/mic permission". */
-  start: (mode: RecordMode, topic: string, locale: Locale) => Promise<void>;
+   * in the background either way in 'raw' format; 'template' format awaits every source (see
+   * `acquireTemplateStreams`). */
+  start: (options: StartOptions) => Promise<void>;
   /** `keep=true` finalizes downloadable file(s); `keep=false` (early close) discards everything. */
   stop: (keep: boolean) => void;
   discardDownload: () => void;
@@ -211,12 +399,17 @@ export interface SelfRecordingApi {
 /**
  * Orchestrates "kendini kaydet": requests camera/mic/screen only at the moment the speech timer
  * starts, records locally, and guarantees every track is stopped (camera/share light off) on a
- * natural finish, an early close, a tab hide, or unmount. Nothing is ever uploaded.
+ * natural finish, an early close, a tab hide, or unmount. Nothing is ever uploaded. Two independent
+ * recording paths live side by side — 'raw' (`useRecordingSlot`, one/two plain files) and 'template'
+ * (`useTemplateRecording`, one composited file via `CompositorEngine`) — `format` at `start()` time
+ * picks which one actually runs; only that path's fields are populated afterwards.
  */
 export function useSelfRecording(): SelfRecordingApi {
   const cameraSlot = useRecordingSlot('kamera');
   const screenSlot = useRecordingSlot('ekran');
+  const template = useTemplateRecording();
   const [mode, setMode] = useState<RecordMode>('off');
+  const [format, setFormat] = useState<RecordFormat>('template');
   const sessionTokenRef = useRef(0);
 
   const [capabilities] = useState<RecordingCapabilities>(() => {
@@ -228,14 +421,40 @@ export function useSelfRecording(): SelfRecordingApi {
     const onPageHide = (): void => {
       cameraSlot.hardStop();
       screenSlot.hardStop();
+      template.hardStop();
     };
     window.addEventListener('pagehide', onPageHide);
     return () => window.removeEventListener('pagehide', onPageHide);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const start = (requestedMode: RecordMode, topic: string, locale: Locale): Promise<void> => {
-    const effective = downgradeRecordMode(requestedMode, capabilities);
+  const start = async (options: StartOptions): Promise<void> => {
+    const effective = downgradeRecordMode(options.mode, capabilities);
+    setFormat(options.format);
+
+    if (options.format === 'template') {
+      const compositeMode = compositeModeFor(effective);
+      if (!compositeMode) {
+        setMode('off');
+        return;
+      }
+      setMode(effective);
+      const token = (sessionTokenRef.current += 1);
+      await template.start({
+        mode: compositeMode,
+        style: options.style,
+        aspect: options.aspect,
+        topic: options.topic,
+        locale: options.locale,
+        totalSec: options.totalSec,
+        getElapsedSec: options.getElapsedSec,
+      });
+      // A session started after this one (a fast re-start) must not have its state clobbered by this
+      // one settling late — mirrors the same guard the 'raw' path uses below.
+      if (token !== sessionTokenRef.current) template.hardStop();
+      return;
+    }
+
     const plan = recordingPlanForMode(effective);
     if (!plan) {
       setMode('off');
@@ -256,7 +475,7 @@ export function useSelfRecording(): SelfRecordingApi {
             stopMediaStream(stream);
             return;
           }
-          cameraSlot.startWithStream(stream, topic, locale, false);
+          cameraSlot.startWithStream(stream, options.topic, options.locale, false);
         })
         .catch(() => {
           if (!stale()) cameraSlot.markFailed();
@@ -282,7 +501,7 @@ export function useSelfRecording(): SelfRecordingApi {
         }
         if (plan.screenOnly) {
           // 'both': its own file, no mic (the camera file already carries the mic audio).
-          screenSlot.startWithStream(screenStream, topic, locale, true);
+          screenSlot.startWithStream(screenStream, options.topic, options.locale, true);
           return;
         }
         // 'screen' mode: merge in the mic once it resolves — screen alone would have no audio.
@@ -299,7 +518,7 @@ export function useSelfRecording(): SelfRecordingApi {
               ...screenStream.getVideoTracks(),
               ...(micStream ? micStream.getAudioTracks() : []),
             ]);
-            screenSlot.startWithStream(combined, topic, locale, true);
+            screenSlot.startWithStream(combined, options.topic, options.locale, true);
           });
       });
   };
@@ -308,34 +527,47 @@ export function useSelfRecording(): SelfRecordingApi {
     sessionTokenRef.current += 1;
     cameraSlot.stop(keep);
     screenSlot.stop(keep);
+    template.stop(keep);
   };
 
   const discardDownload = (): void => {
     cameraSlot.reset();
     screenSlot.reset();
+    template.reset();
   };
 
+  const isTemplate = format === 'template';
   const cameraFailed = cameraSlot.state.status === 'failed';
   const screenFailed = screenSlot.state.status === 'failed';
-  const active = cameraSlot.state.status === 'active' || screenSlot.state.status === 'active';
-  const startFailed =
+  const rawActive = cameraSlot.state.status === 'active' || screenSlot.state.status === 'active';
+  const active = isTemplate ? template.status === 'active' : rawActive;
+  const rawStartFailed =
     mode !== 'off' &&
     ((mode === 'camera' && cameraFailed) ||
       (mode === 'screen' && screenFailed) ||
       (mode === 'both' && cameraFailed && screenFailed));
-  const screenPartialFailed = mode === 'both' && screenFailed && !cameraFailed;
+  const startFailed = isTemplate ? mode !== 'off' && template.status === 'failed' : rawStartFailed;
+  const rawScreenPartialFailed = mode === 'both' && screenFailed && !cameraFailed;
 
   return {
     available: capabilities.camera,
     capabilities,
     visibleModes: visibleRecordModes(capabilities),
     mode,
+    format,
     active,
-    previewStream: mode === 'camera' || mode === 'both' ? cameraSlot.previewStream : null,
+    previewStream: isTemplate
+      ? mode === 'camera' || mode === 'both'
+        ? template.previewStream
+        : null
+      : mode === 'camera' || mode === 'both'
+        ? cameraSlot.previewStream
+        : null,
     startFailed,
-    screenFailed: screenPartialFailed,
-    cameraFile: cameraSlot.state.file,
-    screenFile: screenSlot.state.file,
+    screenFailed: isTemplate ? template.screenFailed : rawScreenPartialFailed,
+    cameraFile: isTemplate ? null : cameraSlot.state.file,
+    screenFile: isTemplate ? null : screenSlot.state.file,
+    compositeFile: isTemplate ? template.file : null,
     start,
     stop,
     discardDownload,

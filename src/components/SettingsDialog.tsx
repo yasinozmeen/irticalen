@@ -1,9 +1,10 @@
 import { useRef } from 'preact/hooks';
 import { SPEECH_MIN, SPEECH_MAX, RESEARCH_MIN, RESEARCH_MAX, saveLocale } from '../lib/settings';
-import type { RecordMode } from '../lib/types';
-import type { ViewMode } from '../lib/view';
+import type { RecordFormat, RecordMode } from '../lib/types';
+import { COMPOSITE_STYLES, compositeModeFor, type RecordAspect } from '../lib/compositor';
 import { fill, localePath, localeTag, type Dictionary, type Locale } from '../i18n';
 import { useFocusTrap } from './useFocusTrap';
+import { TemplatePreview } from './TemplatePreview';
 
 interface Props {
   open: boolean;
@@ -15,21 +16,27 @@ interface Props {
   record: RecordMode;
   /** Which modes this browser can actually do — 'off' alone means the whole section stays hidden. */
   recordModes: readonly RecordMode[];
-  /** The "görünüm" (view) row only ever shows on a wide screen — a narrow one is always minimalist. */
+  recordFormat: RecordFormat;
+  /** An id from `COMPOSITE_STYLES`. */
+  recordStyle: string;
+  /** Already clamped to one the selected style actually supports (see `resolveAspectForStyle`). */
+  recordAspect: RecordAspect;
+  /** Whether the dialog currently renders its wide, two-column layout (>=1100px). */
   isWide: boolean;
-  view: ViewMode;
   dict: Dictionary;
   onSpeechChange: (minutes: number) => void;
   onResearchChange: (minutes: number) => void;
   onMutedChange: (muted: boolean) => void;
   onHideClockChange: (hideClock: boolean) => void;
   onRecordChange: (mode: RecordMode) => void;
-  onViewChange: (view: ViewMode) => void;
+  onRecordFormatChange: (format: RecordFormat) => void;
+  onRecordStyleChange: (styleId: string) => void;
+  onRecordAspectChange: (aspect: RecordAspect) => void;
   onClose: () => void;
 }
 
-/** Settings dialog: language + (on wide screens) view, then speech/research minute ranges + mute,
- * saved immediately on change. */
+/** Settings dialog: language, then speech/research minute ranges + mute, saved immediately on
+ * change. The rich/minimalist layout is automatic (viewport width) and has no setting here. */
 export function SettingsDialog({
   open,
   locale,
@@ -39,15 +46,19 @@ export function SettingsDialog({
   hideClock,
   record,
   recordModes,
+  recordFormat,
+  recordStyle,
+  recordAspect,
   isWide,
-  view,
   dict,
   onSpeechChange,
   onResearchChange,
   onMutedChange,
   onHideClockChange,
   onRecordChange,
-  onViewChange,
+  onRecordFormatChange,
+  onRecordStyleChange,
+  onRecordAspectChange,
   onClose,
 }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -84,23 +95,6 @@ export function SettingsDialog({
               </a>
             </div>
           </div>
-
-          {isWide && (
-            <div class="settings-field">
-              <span class="settings-field-label">
-                <span>{dict.settings.view}</span>
-              </span>
-              <div class="mode-switch" role="radiogroup" aria-label={dict.settings.view}>
-                <button type="button" role="radio" aria-checked={view === 'minimal'} onClick={() => onViewChange('minimal')}>
-                  {dict.settings.viewMinimal}
-                </button>
-                <button type="button" role="radio" aria-checked={view === 'rich'} onClick={() => onViewChange('rich')}>
-                  {dict.settings.viewRich}
-                </button>
-              </div>
-              <p class="settings-field-hint">{dict.settings.viewHint}</p>
-            </div>
-          )}
 
           <hr class="settings-sep" />
           <p class="settings-hint">{dict.settings.hint}</p>
@@ -164,32 +158,79 @@ export function SettingsDialog({
             <div class="settings-field">
               <p class="settings-field-label"><span>{dict.settings.record}</span></p>
               <p class="settings-field-hint">{dict.settings.recordHint}</p>
-              <div class="settings-record-group" role="radiogroup" aria-label={dict.settings.record}>
-                {recordModes.map((value) => {
-                  const label =
+              <ChoiceRow
+                label={dict.settings.record}
+                options={recordModes.map((value) => ({
+                  value,
+                  label:
                     value === 'off'
                       ? dict.settings.recordOff
                       : value === 'camera'
                         ? dict.settings.recordCamera
                         : value === 'screen'
                           ? dict.settings.recordScreen
-                          : dict.settings.recordBoth;
-                  return (
-                    <div class="settings-mute-row" key={value}>
-                      <input
-                        id={`settings-record-${value}`}
-                        type="radio"
-                        name="settings-record"
-                        checked={record === value}
-                        onChange={() => onRecordChange(value)}
-                      />
-                      <label for={`settings-record-${value}`}>{label}</label>
-                    </div>
-                  );
-                })}
-              </div>
+                          : dict.settings.recordBoth,
+                }))}
+                value={record}
+                onChange={onRecordChange}
+              />
             </div>
           )}
+
+          {recordModes.length > 1 && record !== 'off' && (
+            <div class="settings-field">
+              <p class="settings-field-label"><span>{dict.settings.format}</span></p>
+              <ChoiceRow
+                label={dict.settings.format}
+                options={[
+                  { value: 'template' as const, label: dict.settings.formatTemplate },
+                  { value: 'raw' as const, label: dict.settings.formatRaw },
+                ]}
+                value={recordFormat}
+                onChange={onRecordFormatChange}
+              />
+            </div>
+          )}
+
+          {recordModes.length > 1 && record !== 'off' && recordFormat === 'template' && (() => {
+            const selectedStyle = COMPOSITE_STYLES.find((style) => style.id === recordStyle) ?? COMPOSITE_STYLES[0];
+            const compositeMode = compositeModeFor(record);
+            return (
+              <div class="settings-field template-settings">
+                {COMPOSITE_STYLES.length > 1 && (
+                  <>
+                    <p class="settings-field-label"><span>{dict.settings.style}</span></p>
+                    <ChoiceRow
+                      label={dict.settings.style}
+                      options={COMPOSITE_STYLES.map((style) => ({
+                        value: style.id,
+                        label: (dict.record.styles as Record<string, string>)[style.labelKey] ?? style.labelKey,
+                      }))}
+                      value={recordStyle}
+                      onChange={onRecordStyleChange}
+                    />
+                  </>
+                )}
+                {selectedStyle.aspects.length > 1 && (
+                  <>
+                    <p class="settings-field-label"><span>{dict.settings.aspect}</span></p>
+                    <ChoiceRow
+                      label={dict.settings.aspect}
+                      options={selectedStyle.aspects.map((value) => ({
+                        value,
+                        label: value === 'wide' ? dict.settings.aspectWide : dict.settings.aspectTall,
+                      }))}
+                      value={recordAspect}
+                      onChange={onRecordAspectChange}
+                    />
+                  </>
+                )}
+                {compositeMode && (
+                  <TemplatePreview style={selectedStyle} aspect={recordAspect} mode={compositeMode} dict={dict} locale={locale} />
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         <p class="settings-saved">{dict.settings.saved}</p>
@@ -198,6 +239,44 @@ export function SettingsDialog({
           {dict.settings.done}
         </button>
       </div>
+    </div>
+  );
+}
+
+interface ChoiceRowProps<T extends string> {
+  label: string;
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}
+
+/** A single-choice row in the site's underlined-word style (same look as the language row):
+ * compact enough that the recording options fit the dialog without scrolling. */
+function ChoiceRow<T extends string>({ label, options, value, onChange }: ChoiceRowProps<T>) {
+  const onKeyDown = (event: KeyboardEvent): void => {
+    const index = options.findIndex((option) => option.value === value);
+    const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
+    if (!step || index < 0) return;
+    event.preventDefault();
+    const next = options[(index + step + options.length) % options.length];
+    onChange(next.value);
+    const group = event.currentTarget as HTMLElement;
+    requestAnimationFrame(() => group.querySelector<HTMLElement>('[aria-checked="true"]')?.focus());
+  };
+  return (
+    <div class="mode-switch choice-row" role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="radio"
+          aria-checked={value === option.value}
+          tabIndex={value === option.value ? 0 : -1}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
   );
 }

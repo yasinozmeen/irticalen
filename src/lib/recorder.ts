@@ -1,4 +1,4 @@
-import type { Locale, RecordMode } from './types';
+import type { Locale, RecordFormat, RecordMode } from './types';
 import { slugify } from './slug';
 import { dayKey } from './streak';
 
@@ -18,6 +18,17 @@ export function normalizeRecordMode(raw: unknown): RecordMode {
     return raw as RecordMode;
   }
   return 'off';
+}
+
+const KNOWN_FORMATS: readonly RecordFormat[] = ['template', 'raw'];
+
+/** Normalizes an untrusted format value; anything unrecognized falls back to 'template' (the
+ * default — a single composited file). */
+export function normalizeRecordFormat(raw: unknown): RecordFormat {
+  if (typeof raw === 'string' && (KNOWN_FORMATS as readonly string[]).includes(raw)) {
+    return raw as RecordFormat;
+  }
+  return 'template';
 }
 
 /** What this browser can actually do. `screen` implies `camera` (MediaRecorder + getUserMedia). */
@@ -122,6 +133,20 @@ export function buildRecordingFileName(params: {
   const ext = mimeExtension(params.mimeType);
   const date = params.date ?? new Date();
   return `irticalen-${slug}-${dayKey(date)}-${params.variant}.${ext}`;
+}
+
+/** `irticalen-<konu-slug>-<YYYY-MM-DD>.<uzantı>` — the single composited ('template' format) file,
+ * with no `<kamera|ekran>` suffix since there is only ever one file. */
+export function buildCompositeFileName(params: {
+  topic: string;
+  locale: Locale;
+  mimeType: string;
+  date?: Date;
+}): string {
+  const slug = slugify(params.topic, params.locale) || 'konu';
+  const ext = mimeExtension(params.mimeType);
+  const date = params.date ?? new Date();
+  return `irticalen-${slug}-${dayKey(date)}.${ext}`;
 }
 
 /** True for a getUserMedia/getDisplayMedia rejection that means "the person said no", not "no device". */

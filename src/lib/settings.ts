@@ -1,5 +1,6 @@
 import type { Locale, Settings } from './types';
-import { normalizeRecordMode } from './recorder';
+import { normalizeRecordFormat, normalizeRecordMode } from './recorder';
+import { normalizeAspect, normalizeStyleId, resolveAspectForStyle, getStyle } from './compositor/styles';
 
 /** Minute bounds. */
 export const SPEECH_MIN = 1;
@@ -17,6 +18,9 @@ const KEY_MUTED = 'irticalen:muted';
 const KEY_LANG = 'irticalen:lang';
 const KEY_HIDE_CLOCK = 'irticalen:hideClock';
 const KEY_RECORD = 'irticalen:record';
+const KEY_RECORD_FORMAT = 'irticalen:recordFormat';
+const KEY_RECORD_STYLE = 'irticalen:recordStyle';
+const KEY_RECORD_ASPECT = 'irticalen:recordAspect';
 
 /** Minimal storage interface (localStorage-compatible, injectable). */
 export interface StorageLike {
@@ -87,7 +91,25 @@ export function loadSettings(storage: StorageLike | undefined = defaultStorage()
   } catch {
     record = 'off';
   }
-  return { speechSec, researchSec, muted, hideClock, record };
+  let recordFormat: Settings['recordFormat'] = 'template';
+  try {
+    recordFormat = normalizeRecordFormat(storage?.getItem(KEY_RECORD_FORMAT));
+  } catch {
+    recordFormat = 'template';
+  }
+  let recordStyle: Settings['recordStyle'] = normalizeStyleId(undefined);
+  try {
+    recordStyle = normalizeStyleId(storage?.getItem(KEY_RECORD_STYLE));
+  } catch {
+    recordStyle = normalizeStyleId(undefined);
+  }
+  let recordAspect: Settings['recordAspect'] = 'wide';
+  try {
+    recordAspect = resolveAspectForStyle(getStyle(recordStyle), normalizeAspect(storage?.getItem(KEY_RECORD_ASPECT)));
+  } catch {
+    recordAspect = 'wide';
+  }
+  return { speechSec, researchSec, muted, hideClock, record, recordFormat, recordStyle, recordAspect };
 }
 
 /** Saves settings partially (fields not provided are left untouched). Never throws. */
@@ -114,6 +136,15 @@ export function saveSettings(
     }
     if (partial.record !== undefined) {
       storage.setItem(KEY_RECORD, normalizeRecordMode(partial.record));
+    }
+    if (partial.recordFormat !== undefined) {
+      storage.setItem(KEY_RECORD_FORMAT, normalizeRecordFormat(partial.recordFormat));
+    }
+    if (partial.recordStyle !== undefined) {
+      storage.setItem(KEY_RECORD_STYLE, normalizeStyleId(partial.recordStyle));
+    }
+    if (partial.recordAspect !== undefined) {
+      storage.setItem(KEY_RECORD_ASPECT, normalizeAspect(partial.recordAspect));
     }
   } catch {
     // sessizce yok say
