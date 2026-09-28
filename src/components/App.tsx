@@ -37,6 +37,7 @@ import {
   sessionChapters,
   researchMinutes as spentResearchMinutes,
   youtubePrompt as buildYoutubePrompt,
+  downgradeRecordMode,
   type SessionMarks,
   type Countdown,
   type ReleaseWakeLock,
@@ -44,7 +45,8 @@ import {
   type DayLog,
 } from '../lib';
 import type { ShareChannel } from './SharePanel';
-import type { Category, Mode } from '../lib/types';
+import type { Category, Mode, RecordMode } from '../lib/types';
+import { useSelfRecording } from './useSelfRecording';
 import { dictionaries, fill, type Locale } from '../i18n';
 import { getCategories, getCategoryById } from '../data/topics';
 import { ModeSwitch } from './ModeSwitch';
@@ -78,6 +80,7 @@ function AppContent({ locale }: Props) {
     researchSec: DEFAULT_RESEARCH_SEC,
     muted: false,
     hideClock: false,
+    record: 'off',
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sharePanelOpen, setSharePanelOpen] = useState(false);
@@ -100,6 +103,7 @@ function AppContent({ locale }: Props) {
   // pool, unfiltered. SSR-safe default; the saved value loads on the client below.
   const [researchField, setResearchField] = useState<string>(ALL_FIELD_ID);
 
+  const recording = useSelfRecording();
   const soundRef = useRef(createSoundEngine());
   const countdownRef = useRef<Countdown | null>(null);
   const wakeLockReleaseRef = useRef<ReleaseWakeLock | null>(null);
@@ -174,11 +178,15 @@ function AppContent({ locale }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load persisted settings on the client only, after the SSR-safe defaults have rendered.
+  // Load persisted settings on the client only, after the SSR-safe defaults have rendered. A saved
+  // record mode this browser can no longer do (e.g. no getDisplayMedia) is clamped and re-saved.
   useEffect(() => {
     const loaded = loadSettings();
-    setSettings(loaded);
+    const record = downgradeRecordMode(loaded.record, recording.capabilities);
+    if (record !== loaded.record) saveSettings({ record });
+    setSettings({ ...loaded, record });
     soundRef.current.setMuted(loaded.muted);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Same for the practice log that drives the streak indicator — client only.
@@ -349,6 +357,7 @@ function AppContent({ locale }: Props) {
           tracker.track('research_done');
         } else if (wasSpeech && !speechDoneSentRef.current) {
           speechDoneSentRef.current = true;
+          recording.stop(true);
           tracker.track('speech_done');
           // The day counts for the practice streak (kept only in this browser) — the indicator and
           // the "bugün tamam" line both read the updated log straight from state.
@@ -487,10 +496,16 @@ function AppContent({ locale }: Props) {
     }
   };
 
-  const handleStart = (): void => {
+  const handleStart = async (): Promise<void> => {
     if (isLocked(state) || state.topic === null) return;
     soundRef.current.warmUp();
     const nextPhase = state.mode === 'deep-research' ? 'research' : 'speech';
+    const topic = state.topic;
+    // A previous session's finished recording (if not yet downloaded) is gone once a new one starts.
+    recording.discardDownload();
+    // Only the speech timer records — never the research timer (see CLAUDE.md task spec #3). A
+    // screen-share pick, if any, must resolve before the clock starts — camera/mic never block it.
+    if (nextPhase === 'speech') await recording.start(settings.record, topic, locale);
     // Opening the timer hands the topic word's view-transition name from the big landed display to
     // `.timer-topic` — the dispatch is the swap moment the transition captures.
     void runViewTransition(() => {
@@ -532,12 +547,16 @@ function AppContent({ locale }: Props) {
     }
   };
 
-  const handleReadyToSpeak = (): void => {
+  const handleReadyToSpeak = async (): Promise<void> => {
     if (state.phase !== 'ready') return;
+    const topic = state.topic;
+    const mode = state.mode;
+    // Same rule as handleStart: only a screen-share pick blocks the clock, never camera/mic.
+    await recording.start(settings.record, topic ?? '', locale);
     dispatch({ type: 'READY_TO_SPEAK' });
     if (marksRef.current) marksRef.current.speechAt = Date.now();
     beginCountdown(settings.speechSec);
-    tracker.track('start_speech', { m: state.mode, t: state.topic ?? undefined });
+    tracker.track('start_speech', { m: mode, t: topic ?? undefined });
   };
 
   const handleClose = (): void => {
@@ -552,6 +571,9 @@ function AppContent({ locale }: Props) {
     }
     stopCountdown();
     releaseWakeLock();
+    // Closed before the natural finish: the recording so far (if any) is stopped and discarded, not
+    // offered for download — only a full run to the end produces a file (task spec #7).
+    recording.stop(false);
     setSharePanelOpen(false);
     // Closing hands the topic word's view-transition name back from `.timer-topic` to the big
     // landed display it came from.
@@ -677,6 +699,11 @@ function AppContent({ locale }: Props) {
     setSettings((prev) => ({ ...prev, muted }));
     saveSettings({ muted });
     soundRef.current.setMuted(muted);
+  };
+
+  const handleRecordChange = (record: RecordMode): void => {
+    setSettings((prev) => ({ ...prev, record }));
+    saveSettings({ record });
   };
 
   const openSettings = (): void => {
@@ -816,6 +843,16 @@ function AppContent({ locale }: Props) {
           {state.mode === 'off-the-cuff' ? dict.modes.offTheCuffBlurb : dict.modes.deepResearchBlurb}
         </p>
 
+        {settings.record !== 'off' && recording.available && state.topic !== null && (
+          <p class="record-note">
+            {settings.record === 'camera'
+              ? dict.record.noteCamera
+              : settings.record === 'screen'
+                ? dict.record.noteScreen
+                : dict.record.noteBoth}
+          </p>
+        )}
+
         <div class="action-row">
           {/* Before the first topic there is nothing to start — the only action is to spin. */}
           {state.topic === null ? (
@@ -869,6 +906,12 @@ function AppContent({ locale }: Props) {
         hideClock={settings.hideClock}
         onToggleClock={handleToggleClock}
         streakDay={streakCount}
+        recordingActive={recording.active}
+        recordingPreviewStream={recording.previewStream}
+        recordingStartFailed={recording.startFailed}
+        recordingScreenFailed={recording.screenFailed}
+        recordingCameraFile={recording.cameraFile}
+        recordingScreenFile={recording.screenFile}
       />
 
       <StreakSheet open={streakSheetOpen} onClose={closeStreakSheet} dict={dict} locale={locale} days={days} />
@@ -879,11 +922,14 @@ function AppContent({ locale }: Props) {
         researchMinutes={researchMinutes}
         muted={settings.muted}
         hideClock={settings.hideClock}
+        record={settings.record}
+        recordModes={recording.visibleModes}
         dict={dict}
         onSpeechChange={handleSpeechMinutesChange}
         onResearchChange={handleResearchMinutesChange}
         onMutedChange={handleMutedChange}
         onHideClockChange={handleHideClockChange}
+        onRecordChange={handleRecordChange}
         onClose={closeSettings}
       />
     </>

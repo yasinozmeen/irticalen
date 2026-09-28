@@ -6,6 +6,7 @@ import { fill, type Dictionary } from '../i18n';
 import { useFocusTrap } from './useFocusTrap';
 import { Logo, type LogoState } from './Logo';
 import { SharePanel, type ShareChannel } from './SharePanel';
+import { RecordingPreview } from './RecordingPreview';
 
 interface Props {
   mode: Mode;
@@ -37,6 +38,14 @@ interface Props {
   onToggleClock: () => void;
   /** Current streak count as of this session's practice day — shown once the "done" screen lands. */
   streakDay: number;
+  /** "kendini kaydet" state — see useSelfRecording. previewStream is only set for 'camera'/'both'. */
+  recordingActive: boolean;
+  recordingPreviewStream: MediaStream | null;
+  recordingStartFailed: boolean;
+  /** 'both' mode only: screen half failed/declined but the camera half kept recording. */
+  recordingScreenFailed: boolean;
+  recordingCameraFile: { url: string; name: string } | null;
+  recordingScreenFile: { url: string; name: string } | null;
 }
 
 const STAGE_INDEX: Record<ResearchStage, number> = { gather: 0, shape: 1, warm: 2 };
@@ -81,6 +90,12 @@ export function TimerOverlay({
   hideClock,
   onToggleClock,
   streakDay,
+  recordingActive,
+  recordingPreviewStream,
+  recordingStartFailed,
+  recordingScreenFailed,
+  recordingCameraFile,
+  recordingScreenFile,
 }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const open = phase !== 'idle';
@@ -145,6 +160,8 @@ export function TimerOverlay({
           text={shareText}
           url={shareUrl}
           youtubePrompt={youtubePrompt}
+          recordingCameraFile={recordingCameraFile}
+          recordingScreenFile={recordingScreenFile}
           onBack={onShareBack}
           onTrack={onShareTrack}
         />
@@ -153,6 +170,15 @@ export function TimerOverlay({
           <div class="timer-logo timer-rise" style={{ animationDelay: '0ms' } as Record<string, string>}>
             <Logo state={phase as LogoState} variant="onDark" size={44} />
           </div>
+
+          {recordingActive && (
+            <p class="recording-badge timer-rise" style={{ animationDelay: '20ms' } as Record<string, string>}>
+              <span class="recording-dot" aria-hidden="true" />
+              {dict.record.badge}
+            </p>
+          )}
+
+          {recordingActive && recordingPreviewStream && <RecordingPreview stream={recordingPreviewStream} />}
 
           {mode === 'deep-research' && phase === 'research' && (
             <p class="timer-research-badge timer-rise" style={{ animationDelay: '40ms' } as Record<string, string>}>
@@ -220,10 +246,40 @@ export function TimerOverlay({
             {statusText}
           </p>
 
+          {recordingStartFailed && (
+            <p class="timer-record-failed timer-rise" style={{ animationDelay: '170ms' } as Record<string, string>}>
+              {dict.record.startFailed}
+            </p>
+          )}
+
+          {recordingScreenFailed && (
+            <p class="timer-record-failed timer-rise" style={{ animationDelay: '170ms' } as Record<string, string>}>
+              {dict.record.screenFailed}
+            </p>
+          )}
+
           {isDone && streakDay > 0 && (
             <p class="timer-done-streak timer-rise" style={{ animationDelay: '180ms' } as Record<string, string>}>
               {fill(dict.timer.doneToday, { n: streakDay })}
             </p>
+          )}
+
+          {isDone && (recordingCameraFile || recordingScreenFile) && (
+            <div class="timer-record-download timer-rise" style={{ animationDelay: '190ms' } as Record<string, string>}>
+              <div class="timer-record-download-links">
+                {recordingCameraFile && (
+                  <a class="btn btn-secondary" href={recordingCameraFile.url} download={recordingCameraFile.name}>
+                    {dict.record.downloadCamera}
+                  </a>
+                )}
+                {recordingScreenFile && (
+                  <a class="btn btn-secondary" href={recordingScreenFile.url} download={recordingScreenFile.name}>
+                    {dict.record.downloadScreen}
+                  </a>
+                )}
+              </div>
+              <span class="timer-record-download-note">{dict.record.downloadNote}</span>
+            </div>
           )}
 
           {isResearch && (

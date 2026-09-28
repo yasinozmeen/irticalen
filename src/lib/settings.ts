@@ -1,4 +1,5 @@
 import type { Locale, Settings } from './types';
+import { normalizeRecordMode } from './recorder';
 
 /** Minute bounds. */
 export const SPEECH_MIN = 1;
@@ -15,6 +16,7 @@ const KEY_RESEARCH = 'irticalen:research';
 const KEY_MUTED = 'irticalen:muted';
 const KEY_LANG = 'irticalen:lang';
 const KEY_HIDE_CLOCK = 'irticalen:hideClock';
+const KEY_RECORD = 'irticalen:record';
 
 /** Minimal storage interface (localStorage-compatible, injectable). */
 export interface StorageLike {
@@ -79,7 +81,13 @@ export function loadSettings(storage: StorageLike | undefined = defaultStorage()
   } catch {
     hideClock = false;
   }
-  return { speechSec, researchSec, muted, hideClock };
+  let record: Settings['record'] = 'off';
+  try {
+    record = normalizeRecordMode(storage?.getItem(KEY_RECORD));
+  } catch {
+    record = 'off';
+  }
+  return { speechSec, researchSec, muted, hideClock, record };
 }
 
 /** Saves settings partially (fields not provided are left untouched). Never throws. */
@@ -103,6 +111,9 @@ export function saveSettings(
     }
     if (partial.hideClock !== undefined) {
       storage.setItem(KEY_HIDE_CLOCK, partial.hideClock ? 'true' : 'false');
+    }
+    if (partial.record !== undefined) {
+      storage.setItem(KEY_RECORD, normalizeRecordMode(partial.record));
     }
   } catch {
     // sessizce yok say

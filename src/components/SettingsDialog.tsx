@@ -1,5 +1,6 @@
 import { useRef } from 'preact/hooks';
 import { SPEECH_MIN, SPEECH_MAX, RESEARCH_MIN, RESEARCH_MAX } from '../lib/settings';
+import type { RecordMode } from '../lib/types';
 import { fill, type Dictionary } from '../i18n';
 import { useFocusTrap } from './useFocusTrap';
 
@@ -9,11 +10,15 @@ interface Props {
   researchMinutes: number;
   muted: boolean;
   hideClock: boolean;
+  record: RecordMode;
+  /** Which modes this browser can actually do — 'off' alone means the whole section stays hidden. */
+  recordModes: readonly RecordMode[];
   dict: Dictionary;
   onSpeechChange: (minutes: number) => void;
   onResearchChange: (minutes: number) => void;
   onMutedChange: (muted: boolean) => void;
   onHideClockChange: (hideClock: boolean) => void;
+  onRecordChange: (mode: RecordMode) => void;
   onClose: () => void;
 }
 
@@ -24,11 +29,14 @@ export function SettingsDialog({
   researchMinutes,
   muted,
   hideClock,
+  record,
+  recordModes,
   dict,
   onSpeechChange,
   onResearchChange,
   onMutedChange,
   onHideClockChange,
+  onRecordChange,
   onClose,
 }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -99,6 +107,37 @@ export function SettingsDialog({
           />
           <label for="settings-hide-clock">{dict.settings.hideClock}</label>
         </div>
+
+        {recordModes.length > 1 && (
+          <div class="settings-field">
+            <p class="settings-field-label"><span>{dict.settings.record}</span></p>
+            <p class="settings-field-hint">{dict.settings.recordHint}</p>
+            <div class="settings-record-group" role="radiogroup" aria-label={dict.settings.record}>
+              {recordModes.map((value) => {
+                const label =
+                  value === 'off'
+                    ? dict.settings.recordOff
+                    : value === 'camera'
+                      ? dict.settings.recordCamera
+                      : value === 'screen'
+                        ? dict.settings.recordScreen
+                        : dict.settings.recordBoth;
+                return (
+                  <div class="settings-mute-row" key={value}>
+                    <input
+                      id={`settings-record-${value}`}
+                      type="radio"
+                      name="settings-record"
+                      checked={record === value}
+                      onChange={() => onRecordChange(value)}
+                    />
+                    <label for={`settings-record-${value}`}>{label}</label>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <p class="settings-saved">{dict.settings.saved}</p>
 

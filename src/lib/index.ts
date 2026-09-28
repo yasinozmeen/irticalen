@@ -17,3 +17,4 @@ export * from './viewTransition';
 export * from './researchStages';
 export * from './streak';
 export * from './youtube';
+export * from './recorder';

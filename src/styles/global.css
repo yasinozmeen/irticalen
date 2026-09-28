@@ -292,6 +292,14 @@ a {
   padding-top: 0.85rem;
 }
 
+/* "kendini kaydet" açıkken: sürpriz olmasın diye kurşun kalemle kısa bir uyarı satırı. */
+.record-note {
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--pencil);
+  text-transform: lowercase;
+}
+
 .category-select {
   position: relative;
 }
@@ -660,6 +668,102 @@ a {
   color: var(--pencil);
   font-size: 1.1rem;
   text-transform: lowercase;
+}
+
+/* "kendini kaydet" göstergesi: tek anlamlı durum işareti (kırmızı nokta + "kayıt"), dekoratif değil. */
+.recording-badge {
+  order: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  font-size: 1rem;
+  color: var(--red);
+  text-transform: lowercase;
+}
+
+.recording-dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  background: var(--red);
+  animation: recording-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recording-dot {
+    animation: none;
+  }
+}
+
+@keyframes recording-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Küçük canlı önizleme: keskin köşe, çerçeve/gölge yok, sayaç rakamlarıyla çakışmasın diye sabit köşede. */
+.recording-preview {
+  position: fixed;
+  top: max(1rem, env(safe-area-inset-top));
+  right: max(1rem, env(safe-area-inset-right));
+  z-index: 31;
+  width: 200px;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--ink-deep);
+  transform: scaleX(-1);
+}
+
+@media (max-width: 640px) {
+  .recording-preview {
+    width: 96px;
+  }
+}
+
+.timer-record-failed {
+  order: 4;
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--pencil);
+  text-transform: lowercase;
+}
+
+.timer-record-download {
+  order: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+.timer-record-download-links,
+.share-panel-record-links {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.timer-record-download-note,
+.share-panel-record-note {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--pencil);
+  text-transform: lowercase;
+}
+
+.share-panel-record {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
 }
 
 .timer-topic {
@@ -1190,6 +1294,29 @@ input[type='range']::-moz-range-thumb {
 }
 
 .settings-mute-row input[type='checkbox']:checked {
+  background: var(--ink);
+}
+
+/* Kayıt seçimi: iOS/Android'in yuvarlak radyo düğmesi yerine mevcut kare işaretle tutarlı — kural
+   "kutu/yuvarlak köşe yok" burada da geçerli. */
+.settings-record-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.settings-mute-row input[type='radio'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  margin: 0;
+  cursor: pointer;
+}
+
+.settings-mute-row input[type='radio']:checked {
   background: var(--ink);
 }
 

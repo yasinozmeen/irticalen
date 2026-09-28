@@ -11,6 +11,9 @@ interface Props {
   url: string;
   /** Ask + skill link + session block for an AI agent that prepares the YouTube upload. */
   youtubePrompt: string;
+  /** "kendini kaydet" result, if the visitor recorded this session — device-only, never uploaded. */
+  recordingCameraFile: { url: string; name: string } | null;
+  recordingScreenFile: { url: string; name: string } | null;
   onBack: () => void;
   onTrack: (channel: ShareChannel) => void;
 }
@@ -27,7 +30,17 @@ function clipboardImageSupported(): boolean {
  * Our own share panel — replaces the timer overlay's content in place (same dialog, same focus
  * trap root) instead of calling `navigator.share` directly. See docs SPEC part B.
  */
-export function SharePanel({ dict, imageUrl, text, url, youtubePrompt, onBack, onTrack }: Props) {
+export function SharePanel({
+  dict,
+  imageUrl,
+  text,
+  url,
+  youtubePrompt,
+  recordingCameraFile,
+  recordingScreenFile,
+  onBack,
+  onTrack,
+}: Props) {
   const [copyState, setCopyState] = useState<'idle' | 'done' | 'failed'>('idle');
   const [youtubeState, setYoutubeState] = useState<'idle' | 'done' | 'failed'>('idle');
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -171,6 +184,24 @@ export function SharePanel({ dict, imageUrl, text, url, youtubePrompt, onBack, o
         </div>
 
         {youtubeState === 'done' && <p class="share-panel-hint timer-rise">{dict.share.youtubeHint}</p>}
+
+        {(recordingCameraFile || recordingScreenFile) && (
+          <div class="share-panel-record timer-rise">
+            <div class="share-panel-record-links">
+              {recordingCameraFile && (
+                <a class="btn btn-secondary" href={recordingCameraFile.url} download={recordingCameraFile.name}>
+                  {dict.record.downloadCamera}
+                </a>
+              )}
+              {recordingScreenFile && (
+                <a class="btn btn-secondary" href={recordingScreenFile.url} download={recordingScreenFile.name}>
+                  {dict.record.downloadScreen}
+                </a>
+              )}
+            </div>
+            <span class="share-panel-record-note">{dict.record.downloadNote}</span>
+          </div>
+        )}
 
         <p class="sr-only" aria-live="polite">
           {youtubeState === 'done' ? dict.share.youtubeDone : youtubeState === 'failed' ? dict.share.copyLinkFailed : ''}

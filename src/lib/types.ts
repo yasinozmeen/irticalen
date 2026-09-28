@@ -24,6 +24,12 @@ export interface Category {
   groups?: CategoryGroup[];
 }
 
+/**
+ * "Kendini kaydet": off (default), camera+mic, screen+mic, or both (two separate files, started and
+ * stopped together). Entirely device-local — nothing is ever uploaded anywhere.
+ */
+export type RecordMode = 'off' | 'camera' | 'screen' | 'both';
+
 /** User settings (persisted). */
 export interface Settings {
   speechSec: number;
@@ -31,4 +37,5 @@ export interface Settings {
   muted: boolean;
   /** Clock and ruler are blurred while the timer runs (the visitor chose not to watch the time). */
   hideClock: boolean;
+  record: RecordMode;
 }

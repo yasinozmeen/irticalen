@@ -134,6 +134,20 @@ describe('saveSettings', () => {
     saveSettings({ hideClock: false }, storage);
     expect(loadSettings(storage).hideClock).toBe(false);
   });
+
+  it('"kendini kaydet" tercihi kaydedilir; kayıt yoksa ya da bozuksa/eskiyse kapalı kalır', () => {
+    expect(loadSettings(memoryStorage()).record).toBe('off');
+    expect(loadSettings(memoryStorage({ 'irticalen:record': 'evet' })).record).toBe('off');
+    expect(loadSettings(memoryStorage({ 'irticalen:record': 'audio' })).record).toBe('off'); // kaldırılan eski değer
+    expect(loadSettings(throwingStorage()).record).toBe('off');
+    const storage = memoryStorage();
+    saveSettings({ record: 'camera' }, storage);
+    expect(loadSettings(storage).record).toBe('camera');
+    saveSettings({ record: 'both' }, storage);
+    expect(loadSettings(storage).record).toBe('both');
+    saveSettings({ record: 'off' }, storage);
+    expect(loadSettings(storage).record).toBe('off');
+  });
 });
 
 describe('locale', () => {

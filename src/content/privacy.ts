@@ -61,6 +61,7 @@ export const privacy: Record<Locale, PrivacyContent> = {
         h2: 'Yalnız tarayıcında kalanlar',
         paragraphs: [
           'Ayarların (süreler, ses, süreyi gizleme), daha önce gördüğün konular (tekrar gelmesin diye), araştırmalı modda seçtiğin alan ve pratik serin (hangi gün konuştuğun). Bunlar bu tarayıcıda durur, bize gönderilmez. Tarayıcının site verilerini silersen hepsi gider.',
+          '"Kendini kaydet" açarsan kamera ve/veya ekran kaydı yalnız cihazında tutulur; hiçbir yere gönderilmez ve sayfadan ayrılınca silinir.',
         ],
       },
       {
@@ -125,6 +126,7 @@ export const privacy: Record<Locale, PrivacyContent> = {
         h2: 'What stays in your browser only',
         paragraphs: [
           'Your settings (timer lengths, sound, hiding the clock), the topics you have already seen (so they do not repeat), the field you picked in research mode and your practice streak (which days you spoke). These stay in this browser and are never sent to us. Clearing the site’s data in your browser removes them.',
+          'If you turn on "record yourself", the camera and/or screen recording is kept only on your device; it is never sent anywhere and is deleted once you leave the page.',
         ],
       },
       {
