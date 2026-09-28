@@ -1,0 +1,22 @@
+---
+import Base from '../../layouts/Base.astro';
+import PrivacyArticle from '../../components/PrivacyArticle.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
+import { dictionaries } from '../../i18n';
+import { privacy } from '../../content/privacy';
+
+const locale = 'tr' as const;
+const dict = dictionaries[locale];
+const content = privacy[locale];
+---
+
+<Base
+  locale={locale}
+  title={content.meta.title}
+  description={content.meta.description}
+  path={content.path}
+  alternates={{ tr: '/gizlilik/', en: '/en/privacy/' }}
+>
+  <PrivacyArticle dict={dict} locale={locale} content={content} />
+  <SiteFooter dict={dict} locale={locale} otherLocalePath="/en/privacy/" />
+</Base>

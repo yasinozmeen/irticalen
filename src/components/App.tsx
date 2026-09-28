@@ -11,6 +11,9 @@ import {
   drawFromBag,
   loadSeen,
   recordPractice,
+  loadDays,
+  currentStreak,
+  practisedToday,
   saveSeen,
   positionFrom,
   saveSettings,
@@ -38,6 +41,7 @@ import {
   type Countdown,
   type ReleaseWakeLock,
   type Settings,
+  type DayLog,
 } from '../lib';
 import type { ShareChannel } from './SharePanel';
 import type { Category, Mode } from '../lib/types';
@@ -51,6 +55,7 @@ import { SettingsDialog } from './SettingsDialog';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LanguageSwitch } from './LanguageSwitch';
 import { Logo } from './Logo';
+import { StreakSheet } from './StreakSheet';
 
 /** How long the "süre." screen stays before the share screen takes over. */
 const AUTO_SHARE_DELAY_MS = 1600;
@@ -76,6 +81,9 @@ function AppContent({ locale }: Props) {
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sharePanelOpen, setSharePanelOpen] = useState(false);
+  const [streakSheetOpen, setStreakSheetOpen] = useState(false);
+  // SSR-safe empty default; the real log loads on the client below. Kept only in this browser.
+  const [days, setDays] = useState<DayLog>({});
   const [landKey, setLandKey] = useState(0);
   const [remainingSec, setRemainingSec] = useState(0);
   const [elapsedSec, setElapsedSec] = useState(0);
@@ -100,6 +108,7 @@ function AppContent({ locale }: Props) {
   const rafRef = useRef<number | null>(null);
   const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const settingsTriggerRef = useRef<HTMLButtonElement>(null);
+  const streakTriggerRef = useRef<HTMLButtonElement>(null);
   const startTriggerRef = useRef<HTMLButtonElement>(null);
   const wheelRef = useRef<TopicReelHandle>(null);
   const trackerRef = useRef(getTracker(locale));
@@ -170,6 +179,11 @@ function AppContent({ locale }: Props) {
     const loaded = loadSettings();
     setSettings(loaded);
     soundRef.current.setMuted(loaded.muted);
+  }, []);
+
+  // Same for the practice log that drives the streak indicator — client only.
+  useEffect(() => {
+    setDays(loadDays());
   }, []);
 
   // Load the persisted research field the same way — runs before the `?konu=` preset effect below,
@@ -336,8 +350,9 @@ function AppContent({ locale }: Props) {
         } else if (wasSpeech && !speechDoneSentRef.current) {
           speechDoneSentRef.current = true;
           tracker.track('speech_done');
-          // The day counts for the practice streak (kept only in this browser; no UI reads it yet).
-          recordPractice(stateRef.current.mode);
+          // The day counts for the practice streak (kept only in this browser) — the indicator and
+          // the "bugün tamam" line both read the updated log straight from state.
+          setDays(recordPractice(stateRef.current.mode));
           // The speech is over — after the "süre." beat, move on to the share screen by itself.
           if (autoShareTimerRef.current !== null) clearTimeout(autoShareTimerRef.current);
           autoShareTimerRef.current = setTimeout(() => {
@@ -675,6 +690,27 @@ function AppContent({ locale }: Props) {
     );
   };
 
+  // The top-bar streak indicator: hidden until at least one day is on record, dimmed (pencil) when
+  // today isn't practised yet (the chain is at risk of breaking), inked once it is.
+  const hasPracticeHistory = Object.keys(days).length > 0;
+  const streakCount = useMemo(() => currentStreak(days), [days]);
+  const doneToday = useMemo(() => practisedToday(days), [days]);
+  const streakDayText =
+    streakCount > 0 ? fill(streakCount === 1 ? dict.streak.dayOne : dict.streak.dayOther, { n: streakCount }) : dict.streak.chipZero;
+  const streakAriaLabel =
+    streakCount > 0 ? fill(dict.streak.aria, { days: streakDayText }) : dict.streak.ariaZero;
+
+  const openStreakSheet = (): void => {
+    void runViewTransition(() => setStreakSheetOpen(true));
+    tracker.track('sheet_open', { t: 'streak' });
+  };
+  const closeStreakSheet = (): void => {
+    void runViewTransition(
+      () => setStreakSheetOpen(false),
+      () => streakTriggerRef.current?.focus(),
+    );
+  };
+
   const spinning = state.spinning;
   const locked = isLocked(state);
   const sessionOpen = state.phase !== 'idle';
@@ -712,6 +748,19 @@ function AppContent({ locale }: Props) {
             </a>
           </h1>
           <div class="top-actions">
+            {hasPracticeHistory && (
+              <button
+                ref={streakTriggerRef}
+                type="button"
+                class={`streak-chip${doneToday ? '' : ' is-risk'}`}
+                aria-haspopup="dialog"
+                aria-expanded={streakSheetOpen}
+                aria-label={streakAriaLabel}
+                onClick={openStreakSheet}
+              >
+                {streakDayText}
+              </button>
+            )}
             <LanguageSwitch locale={locale} dict={dict} />
             <button
               ref={settingsTriggerRef}
@@ -819,7 +868,10 @@ function AppContent({ locale }: Props) {
         onNextStage={handleNextStage}
         hideClock={settings.hideClock}
         onToggleClock={handleToggleClock}
+        streakDay={streakCount}
       />
+
+      <StreakSheet open={streakSheetOpen} onClose={closeStreakSheet} dict={dict} locale={locale} days={days} />
 
       <SettingsDialog
         open={settingsOpen}

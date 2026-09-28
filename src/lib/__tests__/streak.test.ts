@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildCalendar,
   currentStreak,
   dayKey,
   loadDays,
@@ -97,5 +98,61 @@ describe('longestStreak', () => {
     };
     expect(longestStreak(log)).toBe(3);
     expect(longestStreak({})).toBe(0);
+  });
+});
+
+describe('buildCalendar', () => {
+  it('5 hafta × 7 gün döner, her hafta pazartesi ile başlar', () => {
+    // 2026-09-28 bir Pazartesi.
+    const weeks = buildCalendar({}, at(2026, 9, 28));
+    expect(weeks).toHaveLength(5);
+    weeks.forEach((week) => expect(week).toHaveLength(7));
+    expect(weeks[4][0].key).toBe('2026-09-28');
+    expect(weeks[4][6].key).toBe('2026-10-04');
+    // İlk hafta, bugünden 4 hafta (28 gün) önceki pazartesi.
+    expect(weeks[0][0].key).toBe('2026-08-31');
+  });
+
+  it('bugün haftanın ortasındaysa (Çarşamba) o hafta yine pazartesiyle başlar', () => {
+    // 2026-09-30 bir Çarşamba.
+    const weeks = buildCalendar({}, at(2026, 9, 30));
+    expect(weeks[4][0].key).toBe('2026-09-28'); // pazartesi
+    expect(weeks[4][2].key).toBe('2026-09-30'); // bugün, çarşamba
+    expect(weeks[4][2].isToday).toBe(true);
+  });
+
+  it('ay/yıl sınırını doğru geçer', () => {
+    // 2026-01-03 bir Cumartesi; 5 hafta öncesi 2025 Aralık'a düşer.
+    const weeks = buildCalendar({}, at(2026, 1, 3));
+    expect(weeks[0][0].key).toBe('2025-12-01');
+    expect(weeks[4][5].key).toBe('2026-01-03');
+  });
+
+  it('bugünden sonraki (bu haftanın kalan) günler işaretsiz ve gelecek olarak işaretlenir', () => {
+    const log: DayLog = { '2026-10-04': 3 }; // bugünden sonraki bir gün, veride olsa bile sayılmaz
+    const weeks = buildCalendar(log, at(2026, 9, 28)); // pazartesi
+    const lastWeek = weeks[4];
+    expect(lastWeek[0].isFuture).toBe(false);
+    expect(lastWeek[0].isToday).toBe(true);
+    for (let i = 1; i < 7; i += 1) {
+      expect(lastWeek[i].isFuture).toBe(true);
+      expect(lastWeek[i].mark).toBe(0);
+    }
+  });
+
+  it('bugün pazar ise o hafta gelecek gün içermez', () => {
+    // 2026-10-04 bir Pazar.
+    const weeks = buildCalendar({}, at(2026, 10, 4));
+    const lastWeek = weeks[4];
+    expect(lastWeek[6].isToday).toBe(true);
+    lastWeek.forEach((day) => expect(day.isFuture).toBe(false));
+  });
+
+  it('geçmiş günlerin bitmask değeri log’dan aynen okunur', () => {
+    const log: DayLog = { '2026-09-28': 1, '2026-09-29': 3 };
+    const weeks = buildCalendar(log, at(2026, 9, 30));
+    expect(weeks[4][0].mark).toBe(1);
+    expect(weeks[4][1].mark).toBe(3);
+    expect(weeks[4][2].mark).toBe(0);
   });
 });

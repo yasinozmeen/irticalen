@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Masaüstü taslakları</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&display=swap">
+<style>
+  body { margin: 0; padding: 2rem 1.25rem 4rem; background: #f3eee2; color: #1d1a16; font: 1.05rem/1.5 'Newsreader', Georgia, serif; }
+  main { max-width: 1200px; margin: 0 auto; }
+  h1 { font-weight: 600; font-size: 1.8rem; margin: 0 0 0.3rem; }
+  h2 { font-weight: 600; font-size: 1.3rem; margin: 2.5rem 0 0.2rem; padding-top: 1rem; border-top: 1px solid #d6cfbf; }
+  p { margin: 0 0 0.8rem; max-width: 70ch; }
+  .dim { color: #6f695c; font-style: italic; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem; margin-top: 1rem; }
+  figure { margin: 0; }
+  img { width: 100%; height: auto; display: block; border: 1px solid #d6cfbf; }
+  figcaption { margin-top: 0.4rem; font-size: 0.98rem; }
+  a { color: #1d1a16; text-decoration-color: #6f695c; text-underline-offset: 0.28em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Masaüstü taslakları</h1>
+  <p class="dim">1440×900 ekran görüntüleri. Resme tıklayınca canlı taslak açılır (durum adresteki ?s= ile değişir). Açıklama: README.md.</p>
+
+  <h2>Zengin görünüm A — açık kitap</h2>
+  <div class="row">
+    <figure><a href="zengin-a.html?s=idle"><img src="zengin-a-bosta.png" alt="A, boşta"></a><figcaption>boşta · hazırlıksız · genel</figcaption></figure>
+    <figure><a href="zengin-a.html?s=landed"><img src="zengin-a-konu.png" alt="A, konu geldi"></a><figcaption>konu geldi · araştırmalı · ekonomi ve karar</figcaption></figure>
+  </div>
+
+  <h2>Zengin görünüm B — çalışma defteri</h2>
+  <div class="row">
+    <figure><a href="zengin-b.html?s=idle"><img src="zengin-b-bosta.png" alt="B, boşta"></a><figcaption>boşta · 13 günlük seri</figcaption></figure>
+    <figure><a href="zengin-b.html?s=landed"><img src="zengin-b-konu.png" alt="B, konu geldi"></a><figcaption>konu geldi · en uzun konu adı</figcaption></figure>
+    <figure><a href="zengin-b.html?s=first"><img src="zengin-b-ilk-ziyaret.png" alt="B, ilk ziyaret"></a><figcaption>ilk ziyaret · kayıt yok</figcaption></figure>
+  </div>
+
+  <h2>Minimalist (dil ayarlara taşındı) ve ayarlar</h2>
+  <div class="row">
+    <figure><a href="minimalist.html?s=idle"><img src="minimalist-bosta.png" alt="Minimalist, boşta"></a><figcaption>minimalist · boşta</figcaption></figure>
+    <figure><a href="minimalist.html?s=landed"><img src="minimalist-konu.png" alt="Minimalist, konu geldi"></a><figcaption>minimalist · konu geldi</figcaption></figure>
+    <figure><a href="ayarlar.html"><img src="ayarlar.png" alt="Ayarlar penceresi"></a><figcaption>ayarlar · dil ve görünüm</figcaption></figure>
+  </div>
+</main>
+</body>
+</html>

@@ -13,6 +13,8 @@ const { about, footer } = dict;
 const whyPath = locale === 'tr' ? '/neden/' : '/en/why/';
 const langHref = otherLocalePath ?? (locale === 'tr' ? '/en/' : '/');
 const langLabel = dict.language.switchTo;
+const privacyPath = locale === 'tr' ? '/gizlilik/' : '/en/privacy/';
+const privacyLabel = locale === 'tr' ? 'gizlilik' : 'privacy';
 ---
 
 <footer class="site-footer" data-outside-app>
@@ -80,5 +82,7 @@ const langLabel = dict.language.switchTo;
     {footer.madeBy}
     {' · '}
     <a class="footer-lang-link" href={langHref}>{langLabel}</a>
+    {' · '}
+    <a class="footer-lang-link" href={privacyPath}>{privacyLabel}</a>
   </p>
 </footer>

@@ -204,6 +204,49 @@ a {
   font-weight: 400;
 }
 
+/* The streak indicator: looks like the underlined dock links, not a chip — ink once today is
+   practised, pencil while the chain is still at risk. */
+.streak-chip {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.05rem;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: currentColor;
+  text-underline-offset: 0.28em;
+  text-transform: lowercase;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.streak-chip.is-risk {
+  color: var(--pencil);
+}
+
+/* Narrow phones: the streak indicator is a third item on the same line as the language switch and
+   the settings icon — tighten the gaps first, per Yasin's rule, rather than abbreviating the text
+   ("{n} gün" stays whole; only the language switcher's own spacing is allowed to shrink further). */
+@media (max-width: 400px) {
+  .top-bar {
+    gap: 0.5rem;
+  }
+
+  .top-actions {
+    gap: 0.55rem;
+  }
+
+  .streak-chip {
+    font-size: 0.95rem;
+  }
+
+  .chip {
+    gap: 0.15rem;
+    font-size: 0.95rem;
+  }
+}
+
 /* ---------- Controls row: mode switch + category select ---------- */
 
 .controls-row {
@@ -701,6 +744,13 @@ a {
   text-transform: lowercase;
 }
 
+.timer-done-streak {
+  order: 4;
+  font-size: 1rem;
+  color: var(--pencil);
+  text-transform: lowercase;
+}
+
 .timer-actions {
   order: 6;
   display: flex;
@@ -990,6 +1040,29 @@ a {
 
 .share-panel-back {
   margin-left: auto;
+}
+
+.share-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: 100%;
+}
+
+/* ≥900px: the panel uses the same full width as the counter screen behind it — a big image on the
+   left, the text/actions/back stacked on the right, both columns sitting on the same bottom edge. */
+@media (min-width: 900px) {
+  .share-panel {
+    max-width: none;
+    display: grid;
+    grid-template-columns: minmax(0, 55%) minmax(0, 1fr);
+    column-gap: 2.5rem;
+    align-items: end;
+  }
+
+  .share-panel-image {
+    max-width: none;
+  }
 }
 
 /* ---------- Settings dialog: kâğıt "sayfa", açılır katman istisnası olarak 1px çerçeve ---------- */
@@ -1684,6 +1757,13 @@ body.is-frame .app-shell {
   text-transform: lowercase;
 }
 
+.sheet-kind a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
 .sheet-def {
   font-size: 1.3rem;
   line-height: 1.4;
@@ -1793,6 +1873,106 @@ body.is-frame .app-shell {
   margin-top: 2rem;
   padding-top: 1rem;
   border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--pencil);
+}
+
+/* ---------- "serin" streak sheet: same kâğıt sheet as "ne demek?", opened from the top-bar chip ---------- */
+
+.streak-summary {
+  margin-top: 0.6rem;
+  font-size: 1rem;
+  color: var(--pencil);
+  text-transform: lowercase;
+}
+
+.streak-calendar-wrap {
+  margin-top: 1.25rem;
+}
+
+.streak-cal-head,
+.streak-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 32px);
+  gap: 6px;
+}
+
+.streak-cal-head {
+  margin-bottom: 6px;
+}
+
+.streak-cal-head span {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--pencil);
+  text-align: center;
+}
+
+/* No boxes/borders (F-kâğıt rule): a calendar written on the page. Every day is its date number in
+   pencil; a practised day is written in ink and underlined (thin = one mode, thick = both modes);
+   today gets a red underline of its own. Future days of this week are faint. */
+.streak-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 32px;
+  font-size: 1rem;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--pencil);
+}
+
+.streak-cell[data-mark='1'],
+.streak-cell[data-mark='2'],
+.streak-cell[data-mark='3'] {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.streak-cell[data-mark='1']::after,
+.streak-cell[data-mark='2']::after,
+.streak-cell[data-mark='3']::after {
+  content: '';
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 2px;
+  height: 1px;
+  background: var(--ink);
+}
+
+.streak-cell[data-mark='3']::after {
+  height: 3px;
+}
+
+.streak-cell[data-today]::after {
+  content: '';
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 2px;
+  height: 2px;
+  background: var(--red);
+}
+
+.streak-cell[data-today][data-mark='3']::after {
+  height: 3px;
+}
+
+.streak-cell[data-future] {
+  color: var(--rule);
+}
+
+.streak-legend {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--pencil);
+  text-transform: lowercase;
+}
+
+.streak-note {
+  margin-top: 0.5rem;
   font-size: 0.85rem;
   color: var(--pencil);
 }

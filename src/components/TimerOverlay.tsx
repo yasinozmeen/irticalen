@@ -35,6 +35,8 @@ interface Props {
   onNextStage: () => void;
   hideClock: boolean;
   onToggleClock: () => void;
+  /** Current streak count as of this session's practice day — shown once the "done" screen lands. */
+  streakDay: number;
 }
 
 const STAGE_INDEX: Record<ResearchStage, number> = { gather: 0, shape: 1, warm: 2 };
@@ -78,6 +80,7 @@ export function TimerOverlay({
   onNextStage,
   hideClock,
   onToggleClock,
+  streakDay,
 }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const open = phase !== 'idle';
@@ -216,6 +219,12 @@ export function TimerOverlay({
           <p class="timer-status timer-rise" style={{ animationDelay: '160ms' } as Record<string, string>} aria-live="polite">
             {statusText}
           </p>
+
+          {isDone && streakDay > 0 && (
+            <p class="timer-done-streak timer-rise" style={{ animationDelay: '180ms' } as Record<string, string>}>
+              {fill(dict.timer.doneToday, { n: streakDay })}
+            </p>
+          )}
 
           {isResearch && (
             // Keyed by stage: each new stage's guide rises in fresh, like everything else that arrives.

@@ -1,0 +1,48 @@
+---
+import type { Dictionary, Locale } from '../i18n';
+import type { PrivacyContent } from '../content/privacy';
+import { Logo } from './Logo';
+
+interface Props {
+  dict: Dictionary;
+  locale: Locale;
+  content: PrivacyContent;
+}
+
+const { dict, locale, content } = Astro.props;
+const homePath = locale === 'tr' ? '/' : '/en/';
+const otherLangHref = locale === 'tr' ? '/en/privacy/' : '/gizlilik/';
+---
+
+<div class="reading-progress" aria-hidden="true" style="animation-timeline: scroll(root);"></div>
+<div class="why-page">
+  <header class="why-topbar">
+    <a class="brand-link" href={homePath} aria-label={dict.brand}>
+      <Logo state="idle" />
+      <span class="wordmark">{dict.wordmark}</span>
+    </a>
+    <a class="why-lang-link" href={otherLangHref}>{dict.language.switchTo}</a>
+  </header>
+
+  <main>
+    <article class="why-article">
+      <p class="why-eyebrow">{content.eyebrow}</p>
+      <h1 class="why-h1">{content.h1}</h1>
+      <p class="why-lead">{content.lead}</p>
+      <p class="why-byline">
+        {content.updatedLabel} · <time datetime={content.updated}>{content.updated}</time>
+      </p>
+
+      {content.sections.map((section) => (
+        <section id={section.id} class="why-section">
+          <h2>{section.h2}</h2>
+          {section.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+        </section>
+      ))}
+
+      <p class="why-section">
+        <a class="footer-lang-link" href={homePath}>{content.back}</a>
+      </p>
+    </article>
+  </main>
+</div>

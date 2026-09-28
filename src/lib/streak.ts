@@ -107,3 +107,50 @@ export function longestStreak(log: DayLog): number {
 export function practisedToday(log: DayLog, now: Date = new Date()): boolean {
   return Boolean(log[dayKey(now)]);
 }
+
+/** One calendar cell in `buildCalendar`'s grid. */
+export interface CalendarDay {
+  key: string;
+  mark: number;
+  isToday: boolean;
+  isFuture: boolean;
+}
+
+/** Monday-first weekday index: Monday = 0 … Sunday = 6 (`Date#getDay` is Sunday-first). */
+function mondayIndex(date: Date): number {
+  return (date.getDay() + 6) % 7;
+}
+
+/**
+ * The last `weeks` calendar weeks (Monday–Sunday) ending with the week that contains `today`, for
+ * the streak sheet's small calendar. Each day carries its practice bitmask (0 = nothing), whether it
+ * is today, and whether it is still in the future (the tail end of the current week) — a day after
+ * today never has a mark, even if one is somehow present in `log`.
+ */
+export function buildCalendar(log: DayLog, today: Date = new Date(), weeks = 5): CalendarDay[][] {
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const todayKey = dayKey(todayMidnight);
+  const currentWeekMonday = new Date(todayMidnight);
+  currentWeekMonday.setDate(currentWeekMonday.getDate() - mondayIndex(todayMidnight));
+  const firstMonday = new Date(currentWeekMonday);
+  firstMonday.setDate(firstMonday.getDate() - 7 * (weeks - 1));
+
+  const grid: CalendarDay[][] = [];
+  for (let w = 0; w < weeks; w += 1) {
+    const week: CalendarDay[] = [];
+    for (let d = 0; d < 7; d += 1) {
+      const day = new Date(firstMonday);
+      day.setDate(day.getDate() + w * 7 + d);
+      const key = dayKey(day);
+      const isFuture = day.getTime() > todayMidnight.getTime();
+      week.push({
+        key,
+        mark: isFuture ? 0 : (log[key] ?? 0),
+        isToday: key === todayKey,
+        isFuture,
+      });
+    }
+    grid.push(week);
+  }
+  return grid;
+}
