@@ -8,7 +8,7 @@ export const tr = {
   wordmark: 'irticalen',
   madeBy: 'yapan',
   skipToApp: 'Uygulamaya geç',
-  language: { label: 'Dil', switchTo: 'English', current: 'TR', other: 'EN' },
+  language: { label: 'Dil', switchTo: 'English', current: 'TR', other: 'EN', selfName: 'Türkçe' },
   modes: {
     label: 'Mod',
     offTheCuff: 'Hazırlıksız',
@@ -26,8 +26,10 @@ export const tr = {
     downloadCamera: 'kamera kaydını indir',
     downloadScreen: 'ekran kaydını indir',
     downloadNote: 'kayıt yalnız bu cihazda; sayfadan çıkınca silinir.',
+    stop: 'kaydı durdur',
+    stillRecording: 'süre doldu, kayıt sürüyor; bitirince durdur.',
   },
-  category: { label: 'Kategori', all: 'Hepsi' },
+  category: { label: 'Kategori', all: 'Hepsi', title: 'kategoriler', groupsTitle: 'alanlar' },
   reel: { idle: 'Hazır', spinning: 'Çekiliyor…', landed: 'Konun', empty: 'Çevir, konun gelsin', announce: 'Konun: {topic}' },
   actions: {
     spin: 'Çevir',
@@ -103,6 +105,12 @@ export const tr = {
     recordCamera: 'kamera',
     recordScreen: 'ekran',
     recordBoth: 'kamera + ekran',
+    language: 'Dil',
+    view: 'Görünüm',
+    viewMinimal: 'minimalist',
+    viewRich: 'zengin',
+    viewHint:
+      'Zengin görünüm geniş ekranda konuşma iskeletini ve daha fazlasını aynı sayfaya açar. Telefonda sayfa hep minimalisttir.',
     saved: 'Bir dahaki sefere kayıtlı.',
     done: 'Tamam',
   },
@@ -162,6 +170,11 @@ export const tr = {
     ],
     inspiredBy: 'İlham: Unprompted (@bitterbuilds).',
     source: 'Kaynak kodu GitHub’da',
+  },
+  plan: {
+    stuck: 'takılırsan',
+    before: 'önce',
+    after: 'sonra',
   },
   streak: {
     dayOne: '{n} gün',

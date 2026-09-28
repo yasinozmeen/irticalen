@@ -45,3 +45,23 @@ export function researchStageAt(plan: ResearchStagePlan[], elapsedSec: number): 
   }
   return index;
 }
+
+export interface ResearchStageMinutes {
+  stage: ResearchStage;
+  minutes: number;
+}
+
+/**
+ * Same split as `planResearchStages`, but expressed as each stage's own rounded-minute length
+ * instead of its start second — what the rich view's "önce topla n dk · kur n dk · ısın n dk" line
+ * needs. Every floored stage (>= 30 s) rounds up to at least 1 displayed minute.
+ */
+export function researchStageMinutes(totalSec: number): ResearchStageMinutes[] {
+  const plan = planResearchStages(totalSec);
+  const total = Math.max(0, Math.round(totalSec));
+  return plan.map((entry, index) => {
+    const end = index + 1 < plan.length ? plan[index + 1].startSec : total;
+    const durationSec = Math.max(0, end - entry.startSec);
+    return { stage: entry.stage, minutes: Math.round(durationSec / 60) };
+  });
+}

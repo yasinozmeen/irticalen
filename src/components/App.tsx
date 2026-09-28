@@ -34,15 +34,22 @@ import {
   buildTopicIndex,
   planResearchStages,
   researchStageAt,
+  researchStageMinutes,
   sessionChapters,
   researchMinutes as spentResearchMinutes,
   youtubePrompt as buildYoutubePrompt,
   downgradeRecordMode,
+  loadView,
+  saveView,
+  broadcastViewChange,
+  RICH_VIEW_MIN_WIDTH,
+  DEFAULT_VIEW,
   type SessionMarks,
   type Countdown,
   type ReleaseWakeLock,
   type Settings,
   type DayLog,
+  type ViewMode,
 } from '../lib';
 import type { ShareChannel } from './SharePanel';
 import type { Category, Mode, RecordMode } from '../lib/types';
@@ -51,16 +58,18 @@ import { dictionaries, fill, type Locale } from '../i18n';
 import { getCategories, getCategoryById } from '../data/topics';
 import { ModeSwitch } from './ModeSwitch';
 import { CategorySelect } from './CategorySelect';
+import { CategoryIndex } from './CategoryIndex';
+import { SpeechPlan } from './SpeechPlan';
 import { TopicReel, type TopicReelHandle } from './TopicReel';
 import { TimerOverlay } from './TimerOverlay';
 import { SettingsDialog } from './SettingsDialog';
 import { ErrorBoundary } from './ErrorBoundary';
-import { LanguageSwitch } from './LanguageSwitch';
 import { Logo } from './Logo';
 import { StreakSheet } from './StreakSheet';
 
 /** How long the "süre." screen stays before the share screen takes over. */
 const AUTO_SHARE_DELAY_MS = 1600;
+const RECORDING_CAP_MS = 30 * 60 * 1000;
 
 interface Props {
   locale: Locale;
@@ -83,6 +92,10 @@ function AppContent({ locale }: Props) {
     record: 'off',
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Desktop "rich" (open-book) view: SSR-safe defaults (minimal / not wide) — the real saved
+  // preference and the actual viewport width both only become known on the client, below.
+  const [view, setView] = useState<ViewMode>(DEFAULT_VIEW);
+  const [isWide, setIsWide] = useState(false);
   const [sharePanelOpen, setSharePanelOpen] = useState(false);
   const [streakSheetOpen, setStreakSheetOpen] = useState(false);
   // SSR-safe empty default; the real log loads on the client below. Kept only in this browser.
@@ -104,6 +117,16 @@ function AppContent({ locale }: Props) {
   const [researchField, setResearchField] = useState<string>(ALL_FIELD_ID);
 
   const recording = useSelfRecording();
+  // Read inside timer callbacks, which close over an older render.
+  const recordingActiveRef = useRef(false);
+  recordingActiveRef.current = recording.active;
+  // Safety cap: a forgotten recording stops (and is kept) after 30 minutes so memory cannot run out.
+  useEffect(() => {
+    if (!recording.active) return;
+    const cap = setTimeout(() => recording.stop(true), RECORDING_CAP_MS);
+    return () => clearTimeout(cap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recording.active]);
   const soundRef = useRef(createSoundEngine());
   const countdownRef = useRef<Countdown | null>(null);
   const wakeLockReleaseRef = useRef<ReleaseWakeLock | null>(null);
@@ -192,6 +215,27 @@ function AppContent({ locale }: Props) {
   // Same for the practice log that drives the streak indicator — client only.
   useEffect(() => {
     setDays(loadDays());
+  }, []);
+
+  // Same for the saved view preference — client only (see the `view` state above).
+  useEffect(() => {
+    setView(loadView());
+  }, []);
+
+  // The rich view is only ever offered/applied at >=1100px — a narrow window (or a phone) always
+  // gets the minimalist layout regardless of the saved preference. Tracks live resizes too, not just
+  // the initial width, so dragging a window across the threshold switches layouts immediately.
+  useEffect(() => {
+    let mql: MediaQueryList | undefined;
+    try {
+      mql = matchMedia(`(min-width: ${RICH_VIEW_MIN_WIDTH}px)`);
+      setIsWide(mql.matches);
+      const onChange = (event: MediaQueryListEvent): void => setIsWide(event.matches);
+      mql.addEventListener('change', onChange);
+      return () => mql?.removeEventListener('change', onChange);
+    } catch {
+      return undefined;
+    }
   }, []);
 
   // Load the persisted research field the same way — runs before the `?konu=` preset effect below,
@@ -357,11 +401,13 @@ function AppContent({ locale }: Props) {
           tracker.track('research_done');
         } else if (wasSpeech && !speechDoneSentRef.current) {
           speechDoneSentRef.current = true;
-          recording.stop(true);
           tracker.track('speech_done');
           // The day counts for the practice streak (kept only in this browser) — the indicator and
           // the "bugün tamam" line both read the updated log straight from state.
           setDays(recordPractice(stateRef.current.mode));
+          // A self-recording keeps running past the timer until the speaker stops it — no auto share
+          // screen then (the stop button stays in front).
+          if (recordingActiveRef.current) return;
           // The speech is over — after the "süre." beat, move on to the share screen by itself.
           if (autoShareTimerRef.current !== null) clearTimeout(autoShareTimerRef.current);
           autoShareTimerRef.current = setTimeout(() => {
@@ -559,7 +605,16 @@ function AppContent({ locale }: Props) {
     tracker.track('start_speech', { m: mode, t: topic ?? undefined });
   };
 
+  const handleStopRecording = (): void => {
+    recording.stop(true);
+  };
+
   const handleClose = (): void => {
+    // Escape while a past-the-timer recording runs means "stop recording", not "throw it away".
+    if (state.phase === 'done' && recording.active) {
+      recording.stop(true);
+      return;
+    }
     if (autoShareTimerRef.current !== null) {
       clearTimeout(autoShareTimerRef.current);
       autoShareTimerRef.current = null;
@@ -588,6 +643,12 @@ function AppContent({ locale }: Props) {
 
   const researchPlan = useMemo(() => planResearchStages(settings.researchSec), [settings.researchSec]);
   const researchStageIds = useMemo(() => researchPlan.map((entry) => entry.stage), [researchPlan]);
+  // Rich view only: the same split, expressed as each stage's own minute length, for the "önce topla
+  // n dk · kur n dk · ısın n dk" line shown above the action row before the timer ever opens.
+  const researchStagesMinutes = useMemo(
+    () => researchStageMinutes(settings.researchSec),
+    [settings.researchSec],
+  );
 
   // Time crossing a stage boundary moves the stage forward (never back — a skipped-ahead stage
   // stays). The new stage's guide arrives inside a view transition, with a soft chord as the cue.
@@ -717,6 +778,15 @@ function AppContent({ locale }: Props) {
     );
   };
 
+  // The word (topic) currently holding the view-transition name stays put — only the column around
+  // it slides into its new spot (see CLAUDE.md's "Geçişler" rule and runViewTransition itself).
+  const handleViewChange = (next: ViewMode): void => {
+    if (next === view) return;
+    saveView(next);
+    broadcastViewChange(next);
+    void runViewTransition(() => setView(next));
+  };
+
   // The top-bar streak indicator: hidden until at least one day is on record, dimmed (pencil) when
   // today isn't practised yet (the chain is at risk of breaking), inked once it is.
   const hasPracticeHistory = Object.keys(days).length > 0;
@@ -742,6 +812,9 @@ function AppContent({ locale }: Props) {
   const locked = isLocked(state);
   const sessionOpen = state.phase !== 'idle';
   const contentInert = sessionOpen || settingsOpen;
+  // The rich (open-book) layout only actually applies once both the preference AND the viewport are
+  // there — a saved 'rich' preference on a phone (or a resized-down window) still renders minimalist.
+  const richActive = view === 'rich' && isWide;
 
   // The bottom dock (and, on article pages, the site footer) lives outside this island; make it inert too while a dialog is open.
   useEffect(() => {
@@ -764,9 +837,105 @@ function AppContent({ locale }: Props) {
       ? fill(dict.actions.startResearch, { min: researchMinutes })
       : fill(dict.actions.startSpeech, { min: speechMinutes });
 
+  // Shared between the two layouts below (minimalist: flat column; rich: open-book "spread") so
+  // neither the JSX nor the state/handlers it closes over are duplicated — only one of the two
+  // branches ever mounts at a time, picked by `richActive`.
+  const modeSwitchNode = <ModeSwitch mode={state.mode} disabled={locked} dict={dict} onChange={handleModeChange} />;
+
+  // Same data in both: off-the-cuff shows the plain category list, deep-research shows "Hepsi" + the
+  // research pool's fields — only the options/value/handler differ (see the deep-research comment
+  // near `researchFieldOptions` above).
+  const categorySelectNode =
+    state.mode === 'off-the-cuff' ? (
+      <CategorySelect
+        categories={categories}
+        value={effectiveCategoryId}
+        disabled={locked}
+        dict={dict}
+        onChange={handleCategoryChange}
+      />
+    ) : (
+      <CategorySelect
+        categories={researchFieldOptions}
+        value={researchField}
+        disabled={locked}
+        dict={dict}
+        onChange={handleResearchFieldChange}
+      />
+    );
+
+  // Rich view's open-list equivalent of the dropdown above — same categories/value/handler.
+  const categoryIndexNode =
+    state.mode === 'off-the-cuff' ? (
+      <CategoryIndex
+        title={dict.category.title}
+        categories={categories}
+        value={effectiveCategoryId}
+        disabled={locked}
+        locale={locale}
+        onChange={handleCategoryChange}
+      />
+    ) : (
+      <CategoryIndex
+        title={dict.category.groupsTitle}
+        categories={researchFieldOptions}
+        value={researchField}
+        disabled={locked}
+        locale={locale}
+        onChange={handleResearchFieldChange}
+      />
+    );
+
+  const topicReelNode = (
+    <TopicReel
+      ref={wheelRef}
+      topics={topics}
+      topic={state.topic}
+      spinning={spinning}
+      landKey={landKey}
+      dict={dict}
+      locale={locale}
+      wordOwner={!sessionOpen}
+    />
+  );
+
+  const modeBlurbNode = (
+    <p class="mode-blurb">{state.mode === 'off-the-cuff' ? dict.modes.offTheCuffBlurb : dict.modes.deepResearchBlurb}</p>
+  );
+
+  const recordNoteNode = settings.record !== 'off' && recording.available && state.topic !== null && (
+    <p class="record-note">
+      {settings.record === 'camera'
+        ? dict.record.noteCamera
+        : settings.record === 'screen'
+          ? dict.record.noteScreen
+          : dict.record.noteBoth}
+    </p>
+  );
+
+  const actionRowNode = (
+    <div class="action-row">
+      {/* Before the first topic there is nothing to start — the only action is to spin. */}
+      {state.topic === null ? (
+        <button type="button" class="btn btn-primary" disabled={locked} onClick={handleSpin}>
+          {spinLabel}
+        </button>
+      ) : (
+        <>
+          <button type="button" class="btn btn-secondary" disabled={locked} onClick={handleSpin}>
+            {spinLabel}
+          </button>
+          <button ref={startTriggerRef} type="button" class="btn btn-primary" disabled={locked} onClick={handleStart}>
+            {startLabel}
+          </button>
+        </>
+      )}
+    </div>
+  );
+
   return (
     <>
-      <div class="app-shell" inert={contentInert || undefined}>
+      <div class={`app-shell${richActive ? ' rich' : ''}`} inert={contentInert || undefined}>
         <header class="top-bar">
           <h1 class="brand-heading">
             <a class="brand-link" href="#top" aria-label={dict.brand}>
@@ -788,7 +957,8 @@ function AppContent({ locale }: Props) {
                 {streakDayText}
               </button>
             )}
-            <LanguageSwitch locale={locale} dict={dict} />
+            {/* Language moved into the settings dialog (see SettingsDialog) — the top bar now carries
+                only the streak indicator and the settings icon, in both views and at every width. */}
             <button
               ref={settingsTriggerRef}
               type="button"
@@ -805,77 +975,51 @@ function AppContent({ locale }: Props) {
           </div>
         </header>
 
-        <div class="controls-row">
-          <ModeSwitch mode={state.mode} disabled={locked} dict={dict} onChange={handleModeChange} />
-          {/* Same component in both modes, at the same position — only its options/value/handler
-              change, so switching modes never mounts/unmounts it (no "pat" pop-in/out). */}
-          {state.mode === 'off-the-cuff' ? (
-            <CategorySelect
-              categories={categories}
-              value={effectiveCategoryId}
-              disabled={locked}
-              dict={dict}
-              onChange={handleCategoryChange}
-            />
-          ) : (
-            <CategorySelect
-              categories={researchFieldOptions}
-              value={researchField}
-              disabled={locked}
-              dict={dict}
-              onChange={handleResearchFieldChange}
-            />
-          )}
-        </div>
+        {richActive ? (
+          <div class="spread">
+            <aside class="page-left">
+              {modeSwitchNode}
+              {categoryIndexNode}
+              <dl class="word-card">
+                <dt>
+                  <span class="word-term" lang="tr">
+                    {dict.about.word.term}
+                  </span>
+                  <span class="word-pron">{dict.about.word.pronunciation}</span>
+                </dt>
+                <dd class="word-kind">{dict.about.word.kind}</dd>
+                <dd class="word-def">{dict.about.word.definition}</dd>
+                <dd class="word-ex">{dict.about.word.example}</dd>
+              </dl>
+            </aside>
+            <main class="page-right">
+              {topicReelNode}
+              {modeBlurbNode}
+              {recordNoteNode}
+              <SpeechPlan
+                mode={state.mode}
+                dict={dict}
+                researchStages={researchStagesMinutes}
+                speechMinutes={speechMinutes}
+              />
+              {actionRowNode}
+            </main>
+          </div>
+        ) : (
+          <>
+            <div class="controls-row">
+              {modeSwitchNode}
+              {/* Same component in both modes, at the same position — only its options/value/handler
+                  change, so switching modes never mounts/unmounts it (no "pat" pop-in/out). */}
+              {categorySelectNode}
+            </div>
 
-        <TopicReel
-          ref={wheelRef}
-          topics={topics}
-          topic={state.topic}
-          spinning={spinning}
-          landKey={landKey}
-          dict={dict}
-          locale={locale}
-          wordOwner={!sessionOpen}
-        />
-
-        <p class="mode-blurb">
-          {state.mode === 'off-the-cuff' ? dict.modes.offTheCuffBlurb : dict.modes.deepResearchBlurb}
-        </p>
-
-        {settings.record !== 'off' && recording.available && state.topic !== null && (
-          <p class="record-note">
-            {settings.record === 'camera'
-              ? dict.record.noteCamera
-              : settings.record === 'screen'
-                ? dict.record.noteScreen
-                : dict.record.noteBoth}
-          </p>
+            {topicReelNode}
+            {modeBlurbNode}
+            {recordNoteNode}
+            {actionRowNode}
+          </>
         )}
-
-        <div class="action-row">
-          {/* Before the first topic there is nothing to start — the only action is to spin. */}
-          {state.topic === null ? (
-            <button type="button" class="btn btn-primary" disabled={locked} onClick={handleSpin}>
-              {spinLabel}
-            </button>
-          ) : (
-            <>
-              <button type="button" class="btn btn-secondary" disabled={locked} onClick={handleSpin}>
-                {spinLabel}
-              </button>
-              <button
-                ref={startTriggerRef}
-                type="button"
-                class="btn btn-primary"
-                disabled={locked}
-                onClick={handleStart}
-              >
-                {startLabel}
-              </button>
-            </>
-          )}
-        </div>
       </div>
 
       <TimerOverlay
@@ -891,6 +1035,7 @@ function AppContent({ locale }: Props) {
         onReadyToSpeak={handleReadyToSpeak}
         onClose={handleClose}
         onShareOpen={handleShareOpen}
+        onStopRecording={handleStopRecording}
         sharePanelOpen={sharePanelOpen}
         shareImageUrl={shareImageUrl}
         shareText={shareTextValue}
@@ -918,18 +1063,22 @@ function AppContent({ locale }: Props) {
 
       <SettingsDialog
         open={settingsOpen}
+        locale={locale}
         speechMinutes={speechMinutes}
         researchMinutes={researchMinutes}
         muted={settings.muted}
         hideClock={settings.hideClock}
         record={settings.record}
         recordModes={recording.visibleModes}
+        isWide={isWide}
+        view={view}
         dict={dict}
         onSpeechChange={handleSpeechMinutesChange}
         onResearchChange={handleResearchMinutesChange}
         onMutedChange={handleMutedChange}
         onHideClockChange={handleHideClockChange}
         onRecordChange={handleRecordChange}
+        onViewChange={handleViewChange}
         onClose={closeSettings}
       />
     </>

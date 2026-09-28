@@ -1,6 +1,21 @@
-import { useRef, useState } from 'preact/hooks';
-import type { Dictionary, Locale } from '../i18n';
-import { detectDevice, getTracker, sendFeedback, type FeedbackKind, type FeedbackResult, runViewTransition } from '../lib';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { localePath, localeTag, type Dictionary, type Locale } from '../i18n';
+import {
+  detectDevice,
+  getTracker,
+  sendFeedback,
+  type FeedbackKind,
+  type FeedbackResult,
+  runViewTransition,
+  loadView,
+  saveLocale,
+  RICH_VIEW_MIN_WIDTH,
+  VIEW_CHANGE_EVENT,
+  type ViewMode,
+  loadLangHintSeen,
+  saveLangHintSeen,
+  shouldShowLangHint,
+} from '../lib';
 import { Sheet } from './Sheet';
 
 interface Props {
@@ -31,6 +46,55 @@ export function Dock({ locale, dict }: Props) {
   const [openSheet, setOpenSheet] = useState<SheetKind>(null);
   const trackerRef = useRef(getTracker(locale));
   const tracker = trackerRef.current;
+
+  // The rich (open-book) view is chosen inside the App island's settings dialog — this island only
+  // needs to know about it to hide the now-redundant "ne demek?" link (the word card lives on the
+  // rich view's own page) and to line the dock up with the wider column. SSR-safe default (false):
+  // both `view` and `isWide` only become real on the client, same rule App.tsx follows for `isWide`.
+  const [view, setView] = useState<ViewMode>('minimal');
+  const [isWide, setIsWide] = useState(false);
+  const richActive = view === 'rich' && isWide;
+
+  useEffect(() => {
+    setView(loadView());
+    const onViewChange = (event: Event): void => {
+      const detail = (event as CustomEvent<ViewMode>).detail;
+      if (detail) setView(detail);
+    };
+    window.addEventListener(VIEW_CHANGE_EVENT, onViewChange);
+    return () => window.removeEventListener(VIEW_CHANGE_EVENT, onViewChange);
+  }, []);
+
+  useEffect(() => {
+    let mql: MediaQueryList | undefined;
+    try {
+      mql = matchMedia(`(min-width: ${RICH_VIEW_MIN_WIDTH}px)`);
+      setIsWide(mql.matches);
+      const onChange = (event: MediaQueryListEvent): void => setIsWide(event.matches);
+      mql.addEventListener('change', onChange);
+      return () => mql?.removeEventListener('change', onChange);
+    } catch {
+      // matchMedia unavailable — stays minimal/narrow
+      return undefined;
+    }
+  }, []);
+
+  // The one-time "other language" hint: shown once, on the client only (never during SSR, to avoid
+  // a hydration mismatch), then marked seen so it never reappears in this browser.
+  const [showLangHint, setShowLangHint] = useState(false);
+  useEffect(() => {
+    try {
+      const languages = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
+      if (shouldShowLangHint(locale, languages, loadLangHintSeen())) {
+        setShowLangHint(true);
+        saveLangHintSeen();
+      }
+    } catch {
+      // never let a missing/odd navigator.languages break the dock
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale]);
+  const otherLocale: Locale = locale === 'tr' ? 'en' : 'tr';
 
   const [fbKind, setFbKind] = useState<FeedbackKind>('topic');
   const [fbText, setFbText] = useState('');
@@ -100,18 +164,23 @@ export function Dock({ locale, dict }: Props) {
 
   return (
     <>
-      <nav class="dock" aria-label={dict.footer.linksHeading} data-outside-app>
+      <nav class={`dock${richActive ? ' rich' : ''}`} aria-label={dict.footer.linksHeading} data-outside-app>
         <div class="dock-group">
-          <button
-            type="button"
-            class="dock-link"
-            aria-haspopup="dialog"
-            aria-expanded={openSheet === 'about'}
-            onClick={openAbout}
-          >
-            <span class="dock-long">{dict.footer.wordHeading}</span>
-            <span class="dock-short">{dict.footer.wordShort}</span>
-          </button>
+          {/* The rich view shows the "irticalen" dictionary entry on its own left page — the sheet
+              would only duplicate it, so the trigger is dropped there (the sheet itself stays mounted
+              and harmless, just unreachable without its button). */}
+          {!richActive && (
+            <button
+              type="button"
+              class="dock-link"
+              aria-haspopup="dialog"
+              aria-expanded={openSheet === 'about'}
+              onClick={openAbout}
+            >
+              <span class="dock-long">{dict.footer.wordHeading}</span>
+              <span class="dock-short">{dict.footer.wordShort}</span>
+            </button>
+          )}
           <a class="dock-link dock-link-why" href={whyPath}>
             <span class="dock-long">{dict.footer.why}</span>
             <span class="dock-short">{dict.footer.whyShort}</span>
@@ -126,6 +195,17 @@ export function Dock({ locale, dict }: Props) {
             <span class="dock-long">{dict.footer.writeToUs}</span>
             <span class="dock-short">{dict.footer.writeToUsShort}</span>
           </button>
+          {showLangHint && (
+            <a
+              class="dock-link dock-lang-hint"
+              href={localePath(otherLocale)}
+              hreflang={localeTag[otherLocale]}
+              lang={localeTag[otherLocale]}
+              onClick={() => saveLocale(otherLocale)}
+            >
+              {dict.language.switchTo}
+            </a>
+          )}
         </div>
         <div class="dock-group">
           <a class="dock-link dock-projects" href="https://yasinozmeen.me" target="_blank" rel="noopener">

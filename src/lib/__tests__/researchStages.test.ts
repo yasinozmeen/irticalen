@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planResearchStages, researchStageAt } from '../researchStages';
+import { planResearchStages, researchStageAt, researchStageMinutes } from '../researchStages';
 
 const starts = (totalSec: number) => planResearchStages(totalSec).map((p) => `${p.stage}@${p.startSec}`);
 
@@ -44,5 +44,33 @@ describe('researchStageAt', () => {
     expect(researchStageAt(plan, 420)).toBe(1);
     expect(researchStageAt(plan, 540)).toBe(2);
     expect(researchStageAt(plan, 9999)).toBe(2);
+  });
+});
+
+describe('researchStageMinutes', () => {
+  it('10 dk: 7/2/1 dk olarak böler (zengin görünümdeki "önce" satırı)', () => {
+    expect(researchStageMinutes(600)).toEqual([
+      { stage: 'gather', minutes: 7 },
+      { stage: 'shape', minutes: 2 },
+      { stage: 'warm', minutes: 1 },
+    ]);
+  });
+
+  it('3 dk altında ısınma satırı yok (yalnız iki bölüm)', () => {
+    expect(researchStageMinutes(120)).toEqual([
+      { stage: 'gather', minutes: 2 },
+      { stage: 'shape', minutes: 1 },
+    ]);
+  });
+
+  it('her bölüm en az 1 dakika gösterir ve bölüm sayısı plana uyar', () => {
+    for (const min of [1, 3, 10, 30, 60]) {
+      const totalSec = min * 60;
+      const stages = researchStageMinutes(totalSec);
+      expect(stages.length).toBe(planResearchStages(totalSec).length);
+      for (const entry of stages) {
+        expect(entry.minutes).toBeGreaterThanOrEqual(1);
+      }
+    }
   });
 });

@@ -18,3 +18,5 @@ export * from './researchStages';
 export * from './streak';
 export * from './youtube';
 export * from './recorder';
+export * from './view';
+export * from './langHint';

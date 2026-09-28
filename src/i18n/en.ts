@@ -10,7 +10,7 @@ export const en: Dictionary = {
   wordmark: 'irticalen',
   madeBy: 'made by',
   skipToApp: 'Skip to the app',
-  language: { label: 'Language', switchTo: 'Türkçe', current: 'EN', other: 'TR' },
+  language: { label: 'Language', switchTo: 'Türkçe', current: 'EN', other: 'TR', selfName: 'English' },
   modes: {
     label: 'Mode',
     offTheCuff: 'Off the cuff',
@@ -28,8 +28,10 @@ export const en: Dictionary = {
     downloadCamera: 'download camera recording',
     downloadScreen: 'download screen recording',
     downloadNote: 'the recording stays on this device only; it is deleted when you leave the page.',
+    stop: 'stop recording',
+    stillRecording: 'time is up, still recording; stop when you are done.',
   },
-  category: { label: 'Category', all: 'All' },
+  category: { label: 'Category', all: 'All', title: 'categories', groupsTitle: 'fields' },
   reel: { idle: 'Ready', spinning: 'Drawing…', landed: 'Your topic', empty: 'Spin to draw a topic', announce: 'Your topic: {topic}' },
   actions: {
     spin: 'Spin',
@@ -105,6 +107,12 @@ export const en: Dictionary = {
     recordCamera: 'camera',
     recordScreen: 'screen',
     recordBoth: 'camera + screen',
+    language: 'Language',
+    view: 'View',
+    viewMinimal: 'minimalist',
+    viewRich: 'rich',
+    viewHint:
+      'The rich view opens the speech outline and more on the same page on a wide screen. On a phone the page is always minimalist.',
     saved: 'Saved for next time.',
     done: 'Done',
   },
@@ -164,6 +172,11 @@ export const en: Dictionary = {
     ],
     inspiredBy: 'Inspired by Unprompted (@bitterbuilds).',
     source: 'Source code on GitHub',
+  },
+  plan: {
+    stuck: 'if you stall',
+    before: 'first',
+    after: 'then',
   },
   streak: {
     dayOne: '{n} day',

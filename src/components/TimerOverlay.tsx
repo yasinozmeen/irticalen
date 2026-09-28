@@ -21,6 +21,8 @@ interface Props {
   onReadyToSpeak: () => void;
   onClose: () => void;
   onShareOpen: () => void;
+  /** Stops a recording that kept running past the speech timer (the speaker ends it). */
+  onStopRecording: () => void;
   sharePanelOpen: boolean;
   shareImageUrl: string;
   shareText: string;
@@ -75,6 +77,7 @@ export function TimerOverlay({
   onReadyToSpeak,
   onClose,
   onShareOpen,
+  onStopRecording,
   sharePanelOpen,
   shareImageUrl,
   shareText,
@@ -264,6 +267,12 @@ export function TimerOverlay({
             </p>
           )}
 
+          {isDone && recordingActive && (
+            <p class="timer-record-failed timer-rise" style={{ animationDelay: '190ms' } as Record<string, string>}>
+              {dict.record.stillRecording}
+            </p>
+          )}
+
           {isDone && (recordingCameraFile || recordingScreenFile) && (
             <div class="timer-record-download timer-rise" style={{ animationDelay: '190ms' } as Record<string, string>}>
               <div class="timer-record-download-links">
@@ -350,14 +359,24 @@ export function TimerOverlay({
                 {dict.timer.readyToSpeak}
               </button>
             )}
-            {isDone && (
-              <button ref={shareTriggerRef} type="button" class="btn btn-secondary" onClick={onShareOpen}>
-                {dict.timer.share}
+            {isDone && recordingActive ? (
+              // Time is up but the recording keeps going until the speaker stops it; sharing and
+              // closing wait until then so the file is never lost mid-take.
+              <button type="button" class="btn btn-primary" onClick={onStopRecording}>
+                {dict.record.stop}
               </button>
+            ) : (
+              <>
+                {isDone && (
+                  <button ref={shareTriggerRef} type="button" class="btn btn-secondary" onClick={onShareOpen}>
+                    {dict.timer.share}
+                  </button>
+                )}
+                <button type="button" class="btn btn-secondary" onClick={onClose}>
+                  {dict.timer.close}
+                </button>
+              </>
             )}
-            <button type="button" class="btn btn-secondary" onClick={onClose}>
-              {dict.timer.close}
-            </button>
           </div>
         </>
       )}
