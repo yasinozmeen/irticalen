@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import type { Dictionary } from '../i18n';
 import type { RecordingFile } from './useSelfRecording';
 
@@ -45,10 +45,8 @@ export function RecordingShareButton({ file, dict, primary }: Props) {
   // This particular file can't go to the share sheet (e.g. a webm the phone won't accept) — the
   // plain download takes the button's place instead of leaving it disabled for good.
   const [unsupported, setUnsupported] = useState(false);
-  const aliveRef = useRef(true);
 
   useEffect(() => {
-    aliveRef.current = true;
     setShareable(null);
     setFailed(false);
     setUnsupported(false);
@@ -57,21 +55,16 @@ export function RecordingShareButton({ file, dict, primary }: Props) {
       setUnsupported(true);
       return;
     }
-    void fetch(file.url)
-      .then((response) => response.blob())
-      .then((blob) => {
-        const prepared = new File([blob], file.name, { type: blob.type || 'video/mp4' });
-        if (!aliveRef.current) return;
-        if (nav.canShare?.({ files: [prepared] })) setShareable(prepared);
-        else setUnsupported(true);
-      })
-      .catch(() => {
-        if (aliveRef.current) setUnsupported(true);
-      });
-    return () => {
-      aliveRef.current = false;
-    };
-  }, [file.url, file.name]);
+    // Built straight from the recording's Blob — no fetch of the blob URL (CSP `connect-src 'self'`
+    // blocks that on the live site).
+    try {
+      const prepared = new File([file.blob], file.name, { type: file.blob.type || 'video/mp4' });
+      if (nav.canShare({ files: [prepared] })) setShareable(prepared);
+      else setUnsupported(true);
+    } catch {
+      setUnsupported(true);
+    }
+  }, [file.blob, file.name]);
 
   const onShare = (): void => {
     if (!shareable) return;

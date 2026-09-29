@@ -1,5 +1,6 @@
 import { canShareVideoFiles } from './RecordingShareButton';
 import { RecordingWatchPanel } from './RecordingWatchPanel';
+import type { RecordingFile } from './useSelfRecording';
 import { runViewTransition } from '../lib/viewTransition';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Phase, Mode } from '../lib/types';
@@ -54,7 +55,7 @@ interface Props {
   /** 'raw' format only. */
   recordingScreenFile: { url: string; name: string } | null;
   /** 'template' format only — the single composited file. */
-  recordingCompositeFile: { url: string; name: string } | null;
+  recordingCompositeFile: RecordingFile | null;
   /** Development copies only (never the live site): end the speech now instead of waiting it out. */
   onFinishEarly?: () => void;
 }

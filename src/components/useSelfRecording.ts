@@ -32,6 +32,9 @@ import {
 export interface RecordingFile {
   url: string;
   name: string;
+  /** The recording itself — the share sheet takes it as a File (a fetch of the blob URL would be
+   * blocked by the site's CSP `connect-src 'self'`). */
+  blob: Blob;
 }
 
 interface SlotState {
@@ -122,7 +125,7 @@ function useRecordingSlot(variant: RecordingVariant) {
           mimeType: mime,
           variant,
         });
-        fileRef.current = { url, name };
+        fileRef.current = { url, name, blob };
         if (mountedRef.current) setState({ status: 'stopped', file: fileRef.current });
       } catch {
         if (mountedRef.current) setState({ status: 'failed', file: null });
@@ -351,7 +354,7 @@ function useTemplateRecording() {
             const url = URL.createObjectURL(blob);
             const topic = getAppStateRef.current?.().topic ?? '';
             const name = buildCompositeFileName({ topic, locale: localeRef.current, mimeType });
-            fileRef.current = { url, name };
+            fileRef.current = { url, name, blob };
             if (mountedRef.current) {
               setFile(fileRef.current);
               setStatus('idle');
