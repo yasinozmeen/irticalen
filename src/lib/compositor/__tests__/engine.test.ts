@@ -22,7 +22,9 @@ function fakeVideo() {
     videoWidth: 1280,
     videoHeight: 720,
     readyState: 2,
-    play: () => Promise.resolve(),
+    paused: false,
+    play: vi.fn(() => Promise.resolve()),
+    remove: vi.fn(),
   };
 }
 
@@ -99,6 +101,7 @@ interface Harness {
   /** The `createAudioAnalyser` fake's last returned reader (if any), so a test can flip its output. */
   micRms: { value: number };
   micAnalyserCreated: ReturnType<typeof vi.fn>;
+  videos: ReturnType<typeof fakeVideo>[];
 }
 
 function buildHarness(overrides: { isTypeSupported?: boolean; hasContext?: boolean; withMicAnalyser?: boolean } = {}): Harness {
@@ -124,12 +127,15 @@ function buildHarness(overrides: { isTypeSupported?: boolean; hasContext?: boole
   let appState = defaultAppState();
   const micRms = { value: 0 };
   const micAnalyserCreated = vi.fn();
+  const videos: ReturnType<typeof fakeVideo>[] = [];
 
   const engine = new CompositorEngine(
     {
       createVideo: () => {
         callOrder.push('createVideo');
-        return fakeVideo();
+        const video = fakeVideo();
+        videos.push(video);
+        return video;
       },
       createCanvas: () => {
         callOrder.push('createCanvas');
@@ -179,6 +185,7 @@ function buildHarness(overrides: { isTypeSupported?: boolean; hasContext?: boole
     getAppState: () => appState,
     micRms,
     micAnalyserCreated,
+    videos,
   };
 }
 
@@ -525,5 +532,45 @@ describe('CompositorEngine fps degrade', () => {
     h.worker.emitTick();
     expect(h.callbacks.onFpsDrop).toHaveBeenCalledTimes(1);
     expect(h.worker.postMessage).toHaveBeenCalledWith({ type: 'interval', ms: 1000 / 24 });
+  });
+});
+
+describe('CompositorEngine video watchdog', () => {
+  it('tarayıcı kaynak videoyu duraklatırsa en geç bir saniyede yeniden oynatılır (kayıt donmaz)', async () => {
+    const h = buildHarness();
+    await h.engine.start({
+      mode: 'camera',
+      aspect: 'wide',
+      style: fakeStyle([]),
+      locale: 'tr',
+      cameraStream: fakeStream(),
+      getAppState: h.getAppState,
+    });
+    const video = h.videos[0];
+    const playsAtStart = video.play.mock.calls.length;
+    video.paused = true;
+    h.setNow(400);
+    h.worker.emitTick();
+    h.setNow(1500);
+    h.worker.emitTick();
+    expect(video.play.mock.calls.length).toBe(playsAtStart + 1);
+    video.paused = false;
+    h.setNow(3000);
+    h.worker.emitTick();
+    expect(video.play.mock.calls.length).toBe(playsAtStart + 1);
+  });
+
+  it('kayıt bitince kaynak video sayfadan kaldırılır', async () => {
+    const h = buildHarness();
+    await h.engine.start({
+      mode: 'camera',
+      aspect: 'wide',
+      style: fakeStyle([]),
+      locale: 'tr',
+      cameraStream: fakeStream(),
+      getAppState: h.getAppState,
+    });
+    h.engine.hardStop();
+    expect(h.videos[0].remove).toHaveBeenCalledTimes(1);
   });
 });

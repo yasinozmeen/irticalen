@@ -38,7 +38,11 @@ export interface EngineVideoElement {
   readonly videoWidth: number;
   readonly videoHeight: number;
   readonly readyState: number;
+  /** Absent in tests' fakes; a real element reports whether the browser has paused it. */
+  readonly paused?: boolean;
   play(): Promise<void> | void;
+  /** Detaches the element from the page (see `createHiddenVideo`). */
+  remove?(): void;
 }
 
 export interface EngineCanvas {
@@ -128,7 +132,7 @@ export interface CompositorCallbacks {
 
 function defaultCompositorDeps(): CompositorEngineDeps {
   return {
-    createVideo: () => document.createElement('video') as unknown as EngineVideoElement,
+    createVideo: () => createHiddenVideo(),
     createCanvas: (width, height) => {
       const canvas = document.createElement('canvas');
       canvas.width = width;
@@ -210,6 +214,29 @@ function defaultCompositorDeps(): CompositorEngineDeps {
   };
 }
 
+/**
+ * The element the engine reads a stream's frames from. It is attached to the page (invisible, 2px,
+ * behind everything) rather than left detached: mobile browsers — iOS Safari above all — pause a
+ * detached <video> after a while, and the recording then freezes on its last frame while the sound
+ * goes on.
+ */
+function createHiddenVideo(): EngineVideoElement {
+  const video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.setAttribute('playsinline', '');
+  video.setAttribute('muted', '');
+  video.setAttribute('aria-hidden', 'true');
+  video.tabIndex = -1;
+  video.style.cssText =
+    'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;z-index:-1;';
+  document.body.appendChild(video);
+  return video as unknown as EngineVideoElement;
+}
+
+/** How often a paused source <video> is told to play again (see `onTick`). */
+const VIDEO_WATCHDOG_MS = 1000;
+
 function isVideoReady(video: EngineVideoElement): boolean {
   return video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0;
 }
@@ -263,6 +290,7 @@ export class CompositorEngine {
   private startedAtMs = 0;
   private outroStartedMs: number | null = null;
   private slowStreak = 0;
+  private lastWatchdogMs = 0;
   private degraded = false;
 
   constructor(deps: Partial<CompositorEngineDeps> = {}, callbacks: CompositorCallbacks = {}) {
@@ -401,10 +429,12 @@ export class CompositorEngine {
     }
     if (this.cameraVideo) {
       this.cameraVideo.srcObject = null;
+      this.cameraVideo.remove?.();
       this.cameraVideo = null;
     }
     if (this.screenVideo) {
       this.screenVideo.srcObject = null;
+      this.screenVideo.remove?.();
       this.screenVideo = null;
     }
     if (this.micAnalyser) {
@@ -508,6 +538,13 @@ export class CompositorEngine {
 
     const drawStart = this.deps.now();
     const recordingElapsedMs = drawStart - this.startedAtMs;
+    // A browser may still pause a source <video> (phone screen dimmed, audio session interrupted…):
+    // without this the recording would freeze on that frame for the rest of the take.
+    if (drawStart - this.lastWatchdogMs >= VIDEO_WATCHDOG_MS) {
+      this.lastWatchdogMs = drawStart;
+      if (this.cameraVideo?.paused) safePlay(this.cameraVideo);
+      if (this.screenVideo?.paused) safePlay(this.screenVideo);
+    }
     const outroElapsedMs = this.outroStartedMs !== null ? drawStart - this.outroStartedMs : null;
     const appState = params.getAppState();
     const phase = computeFramePhase({ recordingElapsedMs, stage: appState.stage, outroElapsedMs });
