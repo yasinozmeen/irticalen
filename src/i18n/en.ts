@@ -31,6 +31,8 @@ export const en: Dictionary = {
     downloadNote: 'the recording stays on this device only; it is deleted when you leave the page.',
     watchRecording: 'watch the recording',
     watchBack: 'back',
+    watchFailedShare: "this browser couldn’t play the recording here; share it to Photos to watch it.",
+    watchFailedDownload: "this browser couldn’t play the recording here; download it to watch it.",
     shareRecording: 'share recording',
     shareFailed: 'couldn’t share; try the download.',
     stop: 'stop recording',

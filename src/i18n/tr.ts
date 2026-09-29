@@ -29,6 +29,8 @@ export const tr = {
     downloadNote: 'kayıt yalnız bu cihazda; sayfadan çıkınca silinir.',
     watchRecording: 'kaydı izle',
     watchBack: 'geri',
+    watchFailedShare: "bu tarayıcı kaydı burada oynatamadı; paylaşıp Fotoğraflar'a kaydederek izleyebilirsin.",
+    watchFailedDownload: "bu tarayıcı kaydı burada oynatamadı; indirip açarak izleyebilirsin.",
     shareRecording: 'kaydı paylaş',
     shareFailed: 'paylaşılamadı; indirmeyi dene.',
     stop: 'kaydı durdur',

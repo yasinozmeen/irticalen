@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Dictionary } from '../i18n';
 import type { RecordingFile } from './useSelfRecording';
 import { RecordingShareButton } from './RecordingShareButton';
+import { recLog } from '../lib/recDebug';
 
 interface Props {
   file: RecordingFile;
@@ -18,6 +19,7 @@ interface Props {
  */
 export function RecordingWatchPanel({ file, dict, shareInsteadOfDownload, onBack }: Props) {
   const backRef = useRef<HTMLButtonElement>(null);
+  const [playFailed, setPlayFailed] = useState(false);
 
   // The panel replaces the button that opened it, so focus would otherwise drop to <body>.
   useEffect(() => {
@@ -26,9 +28,27 @@ export function RecordingWatchPanel({ file, dict, shareInsteadOfDownload, onBack
 
   return (
     <div class="watch-panel">
-      {/* `#t=0.1`: iOS shows nothing before play with a bare blob URL; a start fragment makes it
-          paint the first frame (the template's intro) as the poster. */}
-      <video class="watch-panel-video" src={`${file.url}#t=0.1`} controls playsInline preload="metadata" />
+      <video
+        class="watch-panel-video"
+        src={file.url}
+        controls
+        playsInline
+        preload="metadata"
+        onLoadedMetadata={(event) => {
+          const video = event.currentTarget;
+          recLog(`İZLE: video hazır ${video.videoWidth}x${video.videoHeight} süre=${video.duration.toFixed(1)}sn`);
+        }}
+        onError={(event) => {
+          const error = event.currentTarget.error;
+          recLog(`İZLE HATASI: kod=${error?.code ?? '?'} ${error?.message ?? ''}`);
+          setPlayFailed(true);
+        }}
+      />
+      {/* Some browsers can record a format they then refuse to play inline — the file itself is
+          fine, so point to the way that works (Photos / the downloaded file). */}
+      {playFailed && (
+        <p class="watch-panel-note">{shareInsteadOfDownload ? dict.record.watchFailedShare : dict.record.watchFailedDownload}</p>
+      )}
       <div class="watch-panel-actions">
         {shareInsteadOfDownload ? (
           <RecordingShareButton file={file} dict={dict} primary />

@@ -571,6 +571,7 @@ export class CompositorEngine {
       }
       try {
         const blob = new Blob(chunks, mimeType ? { type: mimeType } : undefined);
+        recLog(`KAYIT BİTTİ dosya=${Math.round(blob.size / 1024)}KB parça=${chunks.length} tür=${blob.type || '?'}`);
         this.status = 'idle';
         this.callbacks.onFinished?.({ blob, mimeType });
       } catch {
