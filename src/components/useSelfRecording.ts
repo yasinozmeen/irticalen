@@ -1,3 +1,4 @@
+import { recLog } from '../lib/recDebug';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Locale, RecordAspect, RecordFormat, RecordMode } from '../lib/types';
 import {
@@ -291,6 +292,7 @@ function useTemplateRecording() {
       setPreviewStream(null);
     }
     const acquired = await acquireTemplateStreams(params.mode);
+    recLog(acquired ? 'izinler alındı, motor başlıyor' : 'KAMERA/EKRAN ALINAMADI (izin reddi ya da hata)');
     if (!acquired) {
       if (mountedRef.current) setStatus('failed');
       return;

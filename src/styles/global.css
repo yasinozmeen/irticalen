@@ -2829,3 +2829,40 @@ a.btn-primary:hover {
     transform: translateY(12px);
   }
 }
+
+/* ---------- GEÇİCİ kayıt tanı günlüğü (?kayitlog=1) — RecDebugPanel.tsx ile birlikte silinecek ---------- */
+.rec-debug {
+  position: fixed;
+  left: 6px;
+  right: 6px;
+  bottom: 72px;
+  z-index: 9999;
+  background: rgba(243, 238, 226, 0.94);
+  border: 1px solid var(--ink);
+  font: 10px/1.35 ui-monospace, Menlo, monospace;
+  color: var(--ink);
+}
+
+.rec-debug-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.rec-debug-bar button {
+  font: inherit;
+  text-decoration: underline;
+  padding: 4px 0;
+}
+
+.rec-debug-lines {
+  margin: 0;
+  padding: 4px 6px;
+  max-height: 28vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

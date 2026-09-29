@@ -69,6 +69,11 @@ import { SettingsDialog } from './SettingsDialog';
 import { RecordingLive, RecordingSwitch } from './RecordingSwitch';
 import { RecordingPreview } from './RecordingPreview';
 import { ErrorBoundary } from './ErrorBoundary';
+import { RecDebugPanel } from './RecDebugPanel';
+import { installFakeCameraIfAsked, recLog } from '../lib/recDebug';
+
+// GEÇİCİ tanı (recDebug.ts): ?sahtekamera=1 iken kamera yerine yapay görüntü.
+installFakeCameraIfAsked();
 import { Logo } from './Logo';
 import { StreakSheet } from './StreakSheet';
 
@@ -628,6 +633,7 @@ function AppContent({ locale }: Props) {
   };
 
   const handleRecordingToggle = (): void => {
+    recLog(`kişi: kayıt anahtarı (${recording.active || recordingPending ? 'kapat' : 'aç'})`);
     if (recording.active || recordingPending) {
       recording.stop(true);
       setRecordingPending(false);
@@ -1255,6 +1261,7 @@ function AppContent({ locale }: Props) {
         onRecordAspectChange={handleRecordAspectChange}
         onClose={closeSettings}
       />
+      <RecDebugPanel />
     </>
   );
 }

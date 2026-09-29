@@ -3,6 +3,7 @@ import { VIDEO_MIME_CANDIDATES, pickSupportedMimeType, stopMediaStream } from '.
 import { computeFramePhase, outroFinished, scaleMicRms, smoothMicLevel } from './frame';
 import { coverCrop, outputSizeForAspect } from './layout';
 import { ensureStyleFonts } from './fonts';
+import { describeTrack, recDebugEnabled, recLog, watchPage, watchTrack, watchVideo } from '../recDebug';
 import type { CompositeMode, Frame, FrameStage, Rect, RecordAspect, StyleDefinition } from './types';
 
 /**
@@ -63,7 +64,7 @@ export interface EngineWorker {
 
 export interface EngineRecorder {
   state: string;
-  start(): void;
+  start(timeslice?: number): void;
   stop(): void;
   ondataavailable: ((event: { data: Blob }) => void) | null;
   onstop: (() => void) | null;
@@ -324,6 +325,14 @@ export class CompositorEngine {
   private reacquiring = false;
   /** Camera streams re-acquired mid-take — stopped with everything else at the end. */
   private replacementStreams: MediaStream[] = [];
+  // GEÇİCİ tanı sayaçları (recDebug.ts) — yalnız ?kayitlog=1 iken dolar.
+  private debugBytes = 0;
+  private debugWindowStart = 0;
+  private debugTicks = 0;
+  private debugDrawTotal = 0;
+  private debugDrawMax = 0;
+  private debugGapMax = 0;
+  private debugLastTick = 0;
   private degraded = false;
 
   constructor(deps: Partial<CompositorEngineDeps> = {}, callbacks: CompositorCallbacks = {}) {
@@ -382,11 +391,28 @@ export class CompositorEngine {
 
       const recorder = this.deps.createRecorder(outputStream, mimeType);
       this.chunks = [];
+      const debug = recDebugEnabled();
       recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) this.chunks.push(event.data);
+        if (debug) this.debugBytes += event.data?.size ?? 0;
       };
       this.recorder = recorder;
-      recorder.start();
+      if (debug) {
+        // GEÇİCİ tanı (recDebug.ts): parça parça veri, kodlayıcının durup durmadığını gösterir.
+        watchPage();
+        recLog(`KAYIT BAŞLADI mod=${params.mode} oran=${params.aspect} stil=${params.style.id} tür=${mimeType} çıktı=${output.w}x${output.h}`);
+        watchTrack('kamera', params.cameraStream?.getVideoTracks()[0]);
+        watchTrack('ekran', params.screenStream?.getVideoTracks()[0]);
+        watchTrack('mikrofon', params.audioStream?.getAudioTracks()[0]);
+        watchTrack('tuval', canvasStream.getVideoTracks()[0]);
+        if (this.cameraVideo) watchVideo('kamera', this.cameraVideo as unknown as HTMLVideoElement);
+        if (this.screenVideo) watchVideo('ekran', this.screenVideo as unknown as HTMLVideoElement);
+        (recorder as unknown as { onerror?: (e: unknown) => void }).onerror = (e) => recLog(`KAYDEDİCİ HATASI: ${String((e as { error?: unknown })?.error ?? e)}`);
+        this.debugWindowStart = this.deps.now();
+        recorder.start(1000);
+      } else {
+        recorder.start();
+      }
 
       const worker = this.deps.createWorker();
       worker.onmessage = (event) => {
@@ -402,7 +428,8 @@ export class CompositorEngine {
       this.degraded = false;
       this.status = 'active';
       return true;
-    } catch {
+    } catch (error) {
+      recLog(`MOTOR BAŞLATILAMADI: ${String(error)}`);
       this.cleanupResources();
       this.status = 'failed';
       this.callbacks.onFailed?.();
@@ -511,6 +538,7 @@ export class CompositorEngine {
   }
 
   private finalizeAndStop(): void {
+    recLog(`KAYIT BİTİYOR (toplanan parça=${this.chunks.length})`);
     this.stopWorker();
     const recorder = this.recorder;
     const mimeType = this.mimeType;
@@ -583,13 +611,17 @@ export class CompositorEngine {
   private watchSources(now: number): void {
     const check = (kind: 'camera' | 'screen', video: EngineVideoElement | null): void => {
       if (!video) return;
-      if (video.paused) safePlay(video);
+      if (video.paused) {
+        recLog(`BEKÇİ: ${kind} videosu duraklamış → oynatılıyor`);
+        safePlay(video);
+      }
       const stream = video.srcObject;
       const track = stream?.getVideoTracks?.()[0] as { readyState?: string } | undefined;
       const watch = this.sourceWatch.get(kind) ?? { time: -1, movedAt: now, kickedAt: -Infinity };
       if (kind === 'camera' && track?.readyState === 'ended') {
         if (!this.reacquiring && now - watch.kickedAt >= VIDEO_KICK_EVERY_MS) {
           watch.kickedAt = now;
+          recLog('BEKÇİ: kamera izi bitmiş → kamera yeniden isteniyor');
           this.reacquireCameraInto(video);
         }
         this.sourceWatch.set(kind, watch);
@@ -602,6 +634,7 @@ export class CompositorEngine {
         watch.movedAt = now;
       } else if (now - watch.movedAt >= VIDEO_STALL_MS && now - watch.kickedAt >= VIDEO_KICK_EVERY_MS) {
         watch.kickedAt = now;
+        recLog(`BEKÇİ: ${kind} görüntüsü ${Math.round(now - watch.movedAt)}ms ilerlemedi → yeniden bağlanıyor`);
         video.srcObject = null;
         video.srcObject = stream ?? null;
         safePlay(video);
@@ -623,6 +656,7 @@ export class CompositorEngine {
           stopMediaStream(stream);
           return;
         }
+        recLog('BEKÇİ: yeni kamera alındı');
         this.replacementStreams.push(stream);
         video.srcObject = stream;
         safePlay(video);
@@ -632,6 +666,35 @@ export class CompositorEngine {
       .finally(() => {
         this.reacquiring = false;
       });
+  }
+
+  /** GEÇİCİ: bir saniyede bir, kaydın sağlığını tek satırda günlüğe yazar (recDebug.ts). */
+  private debugTick(now: number, drawMs: number, phase: string, stage: string): void {
+    if (this.debugLastTick) this.debugGapMax = Math.max(this.debugGapMax, now - this.debugLastTick);
+    this.debugLastTick = now;
+    this.debugTicks += 1;
+    this.debugDrawTotal += drawMs;
+    this.debugDrawMax = Math.max(this.debugDrawMax, drawMs);
+    const windowMs = now - this.debugWindowStart;
+    if (windowMs < 1000) return;
+    const cam = this.cameraVideo as unknown as HTMLVideoElement | null;
+    const camTrack = (cam?.srcObject as MediaStream | null)?.getVideoTracks()[0];
+    const canvasTrack = this.canvasStream?.getVideoTracks()[0];
+    const camText = cam
+      ? `kamera[${cam.paused ? 'DURAKLADI ' : ''}rs=${cam.readyState} t=${cam.currentTime.toFixed(2)} ${cam.videoWidth}x${cam.videoHeight} iz=${describeTrack(camTrack)}]`
+      : 'kamera[yok]';
+    recLog(
+      `kare/sn=${Math.round((this.debugTicks * 1000) / windowMs)} en-uzun-ara=${Math.round(this.debugGapMax)}ms ` +
+        `çizim ort=${(this.debugDrawTotal / this.debugTicks).toFixed(1)} en=${this.debugDrawMax.toFixed(1)}ms | ${camText} ` +
+        `tuval=${describeTrack(canvasTrack)} kaydedici=${this.recorder?.state ?? '-'} veri=${Math.round(this.debugBytes / 1024)}KB ` +
+        `| ${phase}/${stage} ${document.visibilityState}${this.degraded ? ' YAVAŞLATILDI' : ''}`,
+    );
+    this.debugWindowStart = now;
+    this.debugTicks = 0;
+    this.debugDrawTotal = 0;
+    this.debugDrawMax = 0;
+    this.debugGapMax = 0;
+    this.debugBytes = 0;
   }
 
   private onTick(): void {
@@ -693,7 +756,9 @@ export class CompositorEngine {
 
     style.drawOverlays(ctx, frame);
 
-    this.adaptFps(this.deps.now() - drawStart);
+    const drawMs = this.deps.now() - drawStart;
+    this.adaptFps(drawMs);
+    if (recDebugEnabled()) this.debugTick(drawStart, drawMs, phase, appState.stage);
 
     if (phase === 'outro' && outroElapsedMs !== null && outroFinished(outroElapsedMs)) {
       this.finalizeAndStop();
