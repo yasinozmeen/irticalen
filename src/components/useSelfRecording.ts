@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Locale, RecordAspect, RecordFormat, RecordMode } from '../lib/types';
 import {
   CAMERA_CONSTRAINTS,
+  RAW_VIDEO_BITS,
+  AUDIO_BITS,
   MIC_ONLY_CONSTRAINTS,
   SCREEN_CONSTRAINTS,
   VIDEO_MIME_CANDIDATES,
@@ -143,7 +145,7 @@ function useRecordingSlot(variant: RecordingVariant) {
       return false;
     }
     try {
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: RAW_VIDEO_BITS, audioBitsPerSecond: AUDIO_BITS });
       chunksRef.current = [];
       mimeRef.current = mimeType;
       keepRef.current = false;

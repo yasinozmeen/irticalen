@@ -109,7 +109,25 @@ export function recordingPlanForMode(mode: RecordMode): RecordingPlan | null {
   }
 }
 
-export const CAMERA_CONSTRAINTS: MediaStreamConstraints = { video: true, audio: true };
+/**
+ * Front camera at 720p where it can. Without a size the iPhone opened it at 480x640, which looked soft
+ * blown up into a 1080p recording (measured 2026-09-29, recording log). `ideal` never fails: a camera
+ * that can't do 720p just gives its closest size. In portrait the phone hands back 720x1280.
+ */
+export const CAMERA_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
+  facingMode: 'user',
+  width: { ideal: 1280 },
+  height: { ideal: 720 },
+};
+export const CAMERA_CONSTRAINTS: MediaStreamConstraints = { video: CAMERA_VIDEO_CONSTRAINTS, audio: true };
+
+/**
+ * Recorder bitrates. Left to the browser, iPhone Safari wrote ~14 Mbit/s (a 2-minute talk ≈ 220 MB).
+ * 8 Mbit/s is YouTube's own recommendation for 1080p30 uploads; a single 720p camera file needs less.
+ */
+export const COMPOSITE_VIDEO_BITS = 8_000_000;
+export const RAW_VIDEO_BITS = 5_000_000;
+export const AUDIO_BITS = 128_000;
 export const MIC_ONLY_CONSTRAINTS: MediaStreamConstraints = { video: false, audio: true };
 export const SCREEN_CONSTRAINTS: DisplayMediaStreamOptions = { video: true };
 

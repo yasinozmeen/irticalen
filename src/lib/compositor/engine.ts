@@ -1,5 +1,12 @@
 import type { Locale } from '../types';
-import { VIDEO_MIME_CANDIDATES, pickSupportedMimeType, stopMediaStream } from '../recorder';
+import {
+  AUDIO_BITS,
+  CAMERA_VIDEO_CONSTRAINTS,
+  COMPOSITE_VIDEO_BITS,
+  VIDEO_MIME_CANDIDATES,
+  pickSupportedMimeType,
+  stopMediaStream,
+} from '../recorder';
 import { computeFramePhase, outroFinished, scaleMicRms, smoothMicLevel } from './frame';
 import { coverCrop, outputSizeForAspect } from './layout';
 import { ensureStyleFonts } from './fonts';
@@ -155,7 +162,12 @@ function defaultCompositorDeps(): CompositorEngineDeps {
       return canvas as unknown as EngineCanvas;
     },
     createWorker: () => new Worker(new URL('./tickWorker.ts', import.meta.url), { type: 'module' }) as unknown as EngineWorker,
-    createRecorder: (stream, mimeType) => new MediaRecorder(stream, { mimeType }) as unknown as EngineRecorder,
+    createRecorder: (stream, mimeType) =>
+      new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: COMPOSITE_VIDEO_BITS,
+        audioBitsPerSecond: AUDIO_BITS,
+      }) as unknown as EngineRecorder,
     createMediaStream: (tracks) => new MediaStream(tracks),
     isTypeSupported: (type) => {
       try {
@@ -228,7 +240,7 @@ function defaultCompositorDeps(): CompositorEngineDeps {
     },
     reacquireCamera: async () => {
       try {
-        return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        return await navigator.mediaDevices.getUserMedia({ video: CAMERA_VIDEO_CONSTRAINTS, audio: false });
       } catch {
         return null;
       }
