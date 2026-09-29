@@ -57,6 +57,21 @@ export function visibleRecordModes(caps: RecordingCapabilities): readonly Record
 }
 
 /**
+ * The file formats to offer. A browser that can't share its screen is a phone or tablet: there the
+ * recording is always ONE composited file (Yasin, 2026-09-29) — separate raw files would only ever be
+ * a single camera file anyway, and they have no protection against iOS cutting the camera mid-take
+ * (see the engine's `watchSources`).
+ */
+export function allowedRecordFormats(caps: RecordingCapabilities): readonly RecordFormat[] {
+  return caps.screen ? ['template', 'raw'] : ['template'];
+}
+
+/** A saved format clamped to `allowedRecordFormats`. */
+export function effectiveRecordFormat(format: RecordFormat, caps: RecordingCapabilities): RecordFormat {
+  return allowedRecordFormats(caps).includes(format) ? format : 'template';
+}
+
+/**
  * A saved preference clamped to what this browser can do right now: `screen`/`both` fall back to
  * `camera` when there is no `getDisplayMedia`; everything falls back to `off` with no camera
  * support at all (no MediaRecorder / no getUserMedia).

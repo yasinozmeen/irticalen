@@ -15,8 +15,7 @@ import {
   stopMediaStream,
   stopRecorderIfActive,
   visibleRecordModes,
-  type RecordingCapabilities,
-} from '../recorder';
+  type RecordingCapabilities, allowedRecordFormats, effectiveRecordFormat } from '../recorder';
 
 describe('normalizeRecordMode', () => {
   it('bilinen kaynak değerlerini aynen döner', () => {
@@ -333,5 +332,20 @@ describe('revokeObjectUrl', () => {
     });
     expect(() => revokeObjectUrl('blob:abc')).not.toThrow();
     vi.unstubAllGlobals();
+  });
+});
+
+describe('allowedRecordFormats / effectiveRecordFormat', () => {
+  it('ekran paylaşabilen bilgisayarda iki biçim de sunulur, kayıtlı seçim korunur', () => {
+    const caps = { camera: true, screen: true };
+    expect(allowedRecordFormats(caps)).toEqual(['template', 'raw']);
+    expect(effectiveRecordFormat('raw', caps)).toBe('raw');
+  });
+
+  it('telefonda (ekran paylaşımı yok) kayıt her zaman tek şablonlu dosyadır', () => {
+    const caps = { camera: true, screen: false };
+    expect(allowedRecordFormats(caps)).toEqual(['template']);
+    expect(effectiveRecordFormat('raw', caps)).toBe('template');
+    expect(effectiveRecordFormat('template', caps)).toBe('template');
   });
 });

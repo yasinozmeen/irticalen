@@ -19,6 +19,8 @@ interface Props {
    * hidden (no camera at all). */
   recordModes: readonly RecordMode[];
   recordFormat: RecordFormat;
+  /** Only 'template' on a phone/tablet — the format row is then not shown at all. */
+  recordFormats: readonly RecordFormat[];
   /** An id from `COMPOSITE_STYLES`. */
   recordStyle: string;
   /** Already clamped to one the selected style actually supports (see `resolveAspectForStyle`). */
@@ -49,6 +51,7 @@ export function SettingsDialog({
   record,
   recordModes,
   recordFormat,
+  recordFormats,
   recordStyle,
   recordAspect,
   isWide,
@@ -180,7 +183,7 @@ export function SettingsDialog({
             </div>
           )}
 
-          {recordModes.length > 0 && (
+          {recordModes.length > 0 && recordFormats.length > 1 && (
             <div class="settings-field">
               <p class="settings-field-label"><span>{dict.settings.format}</span></p>
               <ChoiceRow

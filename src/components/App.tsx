@@ -39,6 +39,8 @@ import {
   researchMinutes as spentResearchMinutes,
   youtubePrompt as buildYoutubePrompt,
   downgradeRecordMode,
+  effectiveRecordFormat,
+  allowedRecordFormats,
   normalizeStyleId,
   getStyle,
   resolveAspectForStyle,
@@ -616,7 +618,7 @@ function AppContent({ locale }: Props) {
     void recording
       .start({
         mode: settings.record,
-        format: settings.recordFormat,
+        format: effectiveRecordFormat(settings.recordFormat, recording.capabilities),
         style: getStyle(settings.recordStyle),
         aspect: resolveAspectForStyle(getStyle(settings.recordStyle), settings.recordAspect),
         locale,
@@ -1237,7 +1239,8 @@ function AppContent({ locale }: Props) {
         hideClock={settings.hideClock}
         record={settings.record}
         recordModes={recording.visibleModes}
-        recordFormat={settings.recordFormat}
+        recordFormat={effectiveRecordFormat(settings.recordFormat, recording.capabilities)}
+        recordFormats={allowedRecordFormats(recording.capabilities)}
         recordStyle={settings.recordStyle}
         recordAspect={resolveAspectForStyle(getStyle(settings.recordStyle), settings.recordAspect)}
         isWide={isWide}
