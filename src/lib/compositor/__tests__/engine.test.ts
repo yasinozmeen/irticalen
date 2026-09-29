@@ -23,6 +23,7 @@ function fakeVideo() {
     videoHeight: 720,
     readyState: 2,
     paused: false,
+    currentTime: 0 as number | undefined,
     play: vi.fn(() => Promise.resolve()),
     remove: vi.fn(),
   };
@@ -94,7 +95,7 @@ interface Harness {
    * tick whose draw takes a fixed, non-zero duration (two `now()` calls happen per tick: one at the
    * start, one at the end) without needing to hand-drive the clock between them. */
   setStep: (ms: number) => void;
-  callbacks: { onFailed: ReturnType<typeof vi.fn>; onFinished: ReturnType<typeof vi.fn>; onFpsDrop: ReturnType<typeof vi.fn> };
+  callbacks: { onFailed: ReturnType<typeof vi.fn>; onFinished: ReturnType<typeof vi.fn>; onFpsDrop: ReturnType<typeof vi.fn>; onCameraStreamReplaced: ReturnType<typeof vi.fn> };
   /** Swaps the app state a subsequent tick reads — defaults to `defaultAppState()`. */
   setAppState: (state: CompositorAppState) => void;
   getAppState: () => CompositorAppState;
@@ -102,6 +103,7 @@ interface Harness {
   micRms: { value: number };
   micAnalyserCreated: ReturnType<typeof vi.fn>;
   videos: ReturnType<typeof fakeVideo>[];
+  reacquireCamera: ReturnType<typeof vi.fn>;
 }
 
 function buildHarness(overrides: { isTypeSupported?: boolean; hasContext?: boolean; withMicAnalyser?: boolean } = {}): Harness {
@@ -123,7 +125,8 @@ function buildHarness(overrides: { isTypeSupported?: boolean; hasContext?: boole
       return fakeStream();
     },
   };
-  const callbacks = { onFailed: vi.fn(), onFinished: vi.fn(), onFpsDrop: vi.fn() };
+  const callbacks = { onFailed: vi.fn(), onFinished: vi.fn(), onFpsDrop: vi.fn(), onCameraStreamReplaced: vi.fn() };
+  const reacquireCamera = vi.fn(async () => fakeStream());
   let appState = defaultAppState();
   const micRms = { value: 0 };
   const micAnalyserCreated = vi.fn();
@@ -168,6 +171,7 @@ function buildHarness(overrides: { isTypeSupported?: boolean; hasContext?: boole
             return { read: () => micRms.value, close: vi.fn() };
           }
         : () => null,
+      reacquireCamera,
     },
     callbacks,
   );
@@ -186,6 +190,7 @@ function buildHarness(overrides: { isTypeSupported?: boolean; hasContext?: boole
     micRms,
     micAnalyserCreated,
     videos,
+    reacquireCamera,
   };
 }
 
@@ -551,10 +556,12 @@ describe('CompositorEngine video watchdog', () => {
     video.paused = true;
     h.setNow(400);
     h.worker.emitTick();
+    video.currentTime = 1;
     h.setNow(1500);
     h.worker.emitTick();
     expect(video.play.mock.calls.length).toBe(playsAtStart + 1);
     video.paused = false;
+    video.currentTime = 2;
     h.setNow(3000);
     h.worker.emitTick();
     expect(video.play.mock.calls.length).toBe(playsAtStart + 1);
@@ -572,5 +579,62 @@ describe('CompositorEngine video watchdog', () => {
     });
     h.engine.hardStop();
     expect(h.videos[0].remove).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('CompositorEngine camera interruption (iOS: app switch, Control Center)', () => {
+  const startCamera = async (h: Harness, stream = fakeStream()) => {
+    await h.engine.start({
+      mode: 'camera',
+      aspect: 'wide',
+      style: fakeStyle([]),
+      locale: 'tr',
+      cameraStream: stream,
+      getAppState: h.getAppState,
+    });
+    return h.videos[0];
+  };
+
+  it('görüntü ilerlemeyi bırakırsa (duraklatılmış görünmese de) akış yeniden bağlanır', async () => {
+    const h = buildHarness();
+    const stream = fakeStream();
+    const video = await startCamera(h, stream);
+    video.srcObject = stream as never;
+    const plays = video.play.mock.calls.length;
+    for (const [ms, time] of [[1000, 1], [2000, 2], [3000, 2], [4000, 2], [5000, 2]] as const) {
+      video.currentTime = time;
+      h.setNow(ms);
+      h.worker.emitTick();
+    }
+    expect(video.play.mock.calls.length).toBe(plays + 1);
+    expect(video.srcObject).toBe(stream);
+  });
+
+  it('görüntü akarken hiçbir şeye dokunulmaz', async () => {
+    const h = buildHarness();
+    const video = await startCamera(h);
+    const plays = video.play.mock.calls.length;
+    for (let i = 1; i <= 6; i += 1) {
+      video.currentTime = i;
+      h.setNow(i * 1000);
+      h.worker.emitTick();
+    }
+    expect(video.play.mock.calls.length).toBe(plays);
+    expect(h.reacquireCamera).not.toHaveBeenCalled();
+  });
+
+  it('kamera izi tamamen biterse kamera yeniden alınır, önizleme haberdar edilir', async () => {
+    const h = buildHarness();
+    const stream = fakeStream();
+    const video = await startCamera(h, stream);
+    video.srcObject = stream as never;
+    (stream.getVideoTracks()[0] as unknown as { readyState: string }).readyState = 'ended';
+    h.setNow(1000);
+    h.worker.emitTick();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(h.reacquireCamera).toHaveBeenCalledTimes(1);
+    expect(video.srcObject).not.toBe(stream);
+    expect(h.callbacks.onCameraStreamReplaced).toHaveBeenCalledWith(video.srcObject);
   });
 });

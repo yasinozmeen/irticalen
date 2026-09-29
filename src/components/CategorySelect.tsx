@@ -18,8 +18,13 @@ interface Props {
  */
 export function CategorySelect({ categories, value, disabled, dict, onChange }: Props) {
   const [open, setOpenState] = useState(false);
+  // Opening is a plain CSS entrance (`.category-listbox` in switch-motion.css) — reliable on iOS
+  // Safari too; closing goes through a scoped view transition so the list can fade out after it has
+  // already left the DOM.
   const setOpen = (next: boolean | ((prev: boolean) => boolean)): void => {
-    void runViewTransition(() => setOpenState(next), undefined, 'catlist');
+    const target = typeof next === 'function' ? next(open) : next;
+    if (target) setOpenState(true);
+    else void runViewTransition(() => setOpenState(false), undefined, 'catlist');
   };
   const [activeIndex, setActiveIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);

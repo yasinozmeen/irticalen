@@ -40,6 +40,8 @@ export interface EngineVideoElement {
   readonly readyState: number;
   /** Absent in tests' fakes; a real element reports whether the browser has paused it. */
   readonly paused?: boolean;
+  /** Advances while frames arrive — a stall (iOS interrupting the camera) shows as it standing still. */
+  readonly currentTime?: number;
   play(): Promise<void> | void;
   /** Detaches the element from the page (see `createHiddenVideo`). */
   remove?(): void;
@@ -50,6 +52,7 @@ export interface EngineCanvas {
   height: number;
   getContext(type: '2d'): CanvasRenderingContext2D | null;
   captureStream(frameRate?: number): MediaStream;
+  remove?(): void;
 }
 
 export interface EngineWorker {
@@ -93,6 +96,10 @@ export interface CompositorEngineDeps {
   /** Builds the `Frame.micLevel` source from the recorded audio stream, or `null` when no analyser
    * could be created (e.g. no Web Audio support) — `micLevel` then simply stays 0 (see `onTick`). */
   createAudioAnalyser: (stream: MediaStream) => EngineAudioAnalyser | null;
+  /** A fresh camera-only stream, for when the browser ended the original camera track mid-take (iOS
+   * does this when the visitor switches apps or opens Control Center). Permission is already granted,
+   * so no prompt and no gesture is needed. `null` when it can't be had. */
+  reacquireCamera: () => Promise<MediaStream | null>;
 }
 
 /** Live read, once per tick, of everything about the *app's* session a `Frame` needs but the engine
@@ -128,6 +135,8 @@ export interface CompositorCallbacks {
   onFinished?: (file: { blob: Blob; mimeType: string }) => void;
   /** Fired once, the moment the engine silently degrades to `DEGRADED_FPS` under load. */
   onFpsDrop?: () => void;
+  /** The camera had to be re-acquired mid-take (see `reacquireCamera`) — the preview should follow. */
+  onCameraStreamReplaced?: (stream: MediaStream) => void;
 }
 
 function defaultCompositorDeps(): CompositorEngineDeps {
@@ -137,6 +146,11 @@ function defaultCompositorDeps(): CompositorEngineDeps {
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
+      // Attached for the same reason as the source videos (see `createHiddenVideo`): some mobile
+      // browsers stop feeding `captureStream` from a canvas that isn't in the page.
+      canvas.setAttribute('aria-hidden', 'true');
+      canvas.style.cssText = HIDDEN_MEDIA_CSS;
+      document.body.appendChild(canvas);
       return canvas as unknown as EngineCanvas;
     },
     createWorker: () => new Worker(new URL('./tickWorker.ts', import.meta.url), { type: 'module' }) as unknown as EngineWorker,
@@ -211,8 +225,18 @@ function defaultCompositorDeps(): CompositorEngineDeps {
         return null;
       }
     },
+    reacquireCamera: async () => {
+      try {
+        return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      } catch {
+        return null;
+      }
+    },
   };
 }
+
+const HIDDEN_MEDIA_CSS =
+  'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;z-index:-1;';
 
 /**
  * The element the engine reads a stream's frames from. It is attached to the page (invisible, 2px,
@@ -228,14 +252,17 @@ function createHiddenVideo(): EngineVideoElement {
   video.setAttribute('muted', '');
   video.setAttribute('aria-hidden', 'true');
   video.tabIndex = -1;
-  video.style.cssText =
-    'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;z-index:-1;';
+  video.style.cssText = HIDDEN_MEDIA_CSS;
   document.body.appendChild(video);
   return video as unknown as EngineVideoElement;
 }
 
-/** How often a paused source <video> is told to play again (see `onTick`). */
+/** How often the source <video>s are checked (see `watchSources`). */
 const VIDEO_WATCHDOG_MS = 1000;
+/** A source whose picture hasn't moved for this long is re-attached (see `watchSources`). */
+const VIDEO_STALL_MS = 1500;
+/** At most one re-attach / camera re-acquisition attempt per source this often. */
+const VIDEO_KICK_EVERY_MS = 3000;
 
 function isVideoReady(video: EngineVideoElement): boolean {
   return video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0;
@@ -291,6 +318,12 @@ export class CompositorEngine {
   private outroStartedMs: number | null = null;
   private slowStreak = 0;
   private lastWatchdogMs = 0;
+  private canvas: EngineCanvas | null = null;
+  /** Per source: last seen `currentTime`, when it last moved, when it was last kicked. */
+  private sourceWatch = new Map<'camera' | 'screen', { time: number; movedAt: number; kickedAt: number }>();
+  private reacquiring = false;
+  /** Camera streams re-acquired mid-take — stopped with everything else at the end. */
+  private replacementStreams: MediaStream[] = [];
   private degraded = false;
 
   constructor(deps: Partial<CompositorEngineDeps> = {}, callbacks: CompositorCallbacks = {}) {
@@ -317,6 +350,7 @@ export class CompositorEngine {
 
       const output = outputSizeForAspect(params.aspect);
       const canvas = this.deps.createCanvas(output.w, output.h);
+      this.canvas = canvas;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('no-2d-context');
       this.ctx = ctx;
@@ -437,6 +471,12 @@ export class CompositorEngine {
       this.screenVideo.remove?.();
       this.screenVideo = null;
     }
+    for (const stream of this.replacementStreams) stopMediaStream(stream);
+    this.replacementStreams = [];
+    this.sourceWatch.clear();
+    this.reacquiring = false;
+    this.canvas?.remove?.();
+    this.canvas = null;
     if (this.micAnalyser) {
       try {
         this.micAnalyser.close();
@@ -531,6 +571,69 @@ export class CompositorEngine {
     }
   }
 
+  /**
+   * Keeps the source pictures moving. Without this a phone recording freezes on one frame for the
+   * rest of the take while the sound goes on: iOS interrupts the camera whenever the visitor switches
+   * apps or pulls down Control Center / notifications, and either pauses the <video>, leaves it
+   * stalled on a live-but-silent track, or ends the camera track outright.
+   * - paused → play again;
+   * - picture not moving for VIDEO_STALL_MS → re-attach the stream (restarts the element's pipeline);
+   * - camera track ended → a fresh camera-only stream (mic audio is untouched and keeps recording).
+   */
+  private watchSources(now: number): void {
+    const check = (kind: 'camera' | 'screen', video: EngineVideoElement | null): void => {
+      if (!video) return;
+      if (video.paused) safePlay(video);
+      const stream = video.srcObject;
+      const track = stream?.getVideoTracks?.()[0] as { readyState?: string } | undefined;
+      const watch = this.sourceWatch.get(kind) ?? { time: -1, movedAt: now, kickedAt: -Infinity };
+      if (kind === 'camera' && track?.readyState === 'ended') {
+        if (!this.reacquiring && now - watch.kickedAt >= VIDEO_KICK_EVERY_MS) {
+          watch.kickedAt = now;
+          this.reacquireCameraInto(video);
+        }
+        this.sourceWatch.set(kind, watch);
+        return;
+      }
+      const time = video.currentTime;
+      if (time === undefined) return;
+      if (time !== watch.time) {
+        watch.time = time;
+        watch.movedAt = now;
+      } else if (now - watch.movedAt >= VIDEO_STALL_MS && now - watch.kickedAt >= VIDEO_KICK_EVERY_MS) {
+        watch.kickedAt = now;
+        video.srcObject = null;
+        video.srcObject = stream ?? null;
+        safePlay(video);
+      }
+      this.sourceWatch.set(kind, watch);
+    };
+    check('camera', this.cameraVideo);
+    check('screen', this.screenVideo);
+  }
+
+  private reacquireCameraInto(video: EngineVideoElement): void {
+    this.reacquiring = true;
+    void this.deps
+      .reacquireCamera()
+      .then((stream) => {
+        if (!stream) return;
+        // The take may have ended (or moved on to another element) while the prompt-less request ran.
+        if (this.cameraVideo !== video || (this.status !== 'active' && this.status !== 'outro')) {
+          stopMediaStream(stream);
+          return;
+        }
+        this.replacementStreams.push(stream);
+        video.srcObject = stream;
+        safePlay(video);
+        this.callbacks.onCameraStreamReplaced?.(stream);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        this.reacquiring = false;
+      });
+  }
+
   private onTick(): void {
     if (this.status !== 'active' && this.status !== 'outro') return;
     const { ctx, params } = this;
@@ -538,12 +641,9 @@ export class CompositorEngine {
 
     const drawStart = this.deps.now();
     const recordingElapsedMs = drawStart - this.startedAtMs;
-    // A browser may still pause a source <video> (phone screen dimmed, audio session interrupted…):
-    // without this the recording would freeze on that frame for the rest of the take.
     if (drawStart - this.lastWatchdogMs >= VIDEO_WATCHDOG_MS) {
       this.lastWatchdogMs = drawStart;
-      if (this.cameraVideo?.paused) safePlay(this.cameraVideo);
-      if (this.screenVideo?.paused) safePlay(this.screenVideo);
+      this.watchSources(drawStart);
     }
     const outroElapsedMs = this.outroStartedMs !== null ? drawStart - this.outroStartedMs : null;
     const appState = params.getAppState();

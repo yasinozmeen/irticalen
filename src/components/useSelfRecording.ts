@@ -307,6 +307,10 @@ function useTemplateRecording() {
         onFailed: () => {
           if (mountedRef.current) setStatus('failed');
         },
+        // iOS ended the camera mid-take and the engine fetched a new one — keep the self-view live.
+        onCameraStreamReplaced: (stream) => {
+          if (mountedRef.current) setPreviewStream(stream);
+        },
         onFinished: ({ blob, mimeType }) => {
           try {
             const url = URL.createObjectURL(blob);

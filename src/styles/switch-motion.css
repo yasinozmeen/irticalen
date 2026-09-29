@@ -108,8 +108,7 @@
   }
 
   /* The popup drops in from just under the trigger and fades back up when it closes. */
-  ::view-transition-new(category-listbox):only-child {
-    transform-origin: top right;
+  .category-listbox {
     animation: vt-list-drop 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 
