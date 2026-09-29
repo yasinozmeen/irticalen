@@ -15,11 +15,15 @@ type ShareNavigator = Navigator & {
 };
 
 /**
- * Whether this browser can hand a video file to the share sheet — checked synchronously so the page
- * can decide between "kaydı paylaş" and "kaydı indir" without the buttons swapping a moment later.
+ * Whether this device should hand the video to the share sheet instead of downloading it — checked
+ * synchronously so the page can decide between "kaydı paylaş" and "kaydı indir" without the buttons
+ * swapping a moment later.
  */
 export function canShareVideoFiles(): boolean {
   try {
+    // Phones/tablets only: a desktop share sheet (macOS, Windows) has no "save to files" entry, so
+    // there the plain download stays.
+    if (!window.matchMedia?.('(pointer: coarse)').matches) return false;
     const nav = navigator as ShareNavigator;
     if (typeof nav.share !== 'function' || typeof nav.canShare !== 'function') return false;
     return nav.canShare({ files: [new File([''], 'irticalen.mp4', { type: 'video/mp4' })] });
@@ -38,21 +42,32 @@ export function canShareVideoFiles(): boolean {
 export function RecordingShareButton({ file, dict, primary }: Props) {
   const [shareable, setShareable] = useState<File | null>(null);
   const [failed, setFailed] = useState(false);
+  // This particular file can't go to the share sheet (e.g. a webm the phone won't accept) — the
+  // plain download takes the button's place instead of leaving it disabled for good.
+  const [unsupported, setUnsupported] = useState(false);
   const aliveRef = useRef(true);
 
   useEffect(() => {
     aliveRef.current = true;
     setShareable(null);
     setFailed(false);
+    setUnsupported(false);
     const nav = navigator as ShareNavigator;
-    if (typeof nav.share !== 'function' || typeof nav.canShare !== 'function') return;
+    if (typeof nav.share !== 'function' || typeof nav.canShare !== 'function') {
+      setUnsupported(true);
+      return;
+    }
     void fetch(file.url)
       .then((response) => response.blob())
       .then((blob) => {
         const prepared = new File([blob], file.name, { type: blob.type || 'video/mp4' });
-        if (aliveRef.current && nav.canShare?.({ files: [prepared] })) setShareable(prepared);
+        if (!aliveRef.current) return;
+        if (nav.canShare?.({ files: [prepared] })) setShareable(prepared);
+        else setUnsupported(true);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (aliveRef.current) setUnsupported(true);
+      });
     return () => {
       aliveRef.current = false;
     };
@@ -62,11 +77,23 @@ export function RecordingShareButton({ file, dict, primary }: Props) {
     if (!shareable) return;
     const nav = navigator as ShareNavigator;
     setFailed(false);
-    nav.share?.({ files: [shareable] }).catch((error: unknown) => {
-      // Closing the sheet is an AbortError — not a failure worth telling anyone about.
-      if ((error as { name?: string })?.name !== 'AbortError') setFailed(true);
-    });
+    try {
+      nav.share?.({ files: [shareable] }).catch((error: unknown) => {
+        // Closing the sheet is an AbortError — not a failure worth telling anyone about.
+        if ((error as { name?: string })?.name !== 'AbortError') setFailed(true);
+      });
+    } catch {
+      setFailed(true);
+    }
   };
+
+  if (unsupported) {
+    return (
+      <a class={`btn ${primary ? 'btn-primary' : 'btn-secondary'}`} href={file.url} download={file.name}>
+        {dict.record.downloadRecording}
+      </a>
+    );
+  }
 
   return (
     <>
@@ -74,7 +101,15 @@ export function RecordingShareButton({ file, dict, primary }: Props) {
       <button type="button" class={`btn ${primary ? 'btn-primary' : 'btn-secondary'}`} onClick={onShare} disabled={!shareable}>
         {dict.record.shareRecording}
       </button>
-      {failed && <span class="record-download-inline-note">{dict.record.shareFailed}</span>}
+      {/* The sheet failed — the note says "try the download", so the download has to be right here. */}
+      {failed && (
+        <>
+          <a class="btn btn-secondary" href={file.url} download={file.name}>
+            {dict.record.downloadRecording}
+          </a>
+          <span class="record-download-inline-note">{dict.record.shareFailed}</span>
+        </>
+      )}
     </>
   );
 }

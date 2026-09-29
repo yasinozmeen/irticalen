@@ -307,25 +307,46 @@ function useTemplateRecording() {
       if (mountedRef.current) setStatus('failed');
       return;
     }
+    // The page went away while the permission prompt was open — nothing may start recording now.
+    if (!mountedRef.current) {
+      stopMediaStream(acquired.cameraStream ?? null);
+      stopMediaStream(acquired.screenStream ?? null);
+      stopMediaStream(acquired.audioStream ?? null);
+      return;
+    }
     if (mountedRef.current) {
       setScreenFailed(acquired.screenFailed);
       // See CLAUDE.md's task notes for why this mirrors the raw camera preview rather than a second
       // live decode of the composited canvas — cheapest option that still shows what's being recorded.
       setPreviewStream(acquired.cameraStream ?? null);
     }
-    const engine = new CompositorEngine(
+    // Each take owns its own sound mix: a take still finishing its outro when a new one starts must
+    // release only its own mix, and must not overwrite the new take's state.
+    releaseMix();
+    const inputs = [acquired.audioStream, acquired.screenStream].filter(
+      (stream): stream is MediaStream => Boolean(stream && stream.getAudioTracks().length > 0),
+    );
+    const mix = params.mixAudio?.(inputs) ?? null;
+    mixRef.current = mix;
+    const releaseOwnMix = (): void => {
+      mix?.release();
+      if (mixRef.current === mix) mixRef.current = null;
+    };
+    const isCurrent = (): boolean => engineRef.current === engine;
+    const engine: CompositorEngine = new CompositorEngine(
       {},
       {
         onFailed: () => {
-          releaseMix();
-          if (mountedRef.current) setStatus('failed');
+          releaseOwnMix();
+          if (mountedRef.current && isCurrent()) setStatus('failed');
         },
         // iOS ended the camera mid-take and the engine fetched a new one — keep the self-view live.
         onCameraStreamReplaced: (stream) => {
-          if (mountedRef.current) setPreviewStream(stream);
+          if (mountedRef.current && isCurrent()) setPreviewStream(stream);
         },
         onFinished: ({ blob, mimeType }) => {
-          releaseMix();
+          releaseOwnMix();
+          if (!isCurrent()) return;
           try {
             const url = URL.createObjectURL(blob);
             const topic = getAppStateRef.current?.().topic ?? '';
@@ -343,11 +364,6 @@ function useTemplateRecording() {
       },
     );
     engineRef.current = engine;
-    releaseMix();
-    const inputs = [acquired.audioStream, acquired.screenStream].filter(
-      (stream): stream is MediaStream => Boolean(stream && stream.getAudioTracks().length > 0),
-    );
-    mixRef.current = params.mixAudio?.(inputs) ?? null;
     const ok = await engine.start({
       mode: params.mode,
       aspect: params.aspect,
@@ -356,7 +372,7 @@ function useTemplateRecording() {
       cameraStream: acquired.cameraStream,
       screenStream: acquired.screenStream,
       audioStream: acquired.audioStream,
-      recordAudioStream: mixRef.current?.stream,
+      recordAudioStream: mix?.stream,
       getAppState: params.getAppState,
     });
     if (ok && mountedRef.current) setStatus('active');

@@ -132,7 +132,8 @@ describe('mixForRecording (kayda efekt sesleri)', () => {
   });
 
   function install(state: 'running' | 'suspended') {
-    const dest = { stream: { id: 'karisim' } };
+    const mixTrack = { stop: vi.fn() };
+    const dest = { stream: { id: 'karisim', getTracks: () => [mixTrack] } };
     const master = { connect: vi.fn(), disconnect: vi.fn(), gain: { value: 1 } };
     const sources: { connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }[] = [];
     const listeners: string[] = [];
@@ -151,7 +152,7 @@ describe('mixForRecording (kayda efekt sesleri)', () => {
       removeEventListener = vi.fn();
     }
     (globalThis as Record<string, unknown>).AudioContext = Ctx;
-    return { dest, master, sources, listeners };
+    return { dest, master, sources, listeners, mixTrack };
   }
 
   const stream = (audio: number) => ({ getAudioTracks: () => Array.from({ length: audio }, () => ({})) }) as unknown as MediaStream;
@@ -163,7 +164,7 @@ describe('mixForRecording (kayda efekt sesleri)', () => {
   });
 
   it('çalışırken mikrofonu ve efektleri tek akışta birleştirir; bırakınca bağlantıları söker', () => {
-    const { dest, master, sources } = install('running');
+    const { dest, master, sources, mixTrack } = install('running');
     const engine = createSoundEngine();
     const mix = engine.mixForRecording([stream(1), stream(0)]);
     expect(mix?.stream).toBe(dest.stream);
@@ -174,5 +175,7 @@ describe('mixForRecording (kayda efekt sesleri)', () => {
     mix?.release();
     expect(sources[0].disconnect).toHaveBeenCalledTimes(1);
     expect(master.disconnect).toHaveBeenCalledWith(dest);
+    // The mix's own track ends too — nothing of the take stays live after release.
+    expect(mixTrack.stop).toHaveBeenCalledTimes(1);
   });
 });

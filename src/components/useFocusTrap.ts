@@ -29,8 +29,10 @@ export function useFocusTrap(
     const root = containerRef.current;
     if (!root) return;
 
+    // Anything under an `inert` subtree (e.g. a folded "diğer" list) can't take focus — skip it, or
+    // wrapping Tab would aim at an element the browser refuses to focus and get stuck.
     const getFocusable = (): HTMLElement[] =>
-      Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => !el.closest('[inert]'));
 
     const initial = root.querySelector<HTMLElement>('[data-autofocus]') ?? getFocusable()[0];
     initial?.focus();

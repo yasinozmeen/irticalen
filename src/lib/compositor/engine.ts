@@ -202,6 +202,9 @@ function defaultCompositorDeps(): CompositorEngineDeps {
         ).AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
         if (!AudioContextCtor) return null;
         const audioContext = new AudioContextCtor();
+        // Created after the permission prompt, i.e. outside the tap: iOS starts it suspended, and a
+        // suspended analyser reads silence (the level meter would sit at zero all take).
+        if (audioContext.state === 'suspended') void audioContext.resume().catch(() => undefined);
         const source = audioContext.createMediaStreamSource(stream);
         const analyser = audioContext.createAnalyser();
         analyser.fftSize = 512;
@@ -616,7 +619,12 @@ export class CompositorEngine {
       if (time !== watch.time) {
         watch.time = time;
         watch.movedAt = now;
-      } else if (now - watch.movedAt >= VIDEO_STALL_MS && now - watch.kickedAt >= VIDEO_KICK_EVERY_MS) {
+      } else if (
+        // Camera only: a shared screen legitimately stops producing frames while nothing on it moves.
+        kind === 'camera' &&
+        now - watch.movedAt >= VIDEO_STALL_MS &&
+        now - watch.kickedAt >= VIDEO_KICK_EVERY_MS
+      ) {
         watch.kickedAt = now;
         video.srcObject = null;
         video.srcObject = stream ?? null;

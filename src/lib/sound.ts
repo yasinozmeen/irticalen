@@ -262,6 +262,7 @@ export function createSoundEngine(): SoundEngine {
             } catch {
               // already gone
             }
+            for (const track of dest.stream.getTracks()) track.stop();
           },
         };
       } catch {

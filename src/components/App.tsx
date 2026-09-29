@@ -1070,6 +1070,13 @@ function AppContent({ locale }: Props) {
     />
   );
   const recordingOn = recording.active || recordingPending;
+  // The timer overlay offers a finished file only if this session was actually recorded — an older
+  // take (still downloadable from the main screen) must not show up as "kaydı izle" under a new topic.
+  const [sessionRecorded, setSessionRecorded] = useState(false);
+  useEffect(() => {
+    if (state.phase === 'idle') setSessionRecorded(false);
+    else if (recordingOn) setSessionRecorded(true);
+  }, [state.phase, recordingOn]);
   // A phone's share sheet also saves to Files, so it replaces the download link there.
   const shareInsteadOfDownload = useMemo(canShareVideoFiles, []);
   const devHost = useMemo(() => isDevHost(), []);
@@ -1281,9 +1288,9 @@ function AppContent({ locale }: Props) {
         recordingPreviewStream={recording.previewStream}
         recordingStartFailed={recording.startFailed}
         recordingScreenFailed={recording.screenFailed}
-        recordingCameraFile={recording.cameraFile}
-        recordingScreenFile={recording.screenFile}
-        recordingCompositeFile={recording.compositeFile}
+        recordingCameraFile={sessionRecorded ? recording.cameraFile : null}
+        recordingScreenFile={sessionRecorded ? recording.screenFile : null}
+        recordingCompositeFile={sessionRecorded ? recording.compositeFile : null}
       />
 
       <StreakSheet open={streakSheetOpen} onClose={closeStreakSheet} dict={dict} locale={locale} days={days} />

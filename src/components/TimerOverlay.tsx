@@ -113,8 +113,27 @@ export function TimerOverlay({
 }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const open = phase !== 'idle';
-  // Esc closes the share panel first (back to the done screen), only then the whole overlay.
-  useFocusTrap(open, overlayRef, sharePanelOpen ? onShareBack : onClose);
+  // A phone's share sheet also saves to Files, so it replaces the download link there.
+  const shareInsteadOfDownload = useMemo(canShareVideoFiles, []);
+  // "kaydı izle" swaps the dialog's content in place, like the share panel.
+  const [watchOpen, setWatchOpen] = useState(false);
+  const watchTriggerRef = useRef<HTMLButtonElement>(null);
+  const watchable = phase === 'done' && !sharePanelOpen && recordingCompositeFile !== null;
+  const showWatch = watchOpen && watchable;
+  useEffect(() => {
+    if (phase !== 'done') setWatchOpen(false);
+  }, [phase]);
+  const openWatch = (): void => {
+    void runViewTransition(() => setWatchOpen(true));
+  };
+  const closeWatch = (): void => {
+    void runViewTransition(
+      () => setWatchOpen(false),
+      () => watchTriggerRef.current?.focus({ preventScroll: true }),
+    );
+  };
+  // Esc closes the share/watch panel first (back to the done screen), only then the whole overlay.
+  useFocusTrap(open, overlayRef, sharePanelOpen ? onShareBack : showWatch ? closeWatch : onClose);
 
   // Coming back from the share panel: that panel's buttons are gone, so hand focus back to "paylaş".
   const shareTriggerRef = useRef<HTMLButtonElement>(null);
@@ -142,25 +161,6 @@ export function TimerOverlay({
 
   const progress = totalSec > 0 ? Math.min(1, elapsedSec / totalSec) : 0;
   const isDone = phase === 'done';
-  // A phone's share sheet also saves to Files, so it replaces the download link there.
-  const shareInsteadOfDownload = useMemo(canShareVideoFiles, []);
-  // "kaydı izle" swaps the dialog's content in place, like the share panel.
-  const [watchOpen, setWatchOpen] = useState(false);
-  const watchTriggerRef = useRef<HTMLButtonElement>(null);
-  const watchable = isDone && !sharePanelOpen && recordingCompositeFile !== null;
-  const showWatch = watchOpen && watchable;
-  useEffect(() => {
-    if (!isDone) setWatchOpen(false);
-  }, [isDone]);
-  const openWatch = (): void => {
-    void runViewTransition(() => setWatchOpen(true));
-  };
-  const closeWatch = (): void => {
-    void runViewTransition(
-      () => setWatchOpen(false),
-      () => watchTriggerRef.current?.focus({ preventScroll: true }),
-    );
-  };
   const statusKey = STATUS_BY_PHASE[phase];
   const isResearch = phase === 'research';
   const stage = researchStages[researchStage] ?? 'gather';
