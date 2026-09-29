@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Dictionary } from '../i18n';
 import type { RecordingFile } from './useSelfRecording';
 import { RecordingShareButton } from './RecordingShareButton';
-import { recLog } from '../lib/recDebug';
 
 interface Props {
   file: RecordingFile;
@@ -34,15 +33,7 @@ export function RecordingWatchPanel({ file, dict, shareInsteadOfDownload, onBack
         controls
         playsInline
         preload="metadata"
-        onLoadedMetadata={(event) => {
-          const video = event.currentTarget;
-          recLog(`İZLE: video hazır ${video.videoWidth}x${video.videoHeight} süre=${video.duration.toFixed(1)}sn`);
-        }}
-        onError={(event) => {
-          const error = event.currentTarget.error;
-          recLog(`İZLE HATASI: kod=${error?.code ?? '?'} ${error?.message ?? ''}`);
-          setPlayFailed(true);
-        }}
+        onError={() => setPlayFailed(true)}
       />
       {/* Some browsers can record a format they then refuse to play inline — the file itself is
           fine, so point to the way that works (Photos / the downloaded file). */}

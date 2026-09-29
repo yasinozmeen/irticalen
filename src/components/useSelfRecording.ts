@@ -1,4 +1,3 @@
-import { recLog } from '../lib/recDebug';
 import type { RecordingMix } from '../lib/sound';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Locale, RecordAspect, RecordFormat, RecordMode } from '../lib/types';
@@ -225,10 +224,7 @@ interface TemplateAcquisition {
  */
 async function acquireTemplateStreams(mode: CompositeMode): Promise<TemplateAcquisition | null> {
   if (mode === 'camera') {
-    const cameraStream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS).catch((error: unknown) => {
-      recLog(`kamera isteği başarısız: ${String(error)}`);
-      return null;
-    });
+    const cameraStream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS).catch(() => null);
     if (!cameraStream) return null;
     return { cameraStream, audioStream: cameraStream, screenFailed: false };
   }
@@ -243,10 +239,7 @@ async function acquireTemplateStreams(mode: CompositeMode): Promise<TemplateAcqu
   // 'both': screen first (the same gesture rule), camera right after — both must settle before the
   // engine starts, so there is no benefit to requesting them concurrently here.
   const screenStream = await navigator.mediaDevices.getDisplayMedia(SCREEN_CONSTRAINTS).catch(() => null);
-  const cameraStream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS).catch((error: unknown) => {
-      recLog(`kamera isteği başarısız: ${String(error)}`);
-      return null;
-    });
+  const cameraStream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS).catch(() => null);
   if (!cameraStream && !screenStream) return null;
   return {
     cameraStream: cameraStream ?? undefined,
@@ -310,7 +303,6 @@ function useTemplateRecording() {
       setPreviewStream(null);
     }
     const acquired = await acquireTemplateStreams(params.mode);
-    recLog(acquired ? 'izinler alındı, motor başlıyor' : 'KAMERA/EKRAN ALINAMADI (izin reddi ya da hata)');
     if (!acquired) {
       if (mountedRef.current) setStatus('failed');
       return;
@@ -356,7 +348,6 @@ function useTemplateRecording() {
       (stream): stream is MediaStream => Boolean(stream && stream.getAudioTracks().length > 0),
     );
     mixRef.current = params.mixAudio?.(inputs) ?? null;
-    recLog(mixRef.current ? `ses karışımı açık (${inputs.length} kaynak + efektler)` : 'ses karışımı yok — mikrofon doğrudan');
     const ok = await engine.start({
       mode: params.mode,
       aspect: params.aspect,
