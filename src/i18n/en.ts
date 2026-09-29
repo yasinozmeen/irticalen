@@ -29,6 +29,8 @@ export const en: Dictionary = {
     downloadScreen: 'download screen recording',
     downloadRecording: 'download the recording',
     downloadNote: 'the recording stays on this device only; it is deleted when you leave the page.',
+    shareRecording: 'share recording',
+    shareFailed: 'couldn’t share; try the download.',
     stop: 'stop recording',
     stillRecording: 'time is up, still recording; stop when you are done.',
     switchLabel: 'record',

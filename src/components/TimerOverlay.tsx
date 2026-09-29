@@ -1,3 +1,4 @@
+import { RecordingShareButton } from './RecordingShareButton';
 import { useEffect, useRef } from 'preact/hooks';
 import type { Phase, Mode } from '../lib/types';
 import type { ResearchStage } from '../lib/researchStages';
@@ -286,6 +287,7 @@ export function TimerOverlay({
                     {dict.record.downloadRecording}
                   </a>
                 )}
+                {recordingCompositeFile && <RecordingShareButton file={recordingCompositeFile} dict={dict} />}
                 {recordingCameraFile && (
                   <a class="btn btn-secondary" href={recordingCameraFile.url} download={recordingCameraFile.name}>
                     {dict.record.downloadCamera}

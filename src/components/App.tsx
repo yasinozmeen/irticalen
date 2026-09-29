@@ -17,6 +17,7 @@ import {
   saveSeen,
   positionFrom,
   saveSettings,
+  hasSavedRecordAspect,
   sessionReducer,
   ALL_FIELD_ID,
   loadResearchField,
@@ -68,6 +69,7 @@ import { TimerOverlay } from './TimerOverlay';
 import { SettingsDialog } from './SettingsDialog';
 import { RecordingLive, RecordingSwitch } from './RecordingSwitch';
 import { RecordingPreview } from './RecordingPreview';
+import { RecordingShareButton } from './RecordingShareButton';
 import { ErrorBoundary } from './ErrorBoundary';
 import { RecDebugPanel } from './RecDebugPanel';
 import { installFakeCameraIfAsked, recLog } from '../lib/recDebug';
@@ -157,6 +159,36 @@ function AppContent({ locale }: Props) {
     return () => clearTimeout(cap);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recording.active]);
+  // The screen stays on for as long as a recording runs — it may start long before the speech timer
+  // (whose own wake lock covers only the timer), and a phone locking itself mid-intro would cut the
+  // camera. The browser drops a wake lock whenever the page is hidden, so it is taken again on return.
+  const recordingKeepsScreenOn = recording.active || recordingPending;
+  useEffect(() => {
+    if (!recordingKeepsScreenOn) return;
+    let alive = true;
+    let release: ReleaseWakeLock | null = null;
+    const take = (): void => {
+      void acquireWakeLock().then((next) => {
+        if (!alive) {
+          next();
+          return;
+        }
+        release?.();
+        release = next;
+      });
+    };
+    take();
+    const onVisible = (): void => {
+      if (document.visibilityState === 'visible') take();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      alive = false;
+      document.removeEventListener('visibilitychange', onVisible);
+      release?.();
+    };
+  }, [recordingKeepsScreenOn]);
+
   // The main-screen switch's own mm:ss readout — independent of the speech timer (see CLAUDE.md's
   // task notes: recording can run before/after/without a speech session).
   const [recordingElapsedSec, setRecordingElapsedSec] = useState(0);
@@ -250,7 +282,13 @@ function AppContent({ locale }: Props) {
     const loaded = loadSettings();
     const record = downgradeRecordMode(loaded.record, recording.capabilities);
     if (record !== loaded.record) saveSettings({ record });
-    setSettings({ ...loaded, record });
+    // A phone is held upright: without a saved choice its recording is vertical (not persisted, so
+    // the same visitor on a laptop still gets the wide default).
+    const recordAspect =
+      !recording.capabilities.screen && !hasSavedRecordAspect()
+        ? resolveAspectForStyle(getStyle(loaded.recordStyle), 'tall')
+        : loaded.recordAspect;
+    setSettings({ ...loaded, record, recordAspect });
     soundRef.current.setMuted(loaded.muted);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1048,6 +1086,7 @@ function AppContent({ locale }: Props) {
               {dict.record.downloadRecording}
             </a>
           )}
+          {recording.compositeFile && <RecordingShareButton file={recording.compositeFile} dict={dict} />}
           {recording.cameraFile && (
             <a class="btn btn-secondary" href={recording.cameraFile.url} download={recording.cameraFile.name}>
               {dict.record.downloadCamera}

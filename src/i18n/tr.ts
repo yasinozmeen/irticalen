@@ -27,6 +27,8 @@ export const tr = {
     downloadScreen: 'ekran kaydını indir',
     downloadRecording: 'kaydı indir',
     downloadNote: 'kayıt yalnız bu cihazda; sayfadan çıkınca silinir.',
+    shareRecording: 'kaydı paylaş',
+    shareFailed: 'paylaşılamadı; indirmeyi dene.',
     stop: 'kaydı durdur',
     stillRecording: 'süre doldu, kayıt sürüyor; bitirince durdur.',
     switchLabel: 'kayıt',

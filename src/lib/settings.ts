@@ -112,6 +112,15 @@ export function loadSettings(storage: StorageLike | undefined = defaultStorage()
   return { speechSec, researchSec, muted, hideClock, record, recordFormat, recordStyle, recordAspect };
 }
 
+/** Whether the visitor ever picked a recording aspect — a phone without one defaults to 'tall'. */
+export function hasSavedRecordAspect(storage: StorageLike | undefined = defaultStorage()): boolean {
+  try {
+    return Boolean(storage?.getItem(KEY_RECORD_ASPECT));
+  } catch {
+    return false;
+  }
+}
+
 /** Saves settings partially (fields not provided are left untouched). Never throws. */
 export function saveSettings(
   partial: Partial<Settings>,
