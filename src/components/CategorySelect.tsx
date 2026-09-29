@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Category } from '../lib/types';
 import type { Dictionary } from '../i18n';
+import { runViewTransition } from '../lib/viewTransition';
 
 interface Props {
   categories: Category[];
@@ -10,9 +11,16 @@ interface Props {
   onChange: (categoryId: string) => void;
 }
 
-/** Category picker following the WAI-ARIA listbox pattern (button + popup listbox). */
+/**
+ * Category picker following the WAI-ARIA listbox pattern (button + popup listbox). The list drops
+ * in and fades out, and a pick changes the page through the same scoped transition as the mode
+ * switch (see switch-motion.css) — nothing pops.
+ */
 export function CategorySelect({ categories, value, disabled, dict, onChange }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
+  const setOpen = (next: boolean | ((prev: boolean) => boolean)): void => {
+    void runViewTransition(() => setOpenState(next), undefined, 'catlist');
+  };
   const [activeIndex, setActiveIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -39,9 +47,15 @@ export function CategorySelect({ categories, value, disabled, dict, onChange }: 
   const commit = (index: number): void => {
     const category = categories[index];
     if (!category) return;
-    onChange(category.id);
-    setOpen(false);
-    triggerRef.current?.focus();
+    // One transition for both: the list fades out while the page takes the new category.
+    void runViewTransition(
+      () => {
+        if (category.id !== value) onChange(category.id);
+        setOpenState(false);
+      },
+      () => triggerRef.current?.focus(),
+      'switch',
+    );
   };
 
   const onTriggerKeyDown = (event: KeyboardEvent): void => {
@@ -81,7 +95,7 @@ export function CategorySelect({ categories, value, disabled, dict, onChange }: 
         triggerRef.current?.focus();
         break;
       case 'Tab':
-        setOpen(false);
+        setOpenState(false);
         break;
       default:
         break;

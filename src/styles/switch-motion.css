@@ -50,6 +50,17 @@
   view-transition-name: action-row;
 }
 
+/* The category picker's popup list (minimalist layout): opening/closing it, and picking from it. */
+.vt-catlist .category-listbox,
+.vt-switch .category-listbox {
+  view-transition-name: category-listbox;
+}
+
+.vt-catlist .category-trigger svg,
+.vt-switch .category-trigger svg {
+  view-transition-name: category-chevron;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   ::view-transition-group(mode-ink),
   ::view-transition-group(*.ix),
@@ -91,6 +102,22 @@
     overflow: clip;
   }
 
+  ::view-transition-group(category-chevron) {
+    animation-duration: 200ms;
+    animation-timing-function: ease-out;
+  }
+
+  /* The popup drops in from just under the trigger and fades back up when it closes. */
+  ::view-transition-new(category-listbox):only-child {
+    transform-origin: top right;
+    animation: vt-list-drop 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  ::view-transition-old(category-listbox):only-child {
+    transform-origin: top right;
+    animation: vt-list-lift 150ms ease-in both;
+  }
+
   /* Switching mode swaps the whole list (categories ↔ fields): the old entries sink away, the new
      ones rise in — the same motion the dialogs use. */
   ::view-transition-old(*.ix):only-child {
@@ -111,5 +138,19 @@
 @keyframes vt-ink-draw {
   from {
     transform: scaleX(0);
+  }
+}
+
+@keyframes vt-list-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes vt-list-lift {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
   }
 }
