@@ -124,8 +124,32 @@ export function installFakeCameraIfAsked(): void {
     if (!new URLSearchParams(window.location.search).has('sahtekamera')) return;
     const devices = navigator.mediaDevices;
     if (!devices) return;
-    const real = devices.getUserMedia?.bind(devices);
-    devices.getUserMedia = async (constraints?: MediaStreamConstraints): Promise<MediaStream> => {
+    const proto = Object.getPrototypeOf(devices) as { getUserMedia?: (c?: MediaStreamConstraints) => Promise<MediaStream> };
+    const original = proto.getUserMedia;
+    const real = original ? (c: MediaStreamConstraints) => original.call(devices, c) : undefined;
+    const fake = async (constraints?: MediaStreamConstraints): Promise<MediaStream> => {
+      try {
+        return await fakeStream(constraints, real);
+      } catch (error) {
+        recLog(`SAHTE KAMERA HATASI: ${String(error)}`);
+        throw error;
+      }
+    };
+    // WebKit ignores a plain assignment on the instance — define it on both, writable.
+    Object.defineProperty(proto, 'getUserMedia', { value: fake, configurable: true, writable: true });
+    Object.defineProperty(devices, 'getUserMedia', { value: fake, configurable: true, writable: true });
+    recLog('sahte kamera kuruldu');
+  } catch (error) {
+    recLog(`sahte kamera kurulamadı: ${String(error)}`);
+  }
+}
+
+async function fakeStream(
+  constraints: MediaStreamConstraints | undefined,
+  real: ((c: MediaStreamConstraints) => Promise<MediaStream>) | undefined,
+): Promise<MediaStream> {
+  {
+    {
       const wantsVideo = Boolean(constraints?.video);
       const wantsAudio = Boolean(constraints?.audio);
       const tracks: MediaStreamTrack[] = [];
@@ -174,8 +198,6 @@ export function installFakeCameraIfAsked(): void {
       }
       recLog(`SAHTE KAMERA verildi (görüntü=${wantsVideo} ses=${wantsAudio})`);
       return new MediaStream(tracks);
-    };
-  } catch {
-    // tanı aracı — sessizce yok say
+    }
   }
 }

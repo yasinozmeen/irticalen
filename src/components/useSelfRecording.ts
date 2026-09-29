@@ -222,7 +222,10 @@ interface TemplateAcquisition {
  */
 async function acquireTemplateStreams(mode: CompositeMode): Promise<TemplateAcquisition | null> {
   if (mode === 'camera') {
-    const cameraStream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS).catch(() => null);
+    const cameraStream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS).catch((error: unknown) => {
+      recLog(`kamera isteği başarısız: ${String(error)}`);
+      return null;
+    });
     if (!cameraStream) return null;
     return { cameraStream, audioStream: cameraStream, screenFailed: false };
   }
@@ -237,7 +240,10 @@ async function acquireTemplateStreams(mode: CompositeMode): Promise<TemplateAcqu
   // 'both': screen first (the same gesture rule), camera right after — both must settle before the
   // engine starts, so there is no benefit to requesting them concurrently here.
   const screenStream = await navigator.mediaDevices.getDisplayMedia(SCREEN_CONSTRAINTS).catch(() => null);
-  const cameraStream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS).catch(() => null);
+  const cameraStream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS).catch((error: unknown) => {
+      recLog(`kamera isteği başarısız: ${String(error)}`);
+      return null;
+    });
   if (!cameraStream && !screenStream) return null;
   return {
     cameraStream: cameraStream ?? undefined,

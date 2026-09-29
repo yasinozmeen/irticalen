@@ -2835,7 +2835,7 @@ a.btn-primary:hover {
   position: fixed;
   left: 6px;
   right: 6px;
-  bottom: 72px;
+  top: max(4px, env(safe-area-inset-top));
   z-index: 9999;
   background: rgba(243, 238, 226, 0.94);
   border: 1px solid var(--ink);
@@ -2861,7 +2861,7 @@ a.btn-primary:hover {
 .rec-debug-lines {
   margin: 0;
   padding: 4px 6px;
-  max-height: 28vh;
+  max-height: 16vh;
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-all;

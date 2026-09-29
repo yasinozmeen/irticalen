@@ -39,7 +39,7 @@ export function RecDebugPanel() {
         <button type="button" onClick={clearRecLog}>temizle</button>
         <button type="button" onClick={() => setOpen(!open)}>{open ? 'gizle' : 'göster'}</button>
       </div>
-      {open && <pre class="rec-debug-lines">{lines.slice(-8).join('\n')}</pre>}
+      {open && <pre class="rec-debug-lines">{lines.slice(-5).join('\n')}</pre>}
     </div>
   );
 }
