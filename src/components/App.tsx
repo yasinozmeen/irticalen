@@ -617,6 +617,8 @@ function AppContent({ locale }: Props) {
   // triggered them on Safari/Firefox.
   const startSelfRecording = (): void => {
     if (recording.active || recordingPending) return;
+    // Inside the click: iOS only lets an AudioContext start from a gesture (see `mixAudio` below).
+    soundRef.current.unlock();
     // A previous session's finished recording (if not yet downloaded) is gone once a new one starts.
     recording.discardDownload();
     setRecordingPending(true);
@@ -628,6 +630,10 @@ function AppContent({ locale }: Props) {
         aspect: resolveAspectForStyle(getStyle(settings.recordStyle), settings.recordAspect),
         locale,
         getAppState: getRecordingAppState,
+        // The site's own sounds (spin ticks, landing chord, end fanfare) and a shared tab's sound go
+        // into the file too. Muted with nothing else to mix → the mic is recorded directly.
+        mixAudio: (inputs) =>
+          settings.muted && inputs.length <= 1 ? null : soundRef.current.mixForRecording(inputs),
       })
       .then(() => setRecordingPending(false));
   };

@@ -129,7 +129,13 @@ export const COMPOSITE_VIDEO_BITS = 8_000_000;
 export const RAW_VIDEO_BITS = 5_000_000;
 export const AUDIO_BITS = 128_000;
 export const MIC_ONLY_CONSTRAINTS: MediaStreamConstraints = { video: false, audio: true };
-export const SCREEN_CONSTRAINTS: DisplayMediaStreamOptions = { video: true };
+/**
+ * Chromium browsers offer "share tab audio" in their picker when audio is asked for; Safari and
+ * Firefox capture no system/tab sound, and Safari may reject the request outright — so audio is only
+ * asked for where it works (`userAgentData` exists in Chromium only).
+ */
+export const SCREEN_CONSTRAINTS: DisplayMediaStreamOptions =
+  typeof navigator !== 'undefined' && 'userAgentData' in navigator ? { video: true, audio: true } : { video: true };
 
 /** Tried in order; the first one `MediaRecorder.isTypeSupported` accepts wins. Safari needs mp4 first. */
 export const VIDEO_MIME_CANDIDATES: readonly string[] = [

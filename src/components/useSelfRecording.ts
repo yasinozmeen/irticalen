@@ -1,4 +1,5 @@
 import { recLog } from '../lib/recDebug';
+import type { RecordingMix } from '../lib/sound';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Locale, RecordAspect, RecordFormat, RecordMode } from '../lib/types';
 import {
@@ -263,6 +264,9 @@ interface TemplateStartParams {
   /** Forwarded straight to the `CompositorEngine` — see `CompositorAppState`. Also read (for its
    * `.topic`) once the file is finalized, to name it. */
   getAppState: () => CompositorAppState;
+  /** Mixes the recording's sound sources with the site's effects (see `SoundEngine.mixForRecording`);
+   * absent or returning `null` → the mic is recorded directly. */
+  mixAudio?: (inputs: readonly MediaStream[]) => RecordingMix | null;
 }
 
 /** The 'template'-format counterpart of `useRecordingSlot`: a single `CompositorEngine` session
@@ -281,12 +285,18 @@ function useTemplateRecording() {
   const getAppStateRef = useRef<(() => CompositorAppState) | null>(null);
   const localeRef = useRef<Locale>('tr');
   const mountedRef = useRef(true);
+  const mixRef = useRef<RecordingMix | null>(null);
+  const releaseMix = (): void => {
+    mixRef.current?.release();
+    mixRef.current = null;
+  };
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       engineRef.current?.hardStop();
+      releaseMix();
       revokeObjectUrl(fileRef.current?.url ?? null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -315,6 +325,7 @@ function useTemplateRecording() {
       {},
       {
         onFailed: () => {
+          releaseMix();
           if (mountedRef.current) setStatus('failed');
         },
         // iOS ended the camera mid-take and the engine fetched a new one — keep the self-view live.
@@ -322,6 +333,7 @@ function useTemplateRecording() {
           if (mountedRef.current) setPreviewStream(stream);
         },
         onFinished: ({ blob, mimeType }) => {
+          releaseMix();
           try {
             const url = URL.createObjectURL(blob);
             const topic = getAppStateRef.current?.().topic ?? '';
@@ -339,6 +351,12 @@ function useTemplateRecording() {
       },
     );
     engineRef.current = engine;
+    releaseMix();
+    const inputs = [acquired.audioStream, acquired.screenStream].filter(
+      (stream): stream is MediaStream => Boolean(stream && stream.getAudioTracks().length > 0),
+    );
+    mixRef.current = params.mixAudio?.(inputs) ?? null;
+    recLog(mixRef.current ? `ses karışımı açık (${inputs.length} kaynak + efektler)` : 'ses karışımı yok — mikrofon doğrudan');
     const ok = await engine.start({
       mode: params.mode,
       aspect: params.aspect,
@@ -347,6 +365,7 @@ function useTemplateRecording() {
       cameraStream: acquired.cameraStream,
       screenStream: acquired.screenStream,
       audioStream: acquired.audioStream,
+      recordAudioStream: mixRef.current?.stream,
       getAppState: params.getAppState,
     });
     if (ok && mountedRef.current) setStatus('active');
@@ -357,6 +376,7 @@ function useTemplateRecording() {
     // A discard resolves synchronously inside the engine; a kept stop plays out an outro first and
     // reports back through `onFinished` — `active` (derived from `status`) must stay true until then
     // so the "still recording" UI doesn't disappear before the file is actually ready.
+    if (!keep) releaseMix();
     if (!keep && mountedRef.current) {
       setStatus('idle');
       setPreviewStream(null);
@@ -365,6 +385,7 @@ function useTemplateRecording() {
 
   const hardStop = (): void => {
     engineRef.current?.hardStop();
+    releaseMix();
   };
 
   const reset = (): void => {
@@ -390,6 +411,8 @@ export interface StartOptions {
   /** Live app-session state — read every draw tick by the 'template' path (see `CompositorAppState`);
    * only its `.topic` is read (once, at stop) by the 'raw' path, to name the file(s). */
   getAppState: () => CompositorAppState;
+  /** 'template' format only — see `TemplateStartParams.mixAudio`. */
+  mixAudio?: (inputs: readonly MediaStream[]) => RecordingMix | null;
 }
 
 export interface SelfRecordingApi {
@@ -473,6 +496,7 @@ export function useSelfRecording(): SelfRecordingApi {
         aspect: options.aspect,
         locale: options.locale,
         getAppState: options.getAppState,
+        mixAudio: options.mixAudio,
       });
       // A session started after this one (a fast re-start) must not have its state clobbered by this
       // one settling late — mirrors the same guard the 'raw' path uses below.

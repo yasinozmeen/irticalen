@@ -134,6 +134,9 @@ export interface CompositorStartParams {
    * acquired mic-only stream for 'screen' (which has no audio of its own). Omit for no audio track —
    * `micLevel` then stays 0 every tick. */
   audioStream?: MediaStream;
+  /** What actually goes into the file's sound when set: the mic mixed with the site's effects (and a
+   * shared tab's sound) — see `SoundEngine.mixForRecording`. `audioStream` still drives `micLevel`. */
+  recordAudioStream?: MediaStream;
   /** Read live every tick — state updates lag a render, same pattern as the rest of the app. */
   getAppState: () => CompositorAppState;
 }
@@ -395,7 +398,8 @@ export class CompositorEngine {
 
       const canvasStream = canvas.captureStream(TARGET_FPS);
       this.canvasStream = canvasStream;
-      const audioTracks = params.audioStream ? params.audioStream.getAudioTracks() : [];
+      const audioSource = params.recordAudioStream ?? params.audioStream;
+      const audioTracks = audioSource ? audioSource.getAudioTracks() : [];
       const outputStream = this.deps.createMediaStream([...canvasStream.getVideoTracks(), ...audioTracks]);
 
       this.micLevel = 0;
@@ -416,6 +420,7 @@ export class CompositorEngine {
         watchTrack('kamera', params.cameraStream?.getVideoTracks()[0]);
         watchTrack('ekran', params.screenStream?.getVideoTracks()[0]);
         watchTrack('mikrofon', params.audioStream?.getAudioTracks()[0]);
+        watchTrack('kayıt sesi (karışım)', params.recordAudioStream?.getAudioTracks()[0]);
         watchTrack('tuval', canvasStream.getVideoTracks()[0]);
         if (this.cameraVideo) watchVideo('kamera', this.cameraVideo as unknown as HTMLVideoElement);
         if (this.screenVideo) watchVideo('ekran', this.screenVideo as unknown as HTMLVideoElement);

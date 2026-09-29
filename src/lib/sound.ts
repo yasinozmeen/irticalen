@@ -12,6 +12,21 @@ export interface SoundEngine {
   setMuted(muted: boolean): void;
   /** Whether sound is muted. */
   isMuted(): boolean;
+  /** Creates/resumes the AudioContext even when muted. Must run inside a click (iOS only lets a
+   * context start from a user gesture) — called right before a recording starts. */
+  unlock(): void;
+  /**
+   * One audio stream for the recording: the given inputs (mic, a shared tab's sound) mixed with the
+   * site's own effects. `null` when mixing can't be trusted right now (no Web Audio, context not
+   * running) — the caller then records the mic directly, so a recording never ends up silent.
+   */
+  mixForRecording(inputs: readonly MediaStream[]): RecordingMix | null;
+}
+
+export interface RecordingMix {
+  readonly stream: MediaStream;
+  /** Disconnects the mix. Safe to call more than once. */
+  release(): void;
 }
 
 type AudioContextCtor = new () => AudioContext;
@@ -32,7 +47,20 @@ function getAudioContextCtor(): AudioContextCtor | undefined {
 export function createSoundEngine(): SoundEngine {
   let muted = false;
   let ctx: AudioContext | undefined;
+  let master: GainNode | undefined;
   let attemptedInit = false;
+
+  /** Every effect goes through one node, so a recording can tap the same sound the speaker gets. */
+  const output = (audioCtx: AudioContext): AudioNode => {
+    if (master) return master;
+    try {
+      master = audioCtx.createGain();
+      master.connect(audioCtx.destination);
+      return master;
+    } catch {
+      return audioCtx.destination;
+    }
+  };
 
   const ensureContext = (): AudioContext | undefined => {
     if (ctx) return ctx;
@@ -73,7 +101,7 @@ export function createSoundEngine(): SoundEngine {
       gain.gain.linearRampToValueAtTime(peakGain, startAt + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.0001, startAt + durationSec);
       osc.connect(gain);
-      gain.connect(audioCtx.destination);
+      gain.connect(output(audioCtx));
       osc.start(startAt);
       osc.stop(startAt + durationSec + 0.02);
     } catch {
@@ -124,7 +152,7 @@ export function createSoundEngine(): SoundEngine {
 
       source.connect(bandpass);
       bandpass.connect(gain);
-      gain.connect(audioCtx.destination);
+      gain.connect(output(audioCtx));
       source.start();
     } catch {
       // ignore
@@ -184,6 +212,61 @@ export function createSoundEngine(): SoundEngine {
     },
     isMuted(): boolean {
       return muted;
+    },
+    unlock(): void {
+      try {
+        const audioCtx = ensureContext();
+        if (audioCtx && audioCtx.state !== 'running') void audioCtx.resume().catch(() => undefined);
+      } catch {
+        // no-op
+      }
+    },
+    mixForRecording(inputs: readonly MediaStream[]): RecordingMix | null {
+      try {
+        const audioCtx = ensureContext();
+        if (!audioCtx || audioCtx.state !== 'running') return null;
+        const dest = audioCtx.createMediaStreamDestination();
+        const sources = inputs
+          .filter((stream) => stream.getAudioTracks().length > 0)
+          .map((stream) => {
+            const source = audioCtx.createMediaStreamSource(stream);
+            source.connect(dest);
+            return source;
+          });
+        const effects = output(audioCtx);
+        effects.connect(dest);
+        // iOS suspends/interrupts the context (phone call, Control Center, app switch); the mixed
+        // track would then carry silence — resume as soon as the page allows it.
+        const keepRunning = (): void => {
+          if (audioCtx.state !== 'running') void audioCtx.resume().catch(() => undefined);
+        };
+        audioCtx.addEventListener('statechange', keepRunning);
+        document.addEventListener('visibilitychange', keepRunning);
+        let released = false;
+        return {
+          stream: dest.stream,
+          release(): void {
+            if (released) return;
+            released = true;
+            audioCtx.removeEventListener('statechange', keepRunning);
+            document.removeEventListener('visibilitychange', keepRunning);
+            for (const source of sources) {
+              try {
+                source.disconnect();
+              } catch {
+                // already gone
+              }
+            }
+            try {
+              effects.disconnect(dest);
+            } catch {
+              // already gone
+            }
+          },
+        };
+      } catch {
+        return null;
+      }
     },
   };
 }

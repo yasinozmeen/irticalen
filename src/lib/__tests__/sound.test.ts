@@ -124,3 +124,55 @@ describe('createSoundEngine', () => {
     expect(engine.isMuted()).toBe(false);
   });
 });
+
+describe('mixForRecording (kayda efekt sesleri)', () => {
+  const originalAudioContext = (globalThis as Record<string, unknown>).AudioContext;
+  afterEach(() => {
+    (globalThis as Record<string, unknown>).AudioContext = originalAudioContext;
+  });
+
+  function install(state: 'running' | 'suspended') {
+    const dest = { stream: { id: 'karisim' } };
+    const master = { connect: vi.fn(), disconnect: vi.fn(), gain: { value: 1 } };
+    const sources: { connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }[] = [];
+    const listeners: string[] = [];
+    class Ctx {
+      state = state;
+      destination = {};
+      createGain = vi.fn(() => master);
+      createMediaStreamDestination = vi.fn(() => dest);
+      createMediaStreamSource = vi.fn(() => {
+        const source = { connect: vi.fn(), disconnect: vi.fn() };
+        sources.push(source);
+        return source;
+      });
+      resume = vi.fn(() => Promise.resolve());
+      addEventListener = vi.fn((type: string) => listeners.push(type));
+      removeEventListener = vi.fn();
+    }
+    (globalThis as Record<string, unknown>).AudioContext = Ctx;
+    return { dest, master, sources, listeners };
+  }
+
+  const stream = (audio: number) => ({ getAudioTracks: () => Array.from({ length: audio }, () => ({})) }) as unknown as MediaStream;
+
+  it('ses bağlamı çalışmıyorsa null döner (kayıt mikrofonu doğrudan alır, sessiz kalmaz)', () => {
+    install('suspended');
+    const engine = createSoundEngine();
+    expect(engine.mixForRecording([stream(1)])).toBeNull();
+  });
+
+  it('çalışırken mikrofonu ve efektleri tek akışta birleştirir; bırakınca bağlantıları söker', () => {
+    const { dest, master, sources } = install('running');
+    const engine = createSoundEngine();
+    const mix = engine.mixForRecording([stream(1), stream(0)]);
+    expect(mix?.stream).toBe(dest.stream);
+    expect(sources).toHaveLength(1);
+    expect(sources[0].connect).toHaveBeenCalledWith(dest);
+    expect(master.connect).toHaveBeenCalledWith(dest);
+    mix?.release();
+    mix?.release();
+    expect(sources[0].disconnect).toHaveBeenCalledTimes(1);
+    expect(master.disconnect).toHaveBeenCalledWith(dest);
+  });
+});
