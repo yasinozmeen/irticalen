@@ -135,18 +135,21 @@ describe('saveSettings', () => {
     expect(loadSettings(storage).hideClock).toBe(false);
   });
 
-  it('"kendini kaydet" tercihi kaydedilir; kayıt yoksa ya da bozuksa/eskiyse kapalı kalır', () => {
-    expect(loadSettings(memoryStorage()).record).toBe('off');
-    expect(loadSettings(memoryStorage({ 'irticalen:record': 'evet' })).record).toBe('off');
-    expect(loadSettings(memoryStorage({ 'irticalen:record': 'audio' })).record).toBe('off'); // kaldırılan eski değer
-    expect(loadSettings(throwingStorage()).record).toBe('off');
+  it('"kendini kaydet" kaynak tercihi kaydedilir; kayıt yoksa/bozuksa/eskiyse (veya eski "off"sa) kameraya düşer', () => {
+    // record artık açma/kapama değil kaynak seçimidir (kayıt kendisi ana ekrandaki anahtarla açılır) —
+    // bu yüzden 'off' bir değer olarak asla dönmez, her zaman 'camera'ya göç eder.
+    expect(loadSettings(memoryStorage()).record).toBe('camera');
+    expect(loadSettings(memoryStorage({ 'irticalen:record': 'evet' })).record).toBe('camera');
+    expect(loadSettings(memoryStorage({ 'irticalen:record': 'audio' })).record).toBe('camera'); // kaldırılan eski değer
+    expect(loadSettings(memoryStorage({ 'irticalen:record': 'off' })).record).toBe('camera'); // eski değer
+    expect(loadSettings(throwingStorage()).record).toBe('camera');
     const storage = memoryStorage();
     saveSettings({ record: 'camera' }, storage);
     expect(loadSettings(storage).record).toBe('camera');
     saveSettings({ record: 'both' }, storage);
     expect(loadSettings(storage).record).toBe('both');
     saveSettings({ record: 'off' }, storage);
-    expect(loadSettings(storage).record).toBe('off');
+    expect(loadSettings(storage).record).toBe('camera');
   });
 
   it('kayıt biçimi kaydedilir; kayıt yoksa ya da bozuksa "şablonlu"da kalır', () => {

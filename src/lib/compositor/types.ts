@@ -32,12 +32,20 @@ export interface CompositeLayout {
 }
 
 /**
- * Where in the recording this frame falls — distinct from the app's speech `Phase`: `intro` is the
- * first ~3s of the *recording* itself (see `INTRO_MS`), `overtime` is once the speech timer has run
- * out but the recording keeps going, and `outro` is the ~2s grace period after "kaydı durdur" is
- * pressed, before the file is actually finalized (see `OUTRO_MS`/`computeFramePhase` in `./frame`).
+ * Where in the recording this frame falls — distinct from the app's own session `Phase`:
+ * - `intro`: the first ~3s of the *recording* itself (see `INTRO_MS`), whatever the app is doing;
+ * - `pre`: the recording runs but the speech timer has not started yet — the speaker may be giving
+ *   an introduction, spinning the wheel, looking at the landed topic or researching (see `stage`);
+ * - `speech`: the speech timer is running;
+ * - `overtime`: the speech timer has run out but the recording keeps going;
+ * - `outro`: the ~2s grace period after "kaydı durdur", before the file is finalized (`OUTRO_MS`).
+ * A recording may start before the wheel is spun, so any of these can follow `intro`.
  */
-export type FramePhase = 'intro' | 'speech' | 'overtime' | 'outro';
+export type FramePhase = 'intro' | 'pre' | 'speech' | 'overtime' | 'outro';
+
+/** What the app shows while the recording runs — lets a style say "konu çekiliyor", show the landed
+ * topic, the research stage, etc. `done` = the speech timer has finished. */
+export type FrameStage = 'idle' | 'spinning' | 'landed' | 'research' | 'ready' | 'speech' | 'done';
 
 /**
  * Everything a style's draw hooks need for one frame. Recomputed every tick (~30fps, degrading to
@@ -47,14 +55,23 @@ export type FramePhase = 'intro' | 'speech' | 'overtime' | 'outro';
 export interface Frame {
   /** Milliseconds since the composite recording itself started (drives `intro`). */
   readonly t: number;
-  readonly topic: string;
+  /** `null` until a topic has landed (recording started before the first spin). May change mid-recording
+   * when the speaker spins again before starting the timer. */
+  readonly topic: string | null;
   readonly locale: Locale;
   readonly phase: FramePhase;
-  /** Speech timer's elapsed/total seconds — both hold steady at `totalSec` once time is up. */
+  readonly stage: FrameStage;
+  /** Session mode: hazırlıksız or araştırmalı (drives e.g. the opening label). */
+  readonly sessionMode: 'off-the-cuff' | 'deep-research';
+  /** Speech timer's elapsed/total seconds — 0/total before the timer starts, both hold steady at
+   * `totalSec` once time is up. */
   readonly elapsedSec: number;
   readonly totalSec: number;
-  /** Which third of the speech outline (Nedir?/örnek/Ne düşünüyorum) — see `speechArcStep`. */
+  /** Which third of the speech outline (Nedir?/örnek/Ne düşünüyorum) — see `speechArcStep`; 0 before
+   * the speech timer starts. */
   readonly arcStep: 0 | 1 | 2;
+  /** Current microphone level 0..1 (smoothed), for level-reactive marks such as the logo bars. */
+  readonly micLevel: number;
   readonly mode: CompositeMode;
   readonly aspect: RecordAspect;
 }
@@ -86,6 +103,11 @@ export interface StyleDefinition {
   /** Key into `dict.record.styles` — the label shown in Settings and used by `TemplatePreview`. */
   readonly labelKey: string;
   readonly aspects: readonly RecordAspect[];
+  /** Google Fonts this style draws with, as `"Family:weights"` (`i` suffix = italic), e.g.
+   * `'Space Grotesk:500,600,700'` or `'Newsreader:400,400i,600'`. Load them with
+   * `ensureStyleFonts` (`../fonts`) before the first frame — canvas silently falls back otherwise.
+   * Only Google Fonts are allowed (the site's CSP permits no other font origin). */
+  readonly fonts?: readonly string[];
   layout(mode: CompositeMode, aspect: RecordAspect, output: Size, sources: CompositeSources): CompositeLayout;
   drawBackground(ctx: CanvasRenderingContext2D, frame: Frame): void;
   drawOverlays(ctx: CanvasRenderingContext2D, frame: Frame): void;

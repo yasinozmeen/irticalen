@@ -14,7 +14,9 @@ interface Props {
   muted: boolean;
   hideClock: boolean;
   record: RecordMode;
-  /** Which modes this browser can actually do — 'off' alone means the whole section stays hidden. */
+  /** The recording *sources* this browser can actually do (never includes 'off' — recording itself
+   * is turned on/off from the main-screen switch, not here) — empty means the whole section stays
+   * hidden (no camera at all). */
   recordModes: readonly RecordMode[];
   recordFormat: RecordFormat;
   /** An id from `COMPOSITE_STYLES`. */
@@ -154,30 +156,31 @@ export function SettingsDialog({
             <label for="settings-hide-clock">{dict.settings.hideClock}</label>
           </div>
 
-          {recordModes.length > 1 && (
+          {recordModes.length > 0 && (
             <div class="settings-field">
               <p class="settings-field-label"><span>{dict.settings.record}</span></p>
               <p class="settings-field-hint">{dict.settings.recordHint}</p>
-              <ChoiceRow
-                label={dict.settings.record}
-                options={recordModes.map((value) => ({
-                  value,
-                  label:
-                    value === 'off'
-                      ? dict.settings.recordOff
-                      : value === 'camera'
+              <p class="settings-field-hint">{dict.settings.recordSwitchHint}</p>
+              {recordModes.length > 1 && (
+                <ChoiceRow
+                  label={dict.settings.record}
+                  options={recordModes.map((value) => ({
+                    value,
+                    label:
+                      value === 'camera'
                         ? dict.settings.recordCamera
                         : value === 'screen'
                           ? dict.settings.recordScreen
                           : dict.settings.recordBoth,
-                }))}
-                value={record}
-                onChange={onRecordChange}
-              />
+                  }))}
+                  value={record}
+                  onChange={onRecordChange}
+                />
+              )}
             </div>
           )}
 
-          {recordModes.length > 1 && record !== 'off' && (
+          {recordModes.length > 0 && (
             <div class="settings-field">
               <p class="settings-field-label"><span>{dict.settings.format}</span></p>
               <ChoiceRow
@@ -192,7 +195,7 @@ export function SettingsDialog({
             </div>
           )}
 
-          {recordModes.length > 1 && record !== 'off' && recordFormat === 'template' && (() => {
+          {recordModes.length > 0 && recordFormat === 'template' && (() => {
             const selectedStyle = COMPOSITE_STYLES.find((style) => style.id === recordStyle) ?? COMPOSITE_STYLES[0];
             const compositeMode = compositeModeFor(record);
             return (

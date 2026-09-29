@@ -1,134 +1,279 @@
-import type {
-  CompositeLayout,
-  CompositeMode,
-  CompositeSources,
-  Frame,
-  RecordAspect,
-  Size,
-  StyleDefinition,
-} from '../types';
-import { cornerPip, fullBleed, stackedBands } from '../layout';
+import type { CompositeLayout, CompositeMode, CompositeSources, Frame, Rect, RecordAspect, Size, StyleDefinition } from '../types';
+import {
+  clamp,
+  drawLogo,
+  eOut,
+  fill,
+  fillR,
+  fit,
+  fitSize,
+  fontSpec,
+  measure,
+  minText,
+  rect,
+  ruler,
+  sceneFor,
+  setFont,
+  text,
+  toCompositeLayout,
+  type Ctx,
+  type LabelKey,
+  type LogoColors,
+  type Scene,
+  type TopicKind,
+} from './kit';
 
 /**
- * Temporary placeholder style — the site's own "F — Kâğıt" palette (paper background, ink text, no
- * boxes/shadows/rounded corners) drawn straight onto the canvas so the composited recording doesn't
- * look bare while a designer works on the real styles. A future style file drops in next to this one
- * and is added to `./index`'s registry — nothing else about the engine changes.
- *
- * Layout: 'camera'/'screen' modes are a single full-bleed rect at any aspect; 'both' mode insets the
- * second feed as a small corner picture-in-picture at 16:9 ('wide'), or stacks the two feeds
- * top/bottom at 9:16 ('tall') — a corner pip would be illegibly small on a portrait canvas.
+ * kâğıt — the site itself ("F — Kâğıt"): paper, ink, one red accent, Newsreader. No boxes, shadows or
+ * rounded corners. The header rule under the logo doubles as the timer (a 12-tick ink ruler); the
+ * topic is written on the paper like a caption ("konu" + the words), and before a topic has landed
+ * that caption is an empty line waiting to be filled. At the end a fresh sheet rises in place of the
+ * screen (or the timer column) carrying the logo, "konu gelir, söz sende." and the address.
  */
 
 const PAPER = '#f3eee2';
 const INK = '#1d1a16';
 const PENCIL = '#6f695c';
 const RULE = '#d6cfbf';
+const BLANK = '#b3aa96';
 const RED = '#b8281c';
+const CAM_TONE = '#dcd4c3';
+const SCR_TONE = '#e7e1d3';
 
+const SER = 'Newsreader, Georgia, serif';
+const F_WORD = fontSpec(600, SER);
+const F_LABEL = fontSpec(600, SER);
+const F_NUM = fontSpec(500, SER);
+const F_ITALIC = fontSpec(400, SER, 'italic');
+const F_TOPIC = fontSpec(700, SER, 'normal', -0.02);
+const F_CAPTION = fontSpec(600, SER, 'normal', -0.01);
+const F_DIGITS = fontSpec(500, SER, 'normal', -0.04);
+const F_TAG = fontSpec(600, SER);
+const F_ADDR = fontSpec(400, SER);
+
+const LOGO: LogoColors = { bubble: INK, mark: PAPER, accent: RED, word: INK, dot: RED, font: F_WORD };
+const NUMS = ['01', '02', '03'] as const;
+const RULER = { base: RULE, tick: PENCIL, bar: INK } as const;
+const DOTS = ['', '.', '..', '...'] as const;
+
+interface KL {
+  readonly cam?: Rect;
+  readonly scr?: Rect;
+  /** Topic caption under the screen (screen layouts). */
+  readonly cap?: Rect;
+  readonly capLines: number;
+  readonly capSize: number;
+  /** Written timer column: topic + big digits (camera-only and screen-only layouts). */
+  readonly col?: Rect;
+  readonly colLines: number;
+  readonly colSize: number;
+  readonly colClock: number;
+  /** Where the closing sheet rises. */
+  readonly end: Rect;
+  readonly logo: readonly [number, number, number];
+  readonly label: readonly [number, number, number];
+  readonly ruler: readonly [number, number, number];
+}
+
+function build(mode: CompositeMode, aspect: RecordAspect): KL {
+  if (aspect === 'wide') {
+    const head = { logo: [64, 90, 40], label: [1856, 90, 36], ruler: [64, 1856, 128] } as const;
+    if (mode === 'both') {
+      return { ...head, scr: rect(64, 164, 1100, 619), cap: rect(64, 812, 1100, 204), capLines: 2, capSize: 64, cam: rect(1196, 164, 660, 852),
+        colLines: 0, colSize: 0, colClock: 0, end: rect(64, 164, 1100, 852) };
+    }
+    if (mode === 'camera') {
+      return { ...head, col: rect(64, 164, 640, 852), colLines: 3, colSize: 88, colClock: 230, cam: rect(736, 164, 1120, 852),
+        capLines: 0, capSize: 0, end: rect(64, 164, 640, 852) };
+    }
+    return { ...head, scr: rect(64, 164, 1360, 765), col: rect(1464, 164, 392, 852), colLines: 4, colSize: 64, colClock: 170,
+      capLines: 0, capSize: 0, end: rect(64, 164, 1792, 852) };
+  }
+  const head = { logo: [120, 196, 40], label: [960, 196, 40], ruler: [120, 960, 236] } as const;
+  if (mode === 'both') {
+    return { ...head, scr: rect(120, 272, 840, 472), cap: rect(120, 764, 840, 136), capLines: 1, capSize: 60, cam: rect(120, 914, 840, 746),
+      colLines: 0, colSize: 0, colClock: 0, end: rect(120, 272, 840, 628) };
+  }
+  if (mode === 'camera') {
+    return { ...head, col: rect(120, 272, 840, 452), colLines: 2, colSize: 76, colClock: 220, cam: rect(120, 756, 840, 904),
+      capLines: 0, capSize: 0, end: rect(120, 272, 840, 452) };
+  }
+  return { ...head, scr: rect(120, 272, 840, 472), col: rect(120, 784, 840, 640), colLines: 3, colSize: 88, colClock: 280,
+    capLines: 0, capSize: 0, end: rect(120, 272, 840, 1152) };
+}
+
+const layouts = new Map<string, KL>();
+function L(mode: CompositeMode, aspect: RecordAspect): KL {
+  const key = `${mode}|${aspect}`;
+  let hit = layouts.get(key);
+  if (!hit) {
+    hit = build(mode, aspect);
+    layouts.set(key, hit);
+  }
+  return hit;
+}
+
+const composite = new Map<string, CompositeLayout>();
 function layout(mode: CompositeMode, aspect: RecordAspect, output: Size, _sources: CompositeSources): CompositeLayout {
-  if (mode === 'camera') return { cameraRect: fullBleed(output) };
-  if (mode === 'screen') return { screenRect: fullBleed(output) };
-  if (aspect === 'wide') return { screenRect: fullBleed(output), cameraRect: cornerPip(output) };
-  const { top, bottom } = stackedBands(output);
-  return { screenRect: top, cameraRect: bottom };
+  const l = L(mode, aspect);
+  return toCompositeLayout(composite, `${mode}|${aspect}`, aspect, output, l.cam, l.scr);
 }
 
-function drawBackground(ctx: CanvasRenderingContext2D, _frame: Frame): void {
-  const { width, height } = ctx.canvas;
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(0, 0, width, height);
+function drawBackground(ctx: Ctx, frame: Frame): void {
+  const sc = sceneFor(ctx, frame);
+  fill(ctx, 0, 0, sc.W, sc.H, PAPER);
+  const l = L(frame.mode, frame.aspect);
+  if (l.scr) {
+    fill(ctx, l.scr.x - 2, l.scr.y - 2, l.scr.w + 4, l.scr.h + 4, RULE);
+    fillR(ctx, l.scr, SCR_TONE);
+  }
+  if (l.cam) fillR(ctx, l.cam, CAM_TONE);
 }
 
-/** Both output resolutions share the same 1080 minimum edge (1920×1080 / 1080×1920) — sizing
- * everything off it keeps text/line weight identical between 'wide' and 'tall'. */
-function unitOf(ctx: CanvasRenderingContext2D): number {
-  const { width, height } = ctx.canvas;
-  return Math.min(width, height) / 20;
+// ---------------------------------------------------------------------------------------------
+
+function drawLabel(ctx: Ctx, sc: Scene, key: LabelKey, x: number, y: number, size: number): void {
+  if (key === 'mode') {
+    setFont(ctx, F_ITALIC, size);
+    text(ctx, sc.durationText, x, y, PENCIL, 'right');
+    let right = x - measure(ctx, sc.durationText);
+    text(ctx, ' · ', right, y, PENCIL, 'right');
+    right -= measure(ctx, ' · ');
+    text(ctx, sc.modeName, right, y, PENCIL, 'right');
+    return;
+  }
+  if (key === 'done') {
+    setFont(ctx, F_LABEL, size + 4);
+    const dot = measure(ctx, '.');
+    text(ctx, sc.str.timeUp, x - dot, y, INK, 'right');
+    text(ctx, '.', x, y, RED, 'right');
+    return;
+  }
+  const name = key === 'research' ? sc.str.research : sc.str.steps[key === 's0' ? 0 : key === 's1' ? 1 : 2];
+  setFont(ctx, F_LABEL, size);
+  const w = measure(ctx, name);
+  text(ctx, name, x, y, INK, 'right');
+  fill(ctx, x - w, y + 8, w, 3, key === 'research' ? PENCIL : RED);
+  if (key !== 'research') {
+    setFont(ctx, F_NUM, Math.max(minText(sc), size * 0.8));
+    text(ctx, NUMS[key === 's0' ? 0 : key === 's1' ? 1 : 2], x - w - 16, y, PENCIL, 'right');
+  }
 }
 
-function drawOverlays(ctx: CanvasRenderingContext2D, frame: Frame): void {
-  const { width, height } = ctx.canvas;
-  const unit = unitOf(ctx);
-  const margin = unit * 0.8;
+function labelSlot(ctx: Ctx, sc: Scene, l: KL): void {
+  const [x, y, size] = l.label;
+  if (sc.labelPrev) {
+    ctx.globalAlpha = 1 - sc.labelK;
+    drawLabel(ctx, sc, sc.labelPrev, x, y - 16 * sc.labelK, size);
+  }
+  ctx.globalAlpha = sc.labelK;
+  drawLabel(ctx, sc, sc.label, x, y + 16 * (1 - sc.labelK), size);
+  ctx.globalAlpha = 1;
+}
 
-  // A thin ink frame around the smaller inset feed in 'both'/'wide' — the pip has no video-level
-  // border of its own, so without this it would blend edge-to-edge into the main feed.
-  if (frame.mode === 'both') {
-    const { cameraRect } = layout(frame.mode, frame.aspect, { w: width, h: height }, {});
-    if (cameraRect && frame.aspect === 'wide') {
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = Math.max(1, unit * 0.05);
-      ctx.strokeRect(cameraRect.x, cameraRect.y, cameraRect.w, cameraRect.h);
+/** One state of the topic slot, first baseline at `y`. */
+function drawTopic(ctx: Ctx, sc: Scene, kind: TopicKind, topic: string | null, x: number, y: number, w: number, lines: number, size: number, min: number): void {
+  if (kind === 'topic' && topic) {
+    const f = fit(ctx, topic, F_TOPIC, w - 16, lines, size, min);
+    let yy = y;
+    for (let i = 0; i < f.lines.length; i += 1) {
+      text(ctx, f.lines[i], x, yy, INK);
+      if (i === f.lines.length - 1) text(ctx, '.', x + measure(ctx, f.lines[i]), yy, RED);
+      yy += f.size * 0.98;
+    }
+    return;
+  }
+  // An empty line on the paper, waiting for the topic; while the wheel spins a stroke of ink runs
+  // along it.
+  const lineW = Math.min(w, Math.max(260, w * 0.62));
+  fill(ctx, x, y + 6, lineW, 3, BLANK);
+  if (kind === 'spin') {
+    const seg = lineW * 0.24;
+    const p = 0.5 + 0.5 * Math.sin(sc.tSec * 3.6);
+    fill(ctx, x + (lineW - seg) * p, y + 5, seg, 5, INK);
+    setFont(ctx, F_ITALIC, Math.max(minText(sc), size * 0.5));
+    text(ctx, sc.str.drawing, x, y - size * 0.12, PENCIL);
+    const dots = DOTS[Math.floor(sc.tSec * 2.5) % 4];
+    if (dots) text(ctx, dots, x + measure(ctx, sc.str.drawing), y - size * 0.12, PENCIL);
+  }
+}
+
+function topicSlot(ctx: Ctx, sc: Scene, x: number, y: number, w: number, lines: number, size: number, min: number): void {
+  if (sc.topicPrevKind) {
+    const a = 1 - clamp(sc.topicK * 2);
+    if (a > 0) {
+      ctx.globalAlpha = a;
+      drawTopic(ctx, sc, sc.topicPrevKind, sc.topicPrevText, x, y, w, lines, size, min);
     }
   }
+  ctx.globalAlpha = sc.topicK;
+  drawTopic(ctx, sc, sc.topicKind, sc.topicText, x, y + 12 * (1 - sc.topicK), w, lines, size, min);
+  ctx.globalAlpha = 1;
+}
 
-  // Wordmark, top-left — small, lowercase, always present as a quiet signature.
-  ctx.textBaseline = 'alphabetic';
-  ctx.textAlign = 'left';
-  ctx.fillStyle = PENCIL;
-  ctx.font = `italic ${Math.round(unit * 0.55)}px Newsreader, Georgia, serif`;
-  ctx.fillText('irticalen.', margin, margin + unit * 0.4);
+/** The caption under the screen: "konu" in pencil, then the topic (or its blank line). */
+function caption(ctx: Ctx, sc: Scene, r: Rect, lines: number, size: number): void {
+  const labelSize = minText(sc);
+  setFont(ctx, F_ITALIC, labelSize);
+  text(ctx, sc.str.topic, r.x, r.y + labelSize, PENCIL);
+  topicSlot(ctx, sc, r.x, r.y + labelSize + size * 1.05, r.w, lines, size, 40);
+}
 
-  // A small red dot next to the wordmark during 'outro' — the same "kayıt" cue the on-screen UI uses.
-  if (frame.phase === 'outro') {
-    ctx.fillStyle = RED;
-    ctx.beginPath();
-    ctx.arc(margin + unit * 5.4, margin + unit * 0.22, unit * 0.18, 0, Math.PI * 2);
-    ctx.fill();
-  }
+/** Camera-/screen-only: the timer written on the paper like the site's own timer screen. */
+function column(ctx: Ctx, sc: Scene, l: KL, r: Rect): void {
+  caption(ctx, sc, r, l.colLines, l.colSize);
+  const size = fitSize(ctx, '00:00', F_DIGITS, r.w, l.colClock);
+  setFont(ctx, F_DIGITS, size);
+  text(ctx, sc.clockText, r.x - (sc.wide ? size * 0.03 : 0), r.y + r.h - 6, sc.running || sc.timeUp ? INK : PENCIL);
+}
 
-  // Bottom bar: an ink progress line (the site's "mürekkep cetvel" motif, not a ring) then the topic.
-  const lineY = height - margin - unit * 1.5;
-  const lineW = width - margin * 2;
-  ctx.strokeStyle = RULE;
-  ctx.lineWidth = Math.max(1, unit * 0.05);
-  ctx.beginPath();
-  ctx.moveTo(margin, lineY);
-  ctx.lineTo(margin + lineW, lineY);
-  ctx.stroke();
+function endCard(ctx: Ctx, sc: Scene, r: Rect): void {
+  const e = sc.end;
+  const top = r.y - 3 + (r.h + 6) * (1 - e);
+  fill(ctx, r.x - 3, top, r.w + 6, r.y + r.h + 3 - top, PAPER);
+  const a = eOut((e - 0.62) / 0.38);
+  if (a <= 0) return;
+  const dy = 18 * (1 - a);
+  const pad = r.w > 1200 ? r.w * 0.06 : sc.wide ? 0 : 8;
+  const x = r.x + pad;
+  const w = r.w - pad * 2;
+  const big = Math.min(r.w > 1200 ? 140 : sc.wide ? 96 : 128, w / 6.6);
+  const cy = r.y + r.h / 2;
+  ctx.globalAlpha = a;
+  drawLogo(ctx, x, cy - big * 0.35 + dy, big, LOGO, 'ready', sc.levels, sc.tSec, sc.str.wordmark);
+  const tagSize = Math.min(big * 0.46, fitSize(ctx, `${sc.str.tagline}.`, F_TAG, w, big * 0.46));
+  setFont(ctx, F_TAG, tagSize);
+  const ty = cy + big * 0.55 + dy;
+  text(ctx, sc.str.tagline, x, ty, INK);
+  text(ctx, '.', x + measure(ctx, sc.str.tagline), ty, RED);
+  setFont(ctx, F_ADDR, Math.max(minText(sc), big * 0.32));
+  const ay = cy + big * 1.12 + dy;
+  text(ctx, sc.str.address, x, ay, PENCIL);
+  fill(ctx, x, ay + 8, measure(ctx, sc.str.address), 2, RULE);
+  ctx.globalAlpha = 1;
+}
 
-  const ratio =
-    frame.phase === 'intro'
-      ? 0
-      : frame.phase === 'speech'
-        ? frame.totalSec > 0
-          ? Math.min(1, Math.max(0, frame.elapsedSec / frame.totalSec))
-          : 0
-        : 1; // overtime/outro: run its course
-  if (ratio > 0) {
-    ctx.strokeStyle = frame.phase === 'outro' ? RED : INK;
-    ctx.beginPath();
-    ctx.moveTo(margin, lineY);
-    ctx.lineTo(margin + lineW * ratio, lineY);
-    ctx.stroke();
-  }
+function drawOverlays(ctx: Ctx, frame: Frame): void {
+  const sc = sceneFor(ctx, frame);
+  const l = L(frame.mode, frame.aspect);
 
-  ctx.textAlign = 'left';
-  ctx.fillStyle = INK;
-  ctx.font = `600 ${Math.round(unit * 1.05)}px Newsreader, Georgia, serif`;
-  const topic = frame.topic.toLowerCase();
-  ctx.fillText(topic, margin, height - margin);
+  if (l.cap) caption(ctx, sc, l.cap, l.capLines, l.capSize);
+  if (l.col) column(ctx, sc, l, l.col);
 
-  // The opening card: the topic word again, large and centered, for the recording's first ~3s —
-  // gives the file a clean "cold open" instead of starting mid-scene.
-  if (frame.phase === 'intro') {
-    ctx.fillStyle = PAPER;
-    ctx.fillRect(0, 0, width, height);
-    ctx.textAlign = 'center';
-    ctx.fillStyle = INK;
-    ctx.font = `600 ${Math.round(unit * 1.8)}px Newsreader, Georgia, serif`;
-    ctx.fillText(topic, width / 2, height / 2);
-    ctx.fillStyle = PENCIL;
-    ctx.font = `italic ${Math.round(unit * 0.6)}px Newsreader, Georgia, serif`;
-    ctx.fillText('irticalen', width / 2, height / 2 + unit * 1.2);
-  }
+  const [lx, ly, ls] = l.logo;
+  drawLogo(ctx, lx, ly, ls, LOGO, sc.logo, sc.levels, sc.tSec, sc.str.wordmark);
+  labelSlot(ctx, sc, l);
+  const [r0, r1, ry] = l.ruler;
+  ruler(ctx, r0, r1, ry, sc.progress, RULER, 14, 6);
+
+  if (sc.end > 0) endCard(ctx, sc, l.end);
 }
 
 export const kagit: StyleDefinition = {
   id: 'kagit',
   labelKey: 'kagit',
   aspects: ['wide', 'tall'],
+  fonts: ['Newsreader:400,400i,500,600,700'],
   layout,
   drawBackground,
   drawOverlays,

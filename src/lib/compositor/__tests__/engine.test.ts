@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CompositorEngine, type EngineRecorder } from '../engine';
+import { CompositorEngine, type CompositorAppState, type EngineRecorder } from '../engine';
 import { OUTRO_MS } from '../frame';
 import type { CompositeLayout, CompositeMode, CompositeSources, Frame, RecordAspect, Size, StyleDefinition } from '../types';
 
@@ -66,6 +66,20 @@ function fakeStyle(calls: string[]): StyleDefinition {
   };
 }
 
+/** Default app state for a session already mid-speech — most tests just care about the recording
+ * lifecycle, not the app's own state, so this is a sensible steady value to start from. */
+function defaultAppState(overrides: Partial<CompositorAppState> = {}): CompositorAppState {
+  return {
+    stage: 'speech',
+    topic: 'konu',
+    sessionMode: 'off-the-cuff',
+    elapsedSec: 0,
+    totalSec: 60,
+    arcStep: 0,
+    ...overrides,
+  };
+}
+
 interface Harness {
   engine: CompositorEngine;
   worker: ReturnType<typeof fakeWorker>;
@@ -79,9 +93,15 @@ interface Harness {
    * start, one at the end) without needing to hand-drive the clock between them. */
   setStep: (ms: number) => void;
   callbacks: { onFailed: ReturnType<typeof vi.fn>; onFinished: ReturnType<typeof vi.fn>; onFpsDrop: ReturnType<typeof vi.fn> };
+  /** Swaps the app state a subsequent tick reads — defaults to `defaultAppState()`. */
+  setAppState: (state: CompositorAppState) => void;
+  getAppState: () => CompositorAppState;
+  /** The `createAudioAnalyser` fake's last returned reader (if any), so a test can flip its output. */
+  micRms: { value: number };
+  micAnalyserCreated: ReturnType<typeof vi.fn>;
 }
 
-function buildHarness(overrides: { isTypeSupported?: boolean; hasContext?: boolean } = {}): Harness {
+function buildHarness(overrides: { isTypeSupported?: boolean; hasContext?: boolean; withMicAnalyser?: boolean } = {}): Harness {
   const callOrder: string[] = [];
   let current = 0;
   let step = 0;
@@ -101,6 +121,9 @@ function buildHarness(overrides: { isTypeSupported?: boolean; hasContext?: boole
     },
   };
   const callbacks = { onFailed: vi.fn(), onFinished: vi.fn(), onFpsDrop: vi.fn() };
+  let appState = defaultAppState();
+  const micRms = { value: 0 };
+  const micAnalyserCreated = vi.fn();
 
   const engine = new CompositorEngine(
     {
@@ -133,6 +156,12 @@ function buildHarness(overrides: { isTypeSupported?: boolean; hasContext?: boole
         current += step;
         return value;
       },
+      createAudioAnalyser: overrides.withMicAnalyser
+        ? (_stream) => {
+            micAnalyserCreated();
+            return { read: () => micRms.value, close: vi.fn() };
+          }
+        : () => null,
     },
     callbacks,
   );
@@ -146,6 +175,10 @@ function buildHarness(overrides: { isTypeSupported?: boolean; hasContext?: boole
     setNow: (ms) => (current = ms),
     setStep: (ms) => (step = ms),
     callbacks,
+    setAppState: (state) => (appState = state),
+    getAppState: () => appState,
+    micRms,
+    micAnalyserCreated,
   };
 }
 
@@ -157,12 +190,10 @@ describe('CompositorEngine.start', () => {
       mode: 'camera',
       aspect: 'wide',
       style,
-      topic: 'test',
       locale: 'tr',
-      totalSec: 60,
       cameraStream: fakeStream(true),
       audioStream: fakeStream(true),
-      getElapsedSec: () => 0,
+      getAppState: h.getAppState,
     });
     expect(ok).toBe(true);
     expect(h.engine.getStatus()).toBe('active');
@@ -183,11 +214,9 @@ describe('CompositorEngine.start', () => {
       mode: 'camera',
       aspect: 'wide',
       style: fakeStyle([]),
-      topic: 't',
       locale: 'tr',
-      totalSec: 60,
       cameraStream: fakeStream(),
-      getElapsedSec: () => 0,
+      getAppState: h.getAppState,
     });
     expect(ok).toBe(false);
     expect(h.engine.getStatus()).toBe('failed');
@@ -201,11 +230,9 @@ describe('CompositorEngine.start', () => {
       mode: 'camera',
       aspect: 'wide',
       style: fakeStyle([]),
-      topic: 't',
       locale: 'tr',
-      totalSec: 60,
       cameraStream: fakeStream(),
-      getElapsedSec: () => 0,
+      getAppState: h.getAppState,
     });
     expect(ok).toBe(false);
     expect(h.engine.getStatus()).toBe('failed');
@@ -218,11 +245,9 @@ describe('CompositorEngine.start', () => {
       mode: 'camera' as const,
       aspect: 'wide' as const,
       style: fakeStyle([]),
-      topic: 't',
       locale: 'tr' as const,
-      totalSec: 60,
       cameraStream: fakeStream(),
-      getElapsedSec: () => 0,
+      getAppState: h.getAppState,
     };
     await h.engine.start(params);
     const second = await h.engine.start(params);
@@ -236,19 +261,146 @@ describe('CompositorEngine tick/draw', () => {
     const h = buildHarness();
     const calls: string[] = [];
     const style = fakeStyle(calls);
+    h.setAppState(defaultAppState({ stage: 'idle' }));
     await h.engine.start({
       mode: 'camera',
       aspect: 'wide',
       style,
-      topic: 'konu',
       locale: 'tr',
-      totalSec: 60,
       cameraStream: fakeStream(),
-      getElapsedSec: () => 0,
+      getAppState: h.getAppState,
     });
     h.worker.emitTick();
     expect(calls).toEqual(['drawBackground', 'drawOverlays:intro']);
     expect(h.ctx.drawImage).toHaveBeenCalledTimes(1);
+  });
+
+  it("intro'dan sonra stage 'pre' ise phase pre, 'speech' ise speech, 'done' ise overtime olur", async () => {
+    const h = buildHarness();
+    const calls: string[] = [];
+    const style = fakeStyle(calls);
+    await h.engine.start({
+      mode: 'camera',
+      aspect: 'wide',
+      style,
+      locale: 'tr',
+      cameraStream: fakeStream(),
+      getAppState: h.getAppState,
+    });
+    h.setNow(4000); // past INTRO_MS
+
+    h.setAppState(defaultAppState({ stage: 'research' }));
+    h.worker.emitTick();
+    expect(calls.at(-1)).toBe('drawOverlays:pre');
+
+    h.setAppState(defaultAppState({ stage: 'speech' }));
+    h.worker.emitTick();
+    expect(calls.at(-1)).toBe('drawOverlays:speech');
+
+    h.setAppState(defaultAppState({ stage: 'done' }));
+    h.worker.emitTick();
+    expect(calls.at(-1)).toBe('drawOverlays:overtime');
+  });
+
+  it('appState alanları (topic/stage/sessionMode/elapsed/total/arcStep) frame’e aktarılır', async () => {
+    const h = buildHarness();
+    let lastFrame: Frame | null = null;
+    const style: StyleDefinition = {
+      ...fakeStyle([]),
+      drawOverlays: (_ctx, frame) => {
+        lastFrame = frame;
+      },
+    };
+    await h.engine.start({
+      mode: 'camera',
+      aspect: 'wide',
+      style,
+      locale: 'tr',
+      cameraStream: fakeStream(),
+      getAppState: h.getAppState,
+    });
+    h.setNow(4000);
+    h.setAppState({ stage: 'speech', topic: 'irticalen', sessionMode: 'deep-research', elapsedSec: 12, totalSec: 60, arcStep: 1 });
+    h.worker.emitTick();
+    expect(lastFrame).not.toBeNull();
+    expect(lastFrame!.topic).toBe('irticalen');
+    expect(lastFrame!.stage).toBe('speech');
+    expect(lastFrame!.sessionMode).toBe('deep-research');
+    expect(lastFrame!.elapsedSec).toBe(12);
+    expect(lastFrame!.totalSec).toBe(60);
+    expect(lastFrame!.arcStep).toBe(1);
+  });
+
+  it('topic null iken frame.topic null’dır (konu henüz gelmemiş)', async () => {
+    const h = buildHarness();
+    let lastFrame: Frame | null = null;
+    const style: StyleDefinition = { ...fakeStyle([]), drawOverlays: (_ctx, frame) => { lastFrame = frame; } };
+    h.setAppState(defaultAppState({ stage: 'idle', topic: null }));
+    await h.engine.start({
+      mode: 'camera',
+      aspect: 'wide',
+      style,
+      locale: 'tr',
+      cameraStream: fakeStream(),
+      getAppState: h.getAppState,
+    });
+    h.worker.emitTick();
+    expect(lastFrame!.topic).toBeNull();
+  });
+});
+
+describe('CompositorEngine mic level', () => {
+  it('ses izi yoksa micLevel her zaman 0’dır', async () => {
+    const h = buildHarness({ withMicAnalyser: false });
+    let lastFrame: Frame | null = null;
+    const style: StyleDefinition = { ...fakeStyle([]), drawOverlays: (_ctx, frame) => { lastFrame = frame; } };
+    await h.engine.start({
+      mode: 'camera',
+      aspect: 'wide',
+      style,
+      locale: 'tr',
+      cameraStream: fakeStream(true),
+      audioStream: fakeStream(true),
+      getAppState: h.getAppState,
+    });
+    h.worker.emitTick();
+    h.worker.emitTick();
+    expect(lastFrame!.micLevel).toBe(0);
+  });
+
+  it('ses izi varsa micLevel analizörün okuduğu değere doğru yumuşayarak yaklaşır', async () => {
+    const h = buildHarness({ withMicAnalyser: true });
+    const frames: Frame[] = [];
+    const style: StyleDefinition = { ...fakeStyle([]), drawOverlays: (_ctx, frame) => frames.push(frame) };
+    await h.engine.start({
+      mode: 'camera',
+      aspect: 'wide',
+      style,
+      locale: 'tr',
+      cameraStream: fakeStream(true),
+      audioStream: fakeStream(true),
+      getAppState: h.getAppState,
+    });
+    expect(h.micAnalyserCreated).toHaveBeenCalledTimes(1);
+    h.micRms.value = 0.1; // scaleMicRms(0.1) = 0.4
+    h.worker.emitTick();
+    h.worker.emitTick();
+    expect(frames[0].micLevel).toBeGreaterThan(0);
+    expect(frames[1].micLevel).toBeGreaterThan(frames[0].micLevel);
+    expect(frames[1].micLevel).toBeLessThanOrEqual(0.4 + 1e-9);
+  });
+
+  it('audioStream verilmezse analizör hiç oluşturulmaz', async () => {
+    const h = buildHarness({ withMicAnalyser: true });
+    await h.engine.start({
+      mode: 'camera',
+      aspect: 'wide',
+      style: fakeStyle([]),
+      locale: 'tr',
+      cameraStream: fakeStream(),
+      getAppState: h.getAppState,
+    });
+    expect(h.micAnalyserCreated).not.toHaveBeenCalled();
   });
 });
 
@@ -261,11 +413,9 @@ describe('CompositorEngine.requestStop', () => {
       mode: 'camera',
       aspect: 'wide',
       style: fakeStyle([]),
-      topic: 't',
       locale: 'tr',
-      totalSec: 60,
       cameraStream,
-      getElapsedSec: () => 0,
+      getAppState: h.getAppState,
     });
     h.engine.requestStop(false);
     expect(h.worker.terminate).toHaveBeenCalledTimes(1);
@@ -283,11 +433,9 @@ describe('CompositorEngine.requestStop', () => {
       mode: 'camera',
       aspect: 'wide',
       style,
-      topic: 't',
       locale: 'tr',
-      totalSec: 60,
       cameraStream: fakeStream(),
-      getElapsedSec: () => 0,
+      getAppState: h.getAppState,
     });
     h.recorder.ondataavailable?.({ data: new Blob(['x'], { type: 'video/webm' }) });
 
@@ -319,11 +467,9 @@ describe('CompositorEngine.requestStop', () => {
       mode: 'camera',
       aspect: 'wide',
       style: fakeStyle([]),
-      topic: 't',
       locale: 'tr',
-      totalSec: 60,
       cameraStream: fakeStream(),
-      getElapsedSec: () => 0,
+      getAppState: h.getAppState,
     });
     h.setNow(1000);
     h.engine.requestStop(true);
@@ -347,11 +493,9 @@ describe('CompositorEngine.hardStop', () => {
       mode: 'camera',
       aspect: 'wide',
       style: fakeStyle([]),
-      topic: 't',
       locale: 'tr',
-      totalSec: 60,
       cameraStream: fakeStream(),
-      getElapsedSec: () => 0,
+      getAppState: h.getAppState,
     });
     h.engine.hardStop();
     expect(h.worker.terminate).toHaveBeenCalledTimes(1);
@@ -367,11 +511,9 @@ describe('CompositorEngine fps degrade', () => {
       mode: 'camera',
       aspect: 'wide',
       style: fakeStyle([]),
-      topic: 't',
       locale: 'tr',
-      totalSec: 60,
       cameraStream: fakeStream(),
-      getElapsedSec: () => 0,
+      getAppState: h.getAppState,
     });
     h.worker.postMessage.mockClear();
     // Every `now()` call advances the clock by 40ms — since each tick reads it once at the start and

@@ -13,6 +13,9 @@ function prefersReducedMotion(): boolean {
   }
 }
 
+/** How many running transitions currently hold each `vt-<scope>` class on <html>. */
+const activeScopes = new Map<string, number>();
+
 /**
  * Resolves once Preact has flushed the state update to the DOM. It must NOT wait for animation
  * frames: while a view transition's update callback is pending the browser suspends rendering, so
@@ -29,8 +32,13 @@ function domFlushed(): Promise<void> {
  * Runs `update` (a synchronous state change, e.g. a reducer dispatch) inside a View Transition when
  * supported. Returns a promise that resolves once the transition has finished (or immediately, in
  * the fallback path) — never rejects.
+ *
+ * `scope` puts a `vt-<scope>` class on <html> for exactly the length of this transition, so CSS can
+ * give elements a `view-transition-name` only while it runs (`.vt-switch .x { view-transition-name:
+ * … }`). A name that is always on would lift that element above sheets and dialogs in every other
+ * transition on the page.
  */
-export function runViewTransition(update: () => void, afterUpdate?: () => void): Promise<void> {
+export function runViewTransition(update: () => void, afterUpdate?: () => void, scope?: string): Promise<void> {
   // `update` must run exactly once no matter what: a transition that is still pending when a newer
   // one starts is aborted by the browser WITHOUT its callback ever being called.
   let ran = false;
@@ -51,6 +59,22 @@ export function runViewTransition(update: () => void, afterUpdate?: () => void):
     runOnce();
     return domFlushed().then(() => afterUpdate?.());
   }
+  const root = document.documentElement;
+  const scopeClass = scope ? `vt-${scope}` : null;
+  // Added before the call so the OLD snapshot is captured with the names too. Counted, because a
+  // quick second click starts a new transition before the first one's `finished` has settled.
+  if (scopeClass) {
+    activeScopes.set(scopeClass, (activeScopes.get(scopeClass) ?? 0) + 1);
+    root.classList.add(scopeClass);
+  }
+  let unscoped = false;
+  const unscope = (): void => {
+    if (!scopeClass || unscoped) return;
+    unscoped = true;
+    const left = (activeScopes.get(scopeClass) ?? 1) - 1;
+    activeScopes.set(scopeClass, left);
+    if (left <= 0) root.classList.remove(scopeClass);
+  };
   try {
     const transition = document.startViewTransition(() => {
       runOnce();
@@ -62,8 +86,14 @@ export function runViewTransition(update: () => void, afterUpdate?: () => void):
     // is a silent "Uncaught (in promise)" in the console even though the DOM update above already
     // happened correctly, so it must be swallowed here too.
     transition.ready.catch(() => undefined);
-    return transition.finished.catch(() => undefined).then(settle);
+    return transition.finished
+      .catch(() => undefined)
+      .then(() => {
+        unscope();
+        settle();
+      });
   } catch {
+    unscope();
     settle();
     return Promise.resolve();
   }

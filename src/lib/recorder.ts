@@ -12,12 +12,18 @@ import { dayKey } from './streak';
 
 const KNOWN_MODES: readonly RecordMode[] = ['off', 'camera', 'screen', 'both'];
 
-/** Normalizes an untrusted (e.g. localStorage) value; anything unrecognized falls back to 'off'. */
+/**
+ * Normalizes an untrusted (e.g. localStorage) `Settings.record` value. `record` is now a *source*
+ * choice (camera/screen/both) — whether recording actually happens is a separate, session-only
+ * switch on the main screen (see `useSelfRecording`'s `start`) — so `'off'` is no longer a settings
+ * value: an old saved `'off'` (or anything unrecognized/missing) normalizes to `'camera'`.
+ */
 export function normalizeRecordMode(raw: unknown): RecordMode {
   if (typeof raw === 'string' && (KNOWN_MODES as readonly string[]).includes(raw)) {
-    return raw as RecordMode;
+    const mode = raw as RecordMode;
+    return mode === 'off' ? 'camera' : mode;
   }
-  return 'off';
+  return 'camera';
 }
 
 const KNOWN_FORMATS: readonly RecordFormat[] = ['template', 'raw'];
@@ -42,10 +48,12 @@ export function isRecordingFeatureAvailable(hasMediaRecorderCtor: boolean, hasGe
   return hasMediaRecorderCtor && hasGetUserMedia;
 }
 
-/** The record-mode options to offer in Settings, given what this browser supports. */
+/** The recording *source* options to offer in Settings, given what this browser supports — 'off' is
+ * never included (see `normalizeRecordMode`'s doc): an empty list means the feature itself is
+ * unavailable and the whole "kendini kaydet" section (and the main-screen switch) stays hidden. */
 export function visibleRecordModes(caps: RecordingCapabilities): readonly RecordMode[] {
-  if (!caps.camera) return ['off'];
-  return caps.screen ? ['off', 'camera', 'screen', 'both'] : ['off', 'camera'];
+  if (!caps.camera) return [];
+  return caps.screen ? ['camera', 'screen', 'both'] : ['camera'];
 }
 
 /**

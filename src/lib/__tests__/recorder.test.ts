@@ -19,21 +19,24 @@ import {
 } from '../recorder';
 
 describe('normalizeRecordMode', () => {
-  it('bilinen değerleri aynen döner', () => {
-    expect(normalizeRecordMode('off')).toBe('off');
+  it('bilinen kaynak değerlerini aynen döner', () => {
     expect(normalizeRecordMode('camera')).toBe('camera');
     expect(normalizeRecordMode('screen')).toBe('screen');
     expect(normalizeRecordMode('both')).toBe('both');
   });
 
-  it('bilinmeyen/eski/bozuk/eksik değer kapalıya düşer', () => {
-    expect(normalizeRecordMode('audio')).toBe('off'); // eski (kaldırılan) değer
-    expect(normalizeRecordMode('av')).toBe('off'); // eski (kaldırılan) değer
-    expect(normalizeRecordMode('evet')).toBe('off');
-    expect(normalizeRecordMode(null)).toBe('off');
-    expect(normalizeRecordMode(undefined)).toBe('off');
-    expect(normalizeRecordMode(1)).toBe('off');
-    expect(normalizeRecordMode('')).toBe('off');
+  it("eski 'off' değeri kameraya göç eder (record artık açma/kapama değil kaynak seçimi)", () => {
+    expect(normalizeRecordMode('off')).toBe('camera');
+  });
+
+  it('bilinmeyen/eski/bozuk/eksik değer kameraya düşer', () => {
+    expect(normalizeRecordMode('audio')).toBe('camera'); // eski (kaldırılan) değer
+    expect(normalizeRecordMode('av')).toBe('camera'); // eski (kaldırılan) değer
+    expect(normalizeRecordMode('evet')).toBe('camera');
+    expect(normalizeRecordMode(null)).toBe('camera');
+    expect(normalizeRecordMode(undefined)).toBe('camera');
+    expect(normalizeRecordMode(1)).toBe('camera');
+    expect(normalizeRecordMode('')).toBe('camera');
   });
 });
 
@@ -50,17 +53,17 @@ describe('isRecordingFeatureAvailable', () => {
 });
 
 describe('visibleRecordModes', () => {
-  it('kamera bile yoksa yalnız kapalı görünür', () => {
-    expect(visibleRecordModes({ camera: false, screen: false })).toEqual(['off']);
-    expect(visibleRecordModes({ camera: false, screen: true })).toEqual(['off']);
+  it('kamera bile yoksa hiçbir kaynak görünmez (özellik tamamen gizlenir)', () => {
+    expect(visibleRecordModes({ camera: false, screen: false })).toEqual([]);
+    expect(visibleRecordModes({ camera: false, screen: true })).toEqual([]);
   });
 
-  it('kamera var, ekran yoksa: kapalı + kamera', () => {
-    expect(visibleRecordModes({ camera: true, screen: false })).toEqual(['off', 'camera']);
+  it('kamera var, ekran yoksa: yalnız kamera', () => {
+    expect(visibleRecordModes({ camera: true, screen: false })).toEqual(['camera']);
   });
 
-  it('ikisi de varsa dört seçenek de görünür', () => {
-    expect(visibleRecordModes({ camera: true, screen: true })).toEqual(['off', 'camera', 'screen', 'both']);
+  it('ikisi de varsa üç kaynak da görünür ("off" hiçbir zaman listede değildir)', () => {
+    expect(visibleRecordModes({ camera: true, screen: true })).toEqual(['camera', 'screen', 'both']);
   });
 });
 

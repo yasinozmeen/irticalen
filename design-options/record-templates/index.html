@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kayıt stilleri · sahne panosu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..800;1,6..72,400..600&display=block">
+<link rel="stylesheet" href="fonts.css">
+<style>
+  :root {
+    --paper: #f3eee2; --ink: #1d1a16; --pencil: #6f695c; --rule: #d6cfbf; --red: #b8281c;
+    --font: 'Newsreader', Georgia, serif;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--font); font-size: 17px; line-height: 1.45;
+         -webkit-font-smoothing: antialiased; }
+  .page { max-width: 1360px; margin: 0 auto; padding: 56px 40px 80px; }
+  h1, h2, h3, p { margin: 0; }
+  h1 { font-size: 46px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; }
+  h1 .dot, h2 .dot { color: var(--red); }
+  h2 { font-size: 40px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; }
+  h3 { font-size: 20px; font-weight: 600; }
+  .lede { margin-top: 14px; max-width: 900px; color: var(--pencil); font-size: 19px; }
+  .lede b { color: var(--ink); font-weight: 600; }
+  .toc { margin-top: 18px; display: flex; gap: 22px; flex-wrap: wrap; font-size: 18px; }
+  .toc a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: .28em; }
+  section { margin-top: 64px; padding-top: 28px; border-top: 1px solid var(--rule); }
+  .why { margin-top: 10px; max-width: 980px; font-size: 18px; }
+  .why i { color: var(--pencil); }
+  .meta { margin-top: 8px; color: var(--pencil); font-size: 15px; font-style: italic; }
+  table { margin-top: 18px; border-collapse: collapse; font-size: 15px; width: 100%; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); }
+  th { font-weight: 600; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .rules { margin: 14px 0 0; padding-left: 20px; max-width: 980px; }
+  .rules li { margin: 4px 0; }
+  .strip-title { margin-top: 38px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .strip-title span { color: var(--pencil); font-style: italic; font-size: 15px; }
+  .strip { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 26px 34px; align-items: flex-start; }
+  .beat { display: flex; flex-direction: column; gap: 8px; }
+  .beat-title { font-size: 15px; font-weight: 600; padding-bottom: 5px; border-bottom: 1px solid var(--ink); }
+  .beat-title i { font-weight: 400; color: var(--pencil); }
+  .frames { display: flex; gap: 12px; align-items: flex-start; }
+  figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  figure img, figure canvas { display: block; outline: 1px solid var(--rule); }
+  figcaption { font-size: 12.5px; line-height: 1.35; color: var(--ink); }
+  figcaption b { font-variant-numeric: tabular-nums; font-weight: 600; }
+  figcaption i { color: var(--pencil); }
+  .overview { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 24px 28px; align-items: flex-start; }
+  .overview figcaption { font-size: 14px; }
+  .settings { margin-top: 18px; display: flex; gap: 48px; flex-wrap: wrap; align-items: flex-start; }
+  .mock { width: 460px; font-size: 17px; }
+  .mock .row { padding: 12px 0; border-bottom: 1px solid var(--rule); }
+  .mock .lbl { font-weight: 600; }
+  .mock .hint { font-size: 14px; font-style: italic; color: var(--pencil); margin-top: 2px; }
+  .mock .opts { margin-top: 6px; display: flex; gap: 16px; flex-wrap: wrap; color: var(--pencil); text-transform: lowercase; }
+  .mock .opts span { text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: .28em; }
+  .mock .opts .on { color: var(--ink); font-weight: 600; text-decoration-color: var(--ink); text-decoration-thickness: 2px; }
+  .note { margin-top: 12px; max-width: 980px; color: var(--pencil); font-size: 15px; }
+  .loading { margin-top: 30px; font-style: italic; color: var(--pencil); }
+</style>
+</head>
+<body>
+<div class="page" id="page">
+  <header id="top">
+    <h1>kayıt stilleri: sahne panosu<span class="dot">.</span></h1>
+    <p class="lede"><b>Aşama 1 / 3: sahne panosu.</b> Video ya da animasyon yok; her kare, tarayıcının kayıt sırasında canvas'a çizeceği görüntünün durağan hâli. Kareler burada da aynı yöntemle (canvas 2D) çiziliyor; kamera yerine düz ton bir siluet, ekran yerine sitenin sayaç ekranının basit bir kopyası var. Örnek konuşma: <b>batık maliyet yanılgısı</b>, hazırlıksız, <b>3 dakika</b>.</p>
+    <p class="lede">Kişi ayarlarda <b>stil</b> ve <b>oran</b> (yatay 16:9 · dikey 9:16) seçer; <b>düzeni kayıt modu belirler</b> (kamera + ekran · yalnız kamera · yalnız ekran). Her karenin altında: zaman · ne oluyor · <i>his</i>.</p>
+    <nav class="toc" id="toc"></nav>
+  </header>
+  <div id="content"><p class="loading">kareler çiziliyor…</p></div>
+</div>
+
+<script>
+/* =========================================================================================
+   Sahne panosu: her kare, gerçek kayıtta canvas'a çizilecek olanın durağan hâli.
+   draw(ctx, S): S = { W, H, mode: 'both'|'cam'|'screen', orient: 'h'|'v', t, ... derive(t) }
+   ========================================================================================= */
+const T = 180;                                   // konuşma süresi (sn) — örnek: 3 dk
+const TOPIC = 'batık maliyet yanılgısı';
+const MODE_LINE = ['hazırlıksız', '3 dakika'];
+const STEPS = ['nedir?', 'bir örnek', 'ne düşünüyorum?'];
+const TAG = 'konu gelir, söz sende';
+const ADDR = 'irticalen.yasinozmeen.me';
+
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const eOut = x => 1 - Math.pow(1 - clamp(x), 3);
+const eInOut = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const lerp = (a, b, k) => a + (b - a) * k;
+const fmt = sec => { const s = Math.ceil(sec - 1e-6); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+const tlabel = (t, dec) => { const m = Math.floor(t / 60), s = t - m * 60, whole = !dec && Math.abs(s - Math.round(s)) < 1e-6; const v = whole ? String(Math.round(s)) : s.toFixed(dec ? 2 : 1).replace(/0$/, ''); return m + ':' + (s < 10 ? '0' : '') + v; };
+
+/* Zaman çizelgesi: tüm hareket t'den türetilir (kayıtta performance.now() − konuşma başlangıcı). */
+function derive(t) {
+  const S = { t };
+  S.p = clamp(t / T);
+  S.remaining = Math.max(0, T - t);
+  S.pill = 1 - eOut((t - 2.7) / 0.6);            // açılış etiketi 2.7–3.3 sn arası çekilir
+  S.labelIn = eOut((t - 2.9) / 0.5);             // ilk adım etiketi 2.9–3.4 sn arası yükselir
+  S.step = t < T / 3 ? 0 : t < 2 * T / 3 ? 1 : 2;
+  const b = S.step === 0 ? -99 : (S.step === 1 ? T / 3 : 2 * T / 3);
+  S.stepK = eOut((t - b) / 0.45);                // adım değişimi 0.45 sn
+  S.done = eOut((t - T) / 0.5);                  // "süre." 0.5 sn
+  S.end = eInOut((t - (T + 3)) / 0.9);           // kapanış: süre + 3 sn'de başlar, 0.9 sn
+  S.logo = t < 0.6 ? 'ready' : t < T ? 'speech' : 'done';
+  S.level = [0, 1, 2].map(i => 0.3 + 0.7 * Math.abs(Math.sin(t * 6.1 + i * 2.3) * Math.cos(t * 2.3 + i)));
+  return S;
+}
+/* Etiket yuvası: açılış etiketi → adım etiketleri → "süre." (her stil kendi biçiminde çizer). */
+function labelStates(S) {
+  const out = [];
+  if (S.pill > 0.001) out.push({ kind: 'pill', a: S.pill, dy: -16 * (1 - S.pill) });
+  if (S.t >= 2.9 && S.done < 1) {
+    const aD = 1 - S.done;
+    if (S.step > 0 && S.stepK < 1) out.push({ kind: 'step', i: S.step - 1, a: (1 - S.stepK) * aD, dy: -16 * S.stepK });
+    const k = S.step === 0 ? S.labelIn : S.stepK;
+    out.push({ kind: 'step', i: S.step, a: k * aD, dy: 16 * (1 - k) });
+  }
+  if (S.done > 0.001) out.push({ kind: 'done', a: S.done, dy: 16 * (1 - S.done) });
+  return out;
+}
+
+let ctx;
+function F(size, weight, fam, style = 'normal', ls = 0) { ctx.font = `${style} ${weight} ${size}px ${fam}`; ctx.letterSpacing = ls + 'px'; }
+function rect(r, c) { ctx.fillStyle = c; ctx.fillRect(r[0], r[1], r[2], r[3]); }
+function txt(s, x, y, c, align = 'left') { ctx.fillStyle = c; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x, y); }
+function tw(s) { return ctx.measureText(s).width; }
+function wrap(text, maxW) {
+  const words = text.split(' '), lines = []; let line = '';
+  for (const w of words) { const t = line ? line + ' ' + w : w; if (line && tw(t) > maxW) { lines.push(line); line = w; } else line = t; }
+  if (line) lines.push(line); return lines;
+}
+/* Kelime asla bölünmez: sığmazsa punto küçülür. */
+function fit(text, maxW, maxLines, size, minSize, setF) {
+  for (let s = size; s >= minSize; s -= 2) { setF(s); const l = wrap(text, maxW); if (l.length <= maxLines && l.every(x => tw(x) <= maxW)) return { lines: l, size: s }; }
+  setF(minSize); return { lines: wrap(text, maxW), size: minSize };
+}
+function withAlpha(a, fn) { if (a <= 0.001) return; ctx.save(); ctx.globalAlpha *= a; fn(); ctx.restore(); }
+function clipRect(r, fn) { ctx.save(); ctx.beginPath(); ctx.rect(r[0], r[1], r[2], r[3]); ctx.clip(); fn(); ctx.restore(); }
+
+/* ---------- Logo: keskin konuşma balonu; işaretler oturumla canlanır (sitedeki Logo.tsx ile aynı durumlar) ---------- */
+const BUBBLE = [[0, 0], [92, 0], [92, 70], [40, 70], [14, 94], [14, 70], [0, 70]];
+function logo(x, base, size, o) {
+  const bh = size * 1.0, k = bh / 94, top = base - bh * 0.80;
+  const P = (pts, c) => { ctx.fillStyle = c; ctx.beginPath(); pts.forEach(([u, v], i) => i ? ctx.lineTo(x + u * k, top + v * k) : ctx.moveTo(x + u * k, top + v * k)); ctx.closePath(); ctx.fill(); };
+  P(BUBBLE, o.bubble);
+  const st = o.state || 'ready';
+  if (st === 'speech') {
+    [22, 46, 70].forEach((cx, i) => { const h = 40 * (o.level ? o.level[i] : 1); P([[cx - 6, 35 - h / 2], [cx + 6, 35 - h / 2], [cx + 6, 35 + h / 2], [cx - 6, 35 + h / 2]], i === 1 ? o.accent : o.mark); });
+  } else if (st === 'done') {
+    P([[14, 28], [78, 28], [78, 42], [14, 42]], o.mark);
+  } else {
+    [22, 46, 70].forEach((cx, i) => P([[cx, 25], [cx + 10, 35], [cx, 45], [cx - 10, 35]], i === 1 ? o.accent : o.mark));
+  }
+  if (o.word === false) return 92 * k;
+  const wx = x + 92 * k + size * 0.36;
+  F(size, o.wWeight || 600, o.wFam, 'normal', o.wLs || 0);
+  txt('irticalen', wx, base, o.word);
+  const ww = tw('irticalen');
+  txt('.', wx + ww, base, o.dot);
+  return wx + ww + tw('.') - x;
+}
+
+/* ---------- Yer tutucular ---------- */
+// Kamera: düz ton + siluet (gerçek fotoğraf yok). Kaynak 1920×1080, plakaya "cover" kırpılır.
+const camSrc = document.createElement('canvas'); camSrc.width = 1920; camSrc.height = 1080;
+(() => {
+  const c = camSrc.getContext('2d');
+  c.fillStyle = '#8c8279'; c.fillRect(0, 0, 1920, 1080);
+  c.fillStyle = '#978d83'; c.fillRect(0, 0, 1920, 520);
+  c.fillStyle = '#51483f';
+  c.beginPath(); c.ellipse(960, 1150, 560, 380, 0, 0, Math.PI * 2); c.fill();
+  c.fillRect(905, 560, 110, 200);
+  c.beginPath(); c.ellipse(960, 430, 148, 184, 0, 0, Math.PI * 2); c.fill();
+})();
+function cover(src, sw, sh, r, fx = 0.5, fy = 0.4) {
+  const s = Math.max(r[2] / sw, r[3] / sh), cw = r[2] / s, ch = r[3] / s;
+  ctx.drawImage(src, (sw - cw) * fx, (sh - ch) * fy, cw, ch, r[0], r[1], r[2], r[3]);
+}
+function drawCam(r) { cover(camSrc, 1920, 1080, r, 0.5, 0.32); }
+
+// Ekran: sitenin sayaç ekranı (kâğıt zemin, konu, dev rakamlar, cetvel, iskelet). Ekran kaydında görünen şey çoğunlukla bu.
+const siteSrc = document.createElement('canvas'); siteSrc.width = 1600; siteSrc.height = 900;
+function drawSite(S) {
+  const keep = ctx; ctx = siteSrc.getContext('2d');
+  rect([0, 0, 1600, 900], '#f3eee2');
+  logo(56, 92, 40, { bubble: '#1d1a16', mark: '#f3eee2', accent: '#b8281c', state: S.logo, level: S.level, word: false });
+  F(62, 700, "'Newsreader'", 'normal', -1.2);
+  txt(TOPIC, 56, 410, '#1d1a16'); txt('.', 56 + tw(TOPIC), 410, '#b8281c');
+  F(230, 500, "'Newsreader'", 'normal', -9);
+  txt(S.done > 0.5 ? '00:00' : fmt(S.remaining), 44, 640, '#1d1a16');
+  ruler(56, 1544, 690, S.p, { base: '#d6cfbf', tick: '#6f695c', bar: '#1d1a16', tickH: 16, barH: 7, baseH: 2 });
+  let x = 56; F(30, 400, "'Newsreader'", 'italic');
+  STEPS.forEach((s, i) => {
+    const hit = i <= S.step && S.t >= 0;
+    F(30, hit ? 600 : 400, "'Newsreader'", hit ? 'normal' : 'italic');
+    txt(s, x, 752, hit ? '#1d1a16' : '#6f695c');
+    if (hit) rect([x, 760, tw(s), 3], '#b8281c');
+    x += tw(s) + 34;
+  });
+  F(46, 500, "'Newsreader'", 'normal', -1);
+  txt(S.t >= T ? 'süre.' : 'konuş.', 56, 830, '#1d1a16');
+  ctx = keep;
+}
+const otherSrc = document.createElement('canvas'); otherSrc.width = 1600; otherSrc.height = 900;
+(() => {   // başka bir pencere (ör. not belgesi): gri satırlar, gerçek içerik yok
+  const c = otherSrc.getContext('2d'); c.fillStyle = '#fbfaf7'; c.fillRect(0, 0, 1600, 900);
+  c.fillStyle = '#e4e1da'; c.fillRect(0, 0, 1600, 56); c.fillStyle = '#c9c4ba'; [0, 1, 2].forEach(i => c.fillRect(24 + i * 30, 20, 16, 16));
+  c.fillStyle = '#3b3833'; c.fillRect(120, 130, 520, 34);
+  c.fillStyle = '#b9b4aa'; for (let i = 0; i < 14; i++) c.fillRect(120, 210 + i * 44, 900 + ((i * 137) % 300) - (i % 4 === 3 ? 500 : 0), 16);
+})();
+function drawScreen(S, r, fx = 0, fy = 0.72) {
+  if (S.foreign) { cover(otherSrc, 1600, 900, r, 0, 0); return; }
+  drawSite(S);
+  // Dikeyde ekran, sayaç bloğuna yakınlaştırılır (kurgudaki Short'larda olduğu gibi). Gerçek kayıtta: Region Capture ile sayaç öğesine kırpma.
+  if (S.orient === 'v') { const sw = 1000, sh = sw * r[3] / r[2]; ctx.drawImage(siteSrc, 20, 870 - sh, sw, sh, r[0], r[1], r[2], r[3]); return; }
+  cover(siteSrc, 1600, 900, r, fx, fy);
+}
+
+/* Mürekkep cetveli: taban çizgisi + 12 eşit çentik + soldan dolan çubuk (sitedeki .timer-ring). */
+function ruler(x0, x1, yb, p, o) {
+  rect([x0, yb - o.baseH, x1 - x0, o.baseH], o.base);
+  for (let i = 0; i <= 12; i++) { const x = x0 + (x1 - x0) * i / 12 - (i === 12 ? 2 : 0); rect([x, yb - o.tickH, 2, o.tickH], o.tick); }
+  rect([x0, yb - o.barH, (x1 - x0) * p, o.barH], o.bar);
+}
+
+/* Platform arayüzü (yaklaşık): Shorts/Reels üst ikonlar, sağ düğmeler, alt yazılar + uzun ekranda yan kırpma. */
+function shortsUI() {
+  ctx.save();
+  ctx.fillStyle = 'rgba(20,20,20,0.18)'; ctx.fillRect(0, 0, 100, 1920); ctx.fillRect(980, 0, 100, 1920);
+  ctx.fillStyle = 'rgba(20,20,20,0.55)';
+  [[40, 60], [870, 60], [960, 60]].forEach(([x, y]) => ctx.fillRect(x, y, 52, 52));
+  for (let i = 0; i < 5; i++) ctx.fillRect(968, 1080 + i * 128, 72, 72);
+  ctx.fillRect(40, 1690, 64, 64); ctx.fillRect(124, 1706, 300, 30);
+  ctx.fillRect(40, 1782, 720, 30); ctx.fillRect(40, 1830, 560, 30);
+  ctx.strokeStyle = 'rgba(31,61,148,0.9)'; ctx.lineWidth = 4; ctx.setLineDash([18, 12]);
+  ctx.strokeRect(120, 120, 840, 1540);
+  ctx.restore();
+}
+
+/* =========================================================================================
+   STİLLER
+   ========================================================================================= */
+const STYLES = {};
+
+/* ---------------------------------------------------------------- kâğıt (sitenin kendi dili) */
+STYLES.kagit = (() => {
+  const C = { paper: '#f3eee2', ink: '#1d1a16', pencil: '#6f695c', rule: '#d6cfbf', red: '#b8281c' };
+  const SER = "'Newsreader', Georgia, serif";
+  function L(S) {
+    if (S.orient === 'h') {
+      const o = { logo: [64, 90], label: [1856, 90], ruler: [64, 1856, 128] };
+      if (S.mode === 'both') Object.assign(o, { scr: [64, 164, 1100, S.foreign ? 812 : 852], cam: [1196, 164, 660, 852] });
+      if (S.mode === 'cam') Object.assign(o, { col: [64, 164, 640, 852], cam: [736, 164, 1120, 852] });
+      if (S.mode === 'screen') Object.assign(o, { scr: [64, 164, 1792, S.foreign ? 812 : 852] });
+      return o;
+    }
+    const o = { logo: [120, 196], label: [960, 196], ruler: [120, 960, 236] };
+    if (S.mode === 'both') Object.assign(o, S.foreign ? { scr: [120, 272, 840, 472], cam: [120, 812, 840, 836] } : { scr: [120, 272, 840, 472], cam: [120, 776, 840, 872] });
+    if (S.mode === 'cam') Object.assign(o, { col: [120, 272, 840, 452], cam: [120, 756, 840, 892] });
+    return o;
+  }
+  function label(S, o, h) {
+    const [x, y] = o.label, big = h ? 36 : 40;
+    for (const l of labelStates(S)) withAlpha(l.a, () => {
+      const yy = y + l.dy;
+      if (l.kind === 'pill') { F(big, 400, SER, 'italic'); txt(MODE_LINE.join(' · '), x, yy, C.pencil, 'right'); }
+      if (l.kind === 'step') {
+        F(big, 600, SER); const n = STEPS[l.i], w = tw(n);
+        txt(n, x, yy, C.ink, 'right'); rect([x - w, yy + 8, w, 3], C.red);
+        F(big * 0.8, 500, SER, 'normal'); ctx.fontVariantNumeric = 'tabular-nums';
+        txt('0' + (l.i + 1), x - w - 16, yy, C.pencil, 'right');
+      }
+      if (l.kind === 'done') { F(big + 4, 600, SER); const w = tw('süre'); txt('süre', x - tw('.'), yy, C.ink, 'right'); txt('.', x, yy, C.red, 'right'); }
+    });
+  }
+  function column(S, r, h) {   // yalnız kamera: sayaç, sitenin sayaç ekranı gibi kâğıda yazılır
+    const [x, y, w, hh] = r;
+    F(h ? 30 : 30, 400, SER, 'italic'); txt('konu', x, y + (h ? 34 : 32), C.pencil);
+    const f = fit(TOPIC, w - 20, 3, h ? 88 : 76, 44, s => F(s, 700, SER, 'normal', -s * 0.02));
+    let yy = y + (h ? 34 : 32) + f.size * 1.05;
+    f.lines.forEach((ln, i) => { txt(ln, x, yy, C.ink); if (i === f.lines.length - 1) txt('.', x + tw(ln), yy, C.red); yy += f.size * 0.98; });
+    const ds = h ? 220 : 230, base = y + hh - (h ? 12 : 6);
+    F(ds, 500, SER, 'normal', -ds * 0.04); txt(S.done > 0.5 ? '00:00' : fmt(S.remaining), x - ds * 0.03, base, C.ink);
+  }
+  function endCard(S, r, h) {
+    const [x0, y, w0, hh] = r;
+    // kâğıt aşağıdan yükselir, sonra yazı belirir
+    rect([x0 - 2, y - 2 + (hh + 4) * (1 - S.end), w0 + 4, (hh + 4) * S.end], C.paper);
+    const x = x0 + (h ? 8 : 0), w = w0 - (h ? 16 : 0);
+    const a = eOut((S.end - 0.62) / 0.38), dy = 18 * (1 - a);   // yazı, kâğıt üstüne tamamen çıkınca belirir
+    withAlpha(a, () => {
+      const big = Math.min(h ? 128 : 96, w / 6.6);
+      const cy = y + hh / 2;
+      logo(x, cy - big * 0.35 + dy, big, { bubble: C.ink, mark: C.paper, accent: C.red, state: 'ready', word: C.ink, dot: C.red, wFam: SER });
+      F(big * 0.46, 600, SER); txt(TAG, x, cy + big * 0.55 + dy, C.ink); txt('.', x + tw(TAG), cy + big * 0.55 + dy, C.red);
+      F(big * 0.32, 400, SER); const aw = tw(ADDR);
+      txt(ADDR, x, cy + big * 1.12 + dy, C.pencil); rect([x, cy + big * 1.12 + 8 + dy, aw, 2], C.rule);
+    });
+  }
+  function draw(S) {
+    const h = S.orient === 'h', o = L(S);
+    rect([0, 0, S.W, S.H], C.paper);
+    if (o.scr) {
+      drawScreen(S, o.scr); ctx.strokeStyle = C.rule; ctx.lineWidth = 2; ctx.strokeRect(o.scr[0] - 1, o.scr[1] - 1, o.scr[2] + 2, o.scr[3] + 2);
+      // ekran irticalen sekmesi değilse konu, kitaptaki şekil altyazısı gibi plakanın altına yazılır
+      if (S.foreign) { const cs = 32; F(cs, 400, SER, 'italic'); const cy = o.scr[1] + o.scr[3] + (h ? 42 : 42);
+      txt('konu: ', o.scr[0], cy, C.pencil); const kx = o.scr[0] + tw('konu: ');
+      F(cs, 600, SER); txt(TOPIC, kx, cy, C.ink); txt('.', kx + tw(TOPIC), cy, C.red); }
+    }
+    if (o.cam) drawCam(o.cam);
+    if (o.col) column(S, o.col, h);
+    logo(o.logo[0], o.logo[1], h ? 40 : 40, { bubble: C.ink, mark: C.paper, accent: C.red, state: S.logo, level: S.level, word: C.ink, dot: C.red, wFam: SER });
+    label(S, o, h);
+    const [a, b, yb] = o.ruler;
+    ruler(a, b, yb, S.p, { base: C.rule, tick: C.pencil, bar: C.ink, tickH: 14, barH: 6, baseH: 2 });
+    if (S.end > 0) { const r = o.scr || o.col; if (S.mode === 'screen') endCard(S, [r[0], r[1], r[2], r[3]], h); else endCard(S, r, h); }
+  }
+  return {
+    id: 'kagit', name: 'kâğıt', his: 'sakin, kitap sayfası gibi; sitenin kendisi.',
+    why: 'Zorunlu ve varsayılan stil: site nasıl görünüyorsa video da öyle görünür (F — Kâğıt). Video kurgudaki <i>krem</i>in gerçek zamanlı hâli ama sitenin kurallarıyla: yuvarlak köşe ve gölge yok, tek vurgu kırmızı. Başlık çizgisi aynı zamanda sayaç cetvelidir; konuşma ilerledikçe mürekkep dolar.',
+    meta: 'renkler: kâğıt #f3eee2 · mürekkep #1d1a16 · kurşun kalem #6f695c · çizgi #d6cfbf · kırmızı #b8281c — yazı: Newsreader',
+    draw,
+    his7: { acilis: 'sayfa açılır, sessiz', basla: 'yumuşak, not düşer gibi', adim: 'sayfa numarası değişir gibi', sure: 'noktayı koymak', sonra: 'nefes; hiçbir şey kıpırdamaz', kapanis: 'sayfa aşağıdan yükselir', son: 'kitabın künyesi' }
+  };
+})();
+
+/* ---------------------------------------------------------------- balon (marka dünyası, kobalt) */
+STYLES.balon = (() => {
+  const C = { cob: '#173f8a', deep: '#0d285c', sh: '#071736', glaze: '#f3f7fb', coral: '#d8402f', ga: a => `rgba(243,247,251,${a})` };
+  const SANS = "'Figtree', sans-serif", SER = "'Newsreader', Georgia, serif";
+  const lattice = {};
+  function ground(W, H) {
+    const key = W + 'x' + H;
+    if (!lattice[key]) {
+      const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+      g.fillStyle = C.cob; g.fillRect(0, 0, W, H);
+      g.fillStyle = 'rgba(243,247,251,0.05)';
+      for (let y = 0; y <= H + 64; y += 64) for (let x = 0; x <= W + 64; x += 64) {
+        const cx = x + ((y / 64) % 2) * 32; g.beginPath(); g.moveTo(cx, y - 6); g.lineTo(cx + 6, y); g.lineTo(cx, y + 6); g.lineTo(cx - 6, y); g.closePath(); g.fill();
+      }
+      lattice[key] = c;
+    }
+    ctx.drawImage(lattice[key], 0, 0);
+  }
+  function tail(r) { const t = Math.round(clamp(r[3] * 0.12, 40, 90)); return { t, tw: Math.round(t * 1.1), tx: Math.round(Math.min(r[2] * 0.15, 180)) }; }
+  function shape(r, role, dir = 'bl') {
+    const [x, y, w, h] = r; ctx.beginPath();
+    if (role !== 'bubble') { ctx.rect(x, y, w, h); return; }
+    const { t, tw: tw_, tx } = tail(r);
+    ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + h - t);
+    if (dir === 'br') { ctx.lineTo(x + w - tx, y + h - t); ctx.lineTo(x + w - tx, y + h); ctx.lineTo(x + w - tx - tw_, y + h - t); }
+    else { ctx.lineTo(x + tx + tw_, y + h - t); ctx.lineTo(x + tx, y + h); ctx.lineTo(x + tx, y + h - t); }
+    ctx.lineTo(x, y + h - t); ctx.closePath();
+  }
+  function frame(r, role, dir) {   // sır kenarı + sert, bulanıksız kobalt-siyah gölge (karo hissi)
+    const B = r[2] < 600 ? 7 : 9, Sh = r[2] < 600 ? 10 : 14;
+    ctx.save(); ctx.lineJoin = 'miter';
+    shape([r[0] + Sh, r[1] + Sh, r[2], r[3]], role, dir); ctx.fillStyle = C.sh; ctx.strokeStyle = C.sh; ctx.lineWidth = 2 * B; ctx.fill(); ctx.stroke();
+    shape(r, role, dir); ctx.fillStyle = C.glaze; ctx.strokeStyle = C.glaze; ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  function diamond(cx, cy, r, c) { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy); ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r, cy); ctx.closePath(); ctx.fill(); }
+  function beads(x, y, pitch, r, p, done) {   // 12 elmaslık sayaç: logodaki çini elmasları dolar
+    for (let i = 0; i < 12; i++) {
+      const f = clamp(p * 12 - i);
+      diamond(x + i * pitch + r, y, r, C.ga(0.22));
+      if (f > 0) withAlpha(f, () => diamond(x + i * pitch + r, y, r, done > 0.5 ? C.coral : C.glaze));
+    }
+  }
+  function L(S) {
+    if (S.orient === 'h') {
+      const o = { logo: [72, 90], label: [1848, 88], topic: [72, 1000, 1300], beads: (S.mode === 'cam' || S.foreign) ? [1480, 986, 32, 10] : [72, 1006, 32, 10] };
+      if (S.mode === 'both') Object.assign(o, { scr: [72, 132, 1080, S.foreign ? 748 : 800], cam: [1204, 132, 644, S.foreign ? 748 : 800] });
+      if (S.mode === 'cam') Object.assign(o, { cam: [72, 132, 1180, 748], tile: [1292, 292, 556, 400] });
+      if (S.mode === 'screen') Object.assign(o, { scr: [72, 132, 1776, S.foreign ? 748 : 800] });
+      return o;
+    }
+    const o = { logo: [120, 196], label: [960, 194], topic: [120, 300, 840], beads: (S.mode === 'cam' || S.foreign) ? [120, 350, 30, 9] : [120, 252, 30, 9] };
+    if (S.mode === 'both') Object.assign(o, S.foreign ? { scr: [120, 392, 840, 472], cam: [120, 902, 840, 746] } : { scr: [120, 300, 840, 472], cam: [120, 814, 840, 834] });
+    if (S.mode === 'cam') Object.assign(o, { cam: [120, 392, 840, 880], tile: [120, 1300, 840, 348] });
+    return o;
+  }
+  function label(S, o, h) {
+    const [x, y] = o.label;
+    for (const l of labelStates(S)) withAlpha(l.a, () => {
+      const yy = y + l.dy;
+      if (l.kind === 'pill') {
+        F(h ? 32 : 38, 700, SANS); const a = MODE_LINE[1], b = MODE_LINE[0];
+        txt(a, x, yy, C.glaze, 'right'); const wa = tw(a); diamond(x - wa - 20, yy - 10, 7, C.coral); txt(b, x - wa - 40, yy, C.glaze, 'right');
+      }
+      if (l.kind === 'step') {
+        F(h ? 36 : 42, 700, SANS); const n = STEPS[l.i], w = tw(n); txt(n, x, yy, C.glaze, 'right');
+        F(h ? 22 : 26, 700, SANS, 'normal', 2.5); const nn = '0' + (l.i + 1), nw = tw(nn); txt(nn, x - w - 16, yy - 2, C.ga(0.6), 'right');
+        diamond(x - w - 16 - nw - 18, yy - 11, 8, C.coral);
+      }
+      if (l.kind === 'done') { F(h ? 40 : 46, 800, SANS); txt('.', x, yy, C.coral, 'right'); txt('süre', x - tw('.'), yy, C.glaze, 'right'); }
+    });
+  }
+  function topicLine(S, o, h) {
+    const [x, y, w] = o.topic;
+    const f = fit(TOPIC, w, 1, h ? 54 : 50, 34, s => F(s, 700, SANS, 'normal', -0.5));
+    txt(f.lines[0], x, y, C.glaze); txt('.', x + tw(f.lines[0]), y, C.coral);
+  }
+  function tile(S, r, h) {   // sayaç kartı: sitenin sayaç ekranından kesilmiş karo
+    frame(r, 'tile');
+    const [x, y, w, hh] = r, pad = Math.round(w * 0.07);
+    if (h) {
+      const ds = 150;
+      F(ds, 500, SER, 'normal', -6); txt(S.done > 0.5 ? '00:00' : fmt(S.remaining), x + pad - 6, y + pad + ds * 0.78, S.done > 0.5 ? C.coral : C.deep);
+      ruler(x + pad, x + w - pad, y + pad + ds * 0.78 + 40, S.p, { base: 'rgba(13,40,92,.25)', tick: 'rgba(13,40,92,.5)', bar: C.deep, tickH: 12, barH: 6, baseH: 2 });
+      let xx = x + pad; STEPS.forEach((s, i) => { const hit = i <= S.step; F(24, hit ? 700 : 500, SANS); txt(s, xx, y + hh - pad, hit ? C.deep : 'rgba(13,40,92,.45)'); if (i === S.step && S.t < T) rect([xx, y + hh - pad + 8, tw(s), 3], C.coral); xx += tw(s) + 22; });
+    } else {
+      const ds = 150;
+      F(ds, 500, SER, 'normal', -6); txt(S.done > 0.5 ? '00:00' : fmt(S.remaining), x + pad - 6, y + hh / 2 + ds * 0.36, S.done > 0.5 ? C.coral : C.deep);
+      let yy = y + pad + 30; STEPS.forEach((s, i) => { const hit = i <= S.step; F(30, hit ? 700 : 500, SANS); txt(s, x + w - pad, yy, hit ? C.deep : 'rgba(13,40,92,.45)', 'right'); if (i === S.step && S.t < T) rect([x + w - pad - tw(s), yy + 8, tw(s), 3], C.coral); yy += 52; });
+      ruler(x + pad, x + w - pad, y + hh - pad + 6, S.p, { base: 'rgba(13,40,92,.25)', tick: 'rgba(13,40,92,.5)', bar: C.deep, tickH: 12, barH: 6, baseH: 2 });
+    }
+  }
+  function endCard(S, r, h, dir) {   // son kart: kameraya "cevap veren" ikinci balon
+    const a = eOut((S.end - 0.3) / 0.7), up = (1 - eOut(S.end)) * 40;
+    withAlpha(eOut(S.end / 0.5), () => {
+      const rr = [r[0], r[1] + up, r[2], r[3]];
+      frame(rr, 'bubble', dir);
+      const [x, y, w, hh] = rr, pad = w * 0.08, t = tail(rr).t;
+      withAlpha(a, () => {
+        const big = Math.min(h ? 150 : 120, w / 6.2);
+        const cy = y + (hh - t) / 2;
+        logo(x + pad, cy - big * 0.3, big, { bubble: C.cob, mark: C.glaze, accent: C.coral, state: 'ready', word: C.deep, dot: C.coral, wFam: SER });
+        F(big * 0.44, 800, SANS); txt(TAG, x + pad, cy + big * 0.58, C.deep); txt('.', x + pad + tw(TAG), cy + big * 0.58, C.coral);
+        F(big * 0.3, 600, SANS); txt(ADDR, x + pad, cy + big * 1.1, C.cob); rect([x + pad, cy + big * 1.1 + 8, tw(ADDR), 3], C.coral);
+      });
+    });
+  }
+  function draw(S) {
+    const h = S.orient === 'h', o = L(S);
+    ground(S.W, S.H);
+    const endR = o.scr || o.tile;
+    if (o.scr) { withAlpha(1 - eOut(S.end / 0.5), () => { frame(o.scr, 'tile'); drawScreen(S, o.scr); }); }
+    if (o.cam) { frame(o.cam, 'bubble'); ctx.save(); shape(o.cam, 'bubble'); ctx.clip(); drawCam(o.cam); ctx.restore(); }
+    if (o.tile) withAlpha(1 - eOut(S.end / 0.5), () => tile(S, o.tile, h));
+    logo(o.logo[0], o.logo[1], h ? 36 : 38, { bubble: C.glaze, mark: C.cob, accent: C.coral, state: S.logo, level: S.level, word: C.glaze, dot: C.coral, wFam: SER });
+    label(S, o, h);
+    if (S.mode === 'cam' || S.foreign) topicLine(S, o, h);
+    const [bx, by, bp, br] = o.beads; beads(bx, by, bp, br, S.p, S.done);
+    if (S.end > 0) endCard(S, endR, h, h ? 'br' : 'bl');
+  }
+  return {
+    id: 'balon', name: 'balon', his: 'enerjik, markanın kendi dünyası; kamera logodaki balonun içinde konuşur.',
+    why: 'Paylaşımda en tanınır stil: kobalt zemin, logodaki keskin konuşma balonu ve çini elmasları. Kurgudaki <i>balon</i>dan alındı; gerçek zamanlıda altyazının yerini konu satırı ve 12 elmaslık sayaç aldı (elmaslar tek tek dolar). Hafif çini deseni bir kez çizilip her karede kopyalanır.',
+    meta: 'renkler: kobalt #173f8a · derin #0d285c · sır #f3f7fb · mercan #d8402f — yazı: Figtree + Newsreader (logo, rakam)',
+    draw,
+    his7: { acilis: 'parlak, "hadi" dedirten', basla: 'elmas atlar gibi canlı', adim: 'tık diye yerine oturur', sure: 'elmaslar mercana döner: oldu!', sonra: 'rahat, gülümseyen', kapanis: 'ikinci balon cevap verir', son: 'davet: sıra sende' }
+  };
+})();
+
+/* ---------------------------------------------------------------- gece (karanlık stüdyo, kehribar) */
+STYLES.gece = (() => {
+  const C = { bg: '#141210', card: '#1c1814', edge: 'rgba(242,236,225,0.14)', text: '#f2ece1', dim: 'rgba(242,236,225,0.5)', faint: 'rgba(242,236,225,0.16)', amber: '#e7a33e' };
+  const GRO = "'Space Grotesk', sans-serif", MONO = "'IBM Plex Mono', monospace";
+  function L(S) {
+    if (S.orient === 'h') {
+      const o = { logo: [64, 76], label: [64, 118], code: [1856, 76], line: (S.mode === 'cam' || S.foreign) ? [64, 1856, 972] : [64, 1856, 1030], topic: [64, 1036, 1500] };
+      if (S.mode === 'both') Object.assign(o, { scr: [64, 146, 1096, S.foreign ? 796 : 850], cam: [1188, 146, 668, S.foreign ? 796 : 850] });
+      if (S.mode === 'cam') Object.assign(o, { cam: [64, 146, 1180, 796], card: [1272, 146, 584, 796] });
+      if (S.mode === 'screen') Object.assign(o, { scr: [64, 146, 1792, S.foreign ? 796 : 850] });
+      return o;
+    }
+    const o = { logo: [120, 178], label: [120, 222], code: [960, 178], line: [120, 960, 256], topic: [120, 322, 840] };
+    if (S.mode === 'both') Object.assign(o, S.foreign ? { scr: [120, 360, 840, 472], cam: [120, 860, 840, 788] } : { scr: [120, 292, 840, 472], cam: [120, 796, 840, 852] });
+    if (S.mode === 'cam') Object.assign(o, { card: [120, 360, 840, 420], cam: [120, 808, 840, 840] });
+    return o;
+  }
+  function plate(r) { rect([r[0] - 2, r[1] - 2, r[2] + 4, r[3] + 4], C.edge); rect(r, C.card); }
+  function label(S, o, h) {
+    const [x, y] = o.label;
+    for (const l of labelStates(S)) withAlpha(l.a, () => {
+      const yy = y + l.dy;
+      if (l.kind === 'pill') { F(h ? 26 : 30, 500, MONO, 'normal', 1); txt(MODE_LINE.join('  /  '), x, yy, C.amber); }
+      if (l.kind === 'step') { F(h ? 26 : 30, 600, MONO); const nn = '0' + (l.i + 1); txt(nn, x, yy, C.amber); const nw = tw(nn); F(h ? 30 : 36, 600, GRO); txt(STEPS[l.i], x + nw + 14, yy, C.text); }
+      if (l.kind === 'done') { F(h ? 32 : 38, 700, GRO); txt('süre', x, yy, C.amber); txt('.', x + tw('süre'), yy, C.text); }
+    });
+  }
+  function timecode(S, o, h) {
+    const [x, y] = o.code;
+    F(h ? 30 : 38, 500, MONO, 'normal', 0);
+    const main = S.done > 0.5 ? '00:00' : fmt(S.remaining), tot = ' / ' + fmt(T);
+    txt(tot, x, y, C.dim, 'right'); txt(main, x - tw(tot), y, S.done > 0.5 ? C.amber : C.text, 'right');
+  }
+  function card(S, r, h) {   // yalnız kamera: stüdyo monitörü gibi sayaç kartı (konu alttaki satırda)
+    plate(r);
+    const [x, y, w, hh] = r, pad = h ? 44 : 40;
+    F(h ? 24 : 28, 500, MONO, 'normal', 1); txt('kalan', x + pad, y + pad + 20, C.amber);
+    const ds = h ? 210 : 250, base = h ? y + pad + 20 + ds * 0.86 : y + hh - pad - 10;
+    F(ds, 500, GRO, 'normal', -ds * 0.03); txt(S.done > 0.5 ? '00:00' : fmt(S.remaining), x + pad - 8, base, S.done > 0.5 ? C.amber : C.text);
+    const list = (x0, y0, gap) => STEPS.forEach((s, i) => { const cur = i === S.step && S.t < T, hit = i <= S.step; F(h ? 26 : 30, 500, MONO); txt('0' + (i + 1), x0, y0 + i * gap, cur ? C.amber : C.dim); F(h ? 32 : 36, 600, GRO); txt(s, x0 + (h ? 52 : 58), y0 + i * gap, hit ? C.text : C.dim); });
+    if (h) list(x + pad, y + hh - pad - 2 * 58, 58);   // dikeyde adım zaten üstteki etikette; kart yalnız süreyi taşır
+  }
+  function endCard(S, r, h) {
+    const a = eOut((S.end - 0.35) / 0.65);
+    withAlpha(eOut(S.end / 0.45), () => {
+      const up = (1 - eOut(S.end)) * 30, rr = [r[0], r[1] + up, r[2], r[3]];
+      plate(rr); rect([rr[0], rr[1], rr[2] * eOut(S.end), 5], C.amber);
+      const [x, y, w, hh] = rr, pad = w * 0.08, big = Math.min(h ? 96 : 80, w / 7.4), cy = y + hh / 2;
+      withAlpha(a, () => {
+        logo(x + pad, cy - big * 0.3, big, { bubble: C.text, mark: C.bg, accent: C.amber, state: 'ready', word: C.text, dot: C.amber, wFam: GRO, wWeight: 700, wLs: -2 });
+        F(big * 0.42, 600, GRO); txt(TAG, x + pad, cy + big * 0.56, C.text); txt('.', x + pad + tw(TAG), cy + big * 0.56, C.amber);
+        F(big * 0.28, 500, MONO); txt(ADDR, x + pad, cy + big * 1.06, C.amber);
+      });
+    });
+  }
+  function draw(S) {
+    const h = S.orient === 'h', o = L(S);
+    rect([0, 0, S.W, S.H], C.bg);
+    if (o.scr) withAlpha(1 - eOut(S.end / 0.45), () => { plate(o.scr); drawScreen(S, o.scr); });
+    if (o.cam) { plate(o.cam); drawCam(o.cam); }
+    if (o.card) withAlpha(1 - eOut(S.end / 0.45), () => card(S, o.card, h));
+    logo(o.logo[0], o.logo[1], h ? 32 : 36, { bubble: C.text, mark: C.bg, accent: C.amber, state: S.logo, level: S.level, word: C.text, dot: C.amber, wFam: GRO, wWeight: 700, wLs: -1 });
+    label(S, o, h); timecode(S, o, h);
+    const [a, b, yl] = o.line; rect([a, yl - 1, b - a, 2], C.faint); rect([a, yl - 2, (b - a) * S.p, 4], C.amber);
+    if (S.mode === 'cam' || S.foreign) { if (h) { F(48, 600, GRO, 'normal', -0.5); txt(TOPIC, o.topic[0], o.topic[1], C.text); }
+    else { const f = fit(TOPIC, o.topic[2], 1, 52, 36, s => F(s, 600, GRO, 'normal', -0.5)); txt(f.lines[0], o.topic[0], o.topic[1], C.text); } }
+    if (S.end > 0) endCard(S, o.scr || o.card, h);
+  }
+  return {
+    id: 'gece', name: 'gece', his: 'karanlık yayın stüdyosu; ciddi, odaklı, akşam kaydı hissi.',
+    why: 'Açık stillere karşı tek koyu seçenek: neredeyse siyah sıcak zemin, ince kenarlı koyu kartlar, tek kehribar vurgu. Kurgudaki <i>gece</i>den alındı; kehribar karaoke altyazısı gerçek zamanlıda olamayacağı için vurgu sağ üstteki zaman koduna ve alt çizgiye taşındı. Kurgudaki "yüz düzeninde iki yanda boş siyah" kusuru burada yok: kamera sola yaslanır, sağda sayaç kartı durur.',
+    meta: 'renkler: zemin #141210 · kart #1c1814 · krem #f2ece1 · kehribar #e7a33e — yazı: Space Grotesk + IBM Plex Mono',
+    draw,
+    his7: { acilis: 'ışıklar yandı, kayıt başladı', basla: 'teknik, net bir tık', adim: 'monitörde bölüm değişti', sure: 'kehribar sinyal: süre', sonra: 'stüdyo sessizleşir', kapanis: 'kart yavaşça aydınlanır', son: 'yayın kapanışı' }
+  };
+})();
+
+/* ---------------------------------------------------------------- ızgara (Mondrian hücreleri) */
+STYLES.izgara = (() => {
+  const C = { line: '#111111', cell: '#f5f3ee', red: '#d93a26', blue: '#1f3d94', yel: '#f1c21b', ink: '#111111', glaze: '#f5f3ee' };
+  const BIG = "'Big Shoulders Display', sans-serif", SANS = "'Instrument Sans', sans-serif";
+  const ROT = [[C.red, C.blue], [C.blue, C.yel], [C.yel, C.red]];   // adım başına blok renkleri: ızgara yeniden kurulur
+  const SPLIT_H = [520, 380, 600], SPLIT_V = [540, 400, 620];
+  function mixC(a, b, k) { const pa = a.match(/\w\w/g).map(v => parseInt(v, 16)), pb = b.match(/\w\w/g).map(v => parseInt(v, 16)); return 'rgb(' + pa.map((v, i) => Math.round(lerp(v, pb[i], k))).join(',') + ')'; }
+  function stepVals(S, arr) { const cur = S.step, prev = Math.max(0, cur - 1), k = cur === 0 ? 1 : S.stepK; return { split: lerp(arr[prev], arr[cur], k), cA: [ROT[prev][0], ROT[cur][0], k], cB: [ROT[prev][1], ROT[cur][1], k] }; }
+  function block(r, c, vertical) { if (!r) return; rect(r, c[0]); if (c[2] > 0) rect(vertical ? [r[0], r[1] + r[3] * (1 - c[2]), r[2], r[3] * c[2]] : [r[0], r[1], r[2] * c[2], r[3]], c[1]); }   // yeni renk bloğu silerek gelir, karışmaz
+  function L(S) {
+    const G = 12;
+    if (S.orient === 'h') {
+      const v = stepVals(S, SPLIT_H), X = 1112, RW = 808;
+      const o = { brandCell: [X, 960, 420, 120] };
+      if (S.mode === 'both') Object.assign(o, { cam: [0, 0, 1100, 1080], scr: [X, 0, RW, 454] }, S.foreign ? { topic: [X, 466, RW, 190] } : {});
+      if (S.mode === 'cam') Object.assign(o, { cam: [0, 0, 1100, 1080], timer: [X, 0, RW, 656] });
+      if (S.mode === 'screen') Object.assign(o, { scr: [0, 0, 1100, 1080] }, S.foreign ? { bigTopic: [X, 0, RW, 656] } : { blockC: [X, 0, RW, 454] });
+      const sy = (S.mode !== 'cam' && !S.foreign) ? 466 : 668, sh = 948 - sy; o.step = [X, sy, v.split, sh]; o.blockA = [X + v.split + G, sy, RW - v.split - G, sh];
+      o.blockB = [X + 420 + G, 960, RW - 420 - G, 120]; o.cA = v.cA; o.cB = v.cB;
+      o.end = S.mode === 'cam' ? o.timer : [X, 0, RW, 454];
+      return o;
+    }
+    const v = stepVals(S, SPLIT_V);
+    const o = { brandCell: [0, 0, v.split, 250], step: [v.split + G, 0, 1080 - v.split - G, 250], cA: v.cA, cB: v.cB, blockA: [0, 262, 108, 540] };
+    if (S.mode === 'both') Object.assign(o, { scr: [120, 262, 960, 540], cam: [0, 814, 1080, 1106], blockB: null }, S.foreign ? { topic: [0, 814, 1080, 150], cam: [0, 976, 1080, 944] } : {});
+    if (S.mode === 'cam') Object.assign(o, { timer: [120, 262, 960, 540], cam: [0, 814, 1080, 1106] });
+    o.end = o.scr || o.timer;
+    return o;
+  }
+  function stepCell(S, r, h) {   // hücre sarıyla dolar = sayaç; içinde dev adım numarası
+    const [x, y, w, hh] = r;
+    rect(r, C.cell); rect([x, y, w * S.p, hh], C.yel);
+    clipRect(r, () => {
+      const nx = h ? x + 28 : Math.max(x + 26, 0);
+      for (const l of labelStates(S)) withAlpha((l.kind === 'pill' || (l.kind === 'step' && S.t < 3.4)) ? l.a : 1, () => {
+        // ızgarada adımlar ve "süre." hücre içinde tam boy kayar: eski yukarı çıkar, yeni aşağıdan gelir (karışma yok)
+        const yy = l.kind === 'done' ? hh * (1 - S.done) : (l.kind === 'step' && S.done > 0) ? -hh * S.done : (l.kind === 'step' && S.t > 10) ? (l.dy < 0 ? -hh * S.stepK : hh * (1 - S.stepK)) : l.dy * 2;
+        if (l.kind === 'pill') { F(h ? 44 : 40, 700, SANS); txt(MODE_LINE[0], nx, y + hh * 0.46 + yy, C.ink); F(h ? 44 : 40, 500, SANS); txt(MODE_LINE[1], nx, y + hh * 0.46 + (h ? 56 : 50) + yy, C.ink); }
+        if (l.kind === 'step') {
+          const ns = h ? 190 : 150; F(ns, 900, BIG, 'normal', -2); const nn = '0' + (l.i + 1);
+          txt(nn, nx, y + hh - (h ? 30 : 34) + yy, C.ink);
+          const nw = tw(nn); F(h ? 38 : 36, 700, SANS);
+          if (h) { wrap(STEPS[l.i], w - 56).forEach((ln, j) => txt(ln, nx, y + 62 + j * 44 + yy, C.ink)); }   // yatay: ad üstte, dev numara altta
+          else { const lines = wrap(STEPS[l.i], Math.min(960, x + w) - (nx + nw + 18) - 10); lines.forEach((ln, j) => txt(ln, nx + nw + 18, y + hh - 44 - (lines.length - 1 - j) * 40 + yy, C.ink)); }
+        }
+        if (l.kind === 'done') { F(h ? 150 : 130, 900, BIG); txt('süre', nx, y + hh - (h ? 40 : 40) + yy, C.ink); txt('.', nx + tw('süre'), y + hh - 40 + yy, C.red); }
+      });
+    });
+  }
+  function timerCell(S, r, h) {
+    const [x, y, w, hh] = r; rect(r, C.cell);
+    const pad = h ? 34 : 30;
+    const f = fit(TOPIC, w - pad * 2 - (h ? 0 : 40), 2, h ? 56 : 54, 34, s => F(s, 700, SANS, 'normal', -0.5));
+    let yy = y + pad + f.size; f.lines.forEach(ln => { txt(ln, x + pad, yy, C.ink); yy += f.size * 1.08; });
+    const ds = h ? 330 : 300;
+    F(ds, 900, BIG, 'normal', -4); txt(S.done > 0.5 ? '00:00' : fmt(S.remaining), x + pad - 8, y + hh - pad + 6, S.done > 0.5 ? C.red : C.ink);
+  }
+  function endCell(S, r, h) {
+    const [x, y, w, hh] = r;
+    const k = S.end, a = eOut((S.end - 0.35) / 0.65);
+    rect([x, y, w, hh * eOut(k)], C.blue);          // mavi hücre yukarıdan iner: ızgara son kez kurulur
+    withAlpha(a, () => clipRect(r, () => {
+      const pad = h ? 40 : 40, big = h ? 78 : 76;
+      logo(x + pad, y + hh * 0.42, big, { bubble: C.glaze, mark: C.blue, accent: C.yel, state: 'ready', word: C.glaze, dot: C.yel, wFam: SANS, wWeight: 700, wLs: -1 });
+      F(h ? 42 : 42, 700, SANS); const lines = wrap(TAG + '.', w - pad * 2); lines.forEach((ln, i) => txt(ln, x + pad, y + hh * 0.42 + 80 + i * 50, C.glaze));
+      F(h ? 28 : 30, 600, SANS); txt(ADDR, x + pad, y + hh - pad, C.yel);
+    }));
+  }
+  function draw(S) {
+    const h = S.orient === 'h', o = L(S);
+    rect([0, 0, S.W, S.H], C.line);
+    if (o.cam) drawCam(o.cam);
+    if (o.scr) { if (S.mode === 'screen') drawScreen(S, o.scr, 0, 0.72); else drawScreen(S, o.scr); }
+    if (o.timer) timerCell(S, o.timer, h);
+    if (o.blockC) rect(o.blockC, C.red);
+    if (o.bigTopic) { const [x, y, w, hh] = o.bigTopic; rect(o.bigTopic, C.cell); F(30, 600, SANS); txt('konu', x + 34, y + 66, C.ink); const f = fit(TOPIC, w - 68, 3, 96, 48, s => F(s, 700, SANS, 'normal', -1)); let yy = y + hh - 40 - (f.lines.length - 1) * f.size * 1.02; f.lines.forEach(ln => { txt(ln, x + 34, yy, C.ink); yy += f.size * 1.02; }); }
+    if (o.topic) { rect(o.topic, C.cell); const f = fit(TOPIC, (h ? o.topic[2] - 68 : 840), 2, h ? 50 : 52, 32, s => F(s, 700, SANS, 'normal', -0.5)); const tx = h ? o.topic[0] + 34 : 120; let yy = o.topic[1] + o.topic[3] / 2 + f.size * 0.35 - (f.lines.length - 1) * f.size * 0.54; f.lines.forEach(ln => { txt(ln, tx, yy, C.ink); yy += f.size * 1.08; }); }
+    stepCell(S, o.step, h);
+    block(o.blockA, o.cA, !h); if (o.blockB) block(o.blockB, o.cB, false);
+    // marka hücresi (mavi)
+    rect(o.brandCell, C.blue);
+    if (h) logo(o.brandCell[0] + 30, o.brandCell[1] + 76, 38, { bubble: C.glaze, mark: C.blue, accent: C.yel, state: S.logo, level: S.level, word: C.glaze, dot: C.yel, wFam: SANS, wWeight: 700 });
+    else logo(120, 196, 42, { bubble: C.glaze, mark: C.blue, accent: C.yel, state: S.logo, level: S.level, word: C.glaze, dot: C.yel, wFam: SANS, wWeight: 700 });
+    if (S.end > 0) endCell(S, o.end, h);
+  }
+  return {
+    id: 'izgara', name: 'ızgara', his: 'cesur, grafik, afiş gibi; her bölümde ızgara yeniden kurulur.',
+    why: 'En "tasarım" hissi veren stil: kalın siyah çizgilerle bölünmüş hücreler, kırmızı-mavi-sarı düz bloklar. Kurgudaki <i>ızgara</i>nın ana fikri gerçek zamanlıya çok uygun: iskelet adımı değişince renk blokları yer ve renk değiştirir, ama kamera ve ekran hücreleri hiç kıpırdamaz. Sayaç ayrı bir çubuk değil, adım hücresinin sarıyla dolmasıdır.',
+    meta: 'renkler: çizgi #111 · hücre #f5f3ee · kırmızı #d93a26 · mavi #1f3d94 · sarı #f1c21b — yazı: Big Shoulders Display + Instrument Sans',
+    draw,
+    his7: { acilis: 'afiş asıldı', basla: 'hücre dolmaya başlar', adim: 'ızgara yeniden kurulur', sure: 'dev "süre." damgası', sonra: 'bloklar durur', kapanis: 'mavi hücre iner', son: 'afişin künyesi' }
+  };
+})();
+
+/* =========================================================================================
+   PANO
+   ========================================================================================= */
+const ORDER = ['kagit', 'balon', 'gece', 'izgara'];
+const DIM = { h: [1920, 1080], v: [1080, 1920] };
+const BEATS = [
+  { id: 'acilis', title: 'açılış', range: '0:00', frames: [[0.2, 'kayıt başlar: logo, mod ve süre etiketi, konu; her şey ilk karede var']] },
+  { id: 'basla', title: 'açılış → konuşma', range: '0:02.7–0:03.4', frames: [[2.8, 'önce: etiket hâlâ "hazırlıksız · 3 dakika"'], [3.0, 'orta: etiket çekilir, ilk adım yükselir'], [3.5, 'son: "01 nedir?" yerinde; sayaç akıyor']] },
+  { id: 'adim', title: 'iskelet adımı 1 → 2', range: '1:00 (sürenin üçte biri)', frames: [[59.9, 'önce: ilk üçte birin sonu'], [60.1, 'orta: "nedir?" kalkarken "bir örnek" gelir'], [60.6, 'son: "02 bir örnek" yerinde']] },
+  { id: 'sure', title: 'süre.', range: '3:00', frames: [[179.8, 'önce: son saniye, sayaç dolmak üzere'], [180.1, 'orta: sayaç doldu, "süre." belirir'], [180.7, 'son: "süre." oturdu; kayıt sürüyor']] },
+  { id: 'sonra', title: 'süre sonrası', range: '3:00–3:03', frames: [[182, 'kişi konuşmayı bağlıyor; ek sayaç yok, hiçbir şey kıpırdamaz']] },
+  { id: 'kapanis', title: 'kapanışa geçiş', range: '3:03–3:04', frames: [[183.1, 'önce: süre + 3 sn, geçiş başlar'], [183.45, 'orta: ekranın yerine son kart gelir'], [183.9, 'son: son kart yerinde; kamera hiç kıpırdamadı']] },
+  { id: 'son', title: 'kapanış', range: 'kişi durdurana kadar', frames: [[196, 'kayıt ne zaman durdurulursa son kare adresi taşır']] },
+];
+const STRIPS = [
+  { mode: 'both', orient: 'h', title: 'kamera + ekran · yatay 16:9', note: 'YouTube uzun video, X' },
+  { mode: 'both', orient: 'v', title: 'kamera + ekran · dikey 9:16', note: 'Shorts, Reels, X' },
+  { mode: 'cam', orient: 'v', title: 'yalnız kamera · dikey 9:16', note: 'Shorts, Reels; sayaç kartı ekranın işini görür' },
+];
+const OVERVIEW = [
+  { mode: 'both', orient: 'h', w: 560, cap: 'kamera + ekran · yatay' },
+  { mode: 'both', orient: 'v', w: 220, cap: 'kamera + ekran · dikey' },
+  { mode: 'both', orient: 'v', w: 220, cap: 'aynısı, Shorts arayüzü ve güvenli alanla', ui: true },
+  { mode: 'cam', orient: 'h', w: 420, cap: 'yalnız kamera · yatay' },
+  { mode: 'cam', orient: 'v', w: 190, cap: 'yalnız kamera · dikey' },
+  { mode: 'screen', orient: 'h', w: 420, cap: 'yalnız ekran · yatay (dikeyi yok)' },
+  { mode: 'both', orient: 'h', w: 420, cap: 'paylaşılan ekran irticalen sekmesi değilse: konuyu stil kendisi yazar', foreign: true },
+];
+
+const work = document.createElement('canvas');
+function render(styleId, mode, orient, t, outW, opts = {}) {
+  const [W, H] = DIM[orient], scale = outW * 2 / W;
+  work.width = Math.round(W * scale); work.height = Math.round(H * scale);
+  ctx = work.getContext('2d'); ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  const S = Object.assign({ W, H, mode, orient, foreign: !!opts.foreign }, derive(t));
+  STYLES[styleId].draw(S);
+  if (opts.ui) shortsUI();
+  const img = new Image(); img.src = work.toDataURL('image/jpeg', 0.9);
+  img.width = outW; img.height = Math.round(outW * H / W); img.alt = '';
+  return img;
+}
+function fig(img, capHTML, w) { const f = document.createElement('figure'); f.style.width = w + 'px'; f.appendChild(img); const c = document.createElement('figcaption'); c.innerHTML = capHTML; f.appendChild(c); return f; }
+function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+
+function buildCommon() {
+  const s = el('section'); s.id = 'ortak';
+  s.appendChild(el('h2', null, 'her stilde aynı olanlar<span class="dot">.</span>'));
+  s.appendChild(el('p', 'why', 'Stiller görünüşte ayrışır; ne zaman ne göründüğü hepsinde aynıdır. Gerçek zamanlıda yalnız kaydın başında bilinen şeyler (konu, mod, süre) ve saatin kendisi kullanılır. Altyazı, sessizlik kesme ve hareketli grafik yok.'));
+  s.appendChild(el('div', null, `<table>
+    <tr><th>öğe</th><th>açılış (0–3 sn)</th><th>konuşma</th><th>süre.</th><th>süre sonrası</th><th>kapanış (süre + 3 sn → durdurana kadar)</th></tr>
+    <tr><td>logo</td><td>elmaslar yanık</td><td>elmaslar ses çubuğuna döner (mikrofon seviyesiyle oynar)</td><td>tek dolu çubuk</td><td>tek dolu çubuk</td><td>son kartta büyük</td></tr>
+    <tr><td>etiket yuvası</td><td>"hazırlıksız · 3 dakika"</td><td>iskelet adımı: 01 nedir? → 02 bir örnek → 03 ne düşünüyorum? (süre üçe bölünür)</td><td>"süre."</td><td>"süre."</td><td>"süre."</td></tr>
+    <tr><td>sayaç</td><td>dolu değil</td><td>stilin kendi çizgisi dolar (cetvel · elmaslar · kehribar çizgi · sarı hücre)</td><td>tam dolu</td><td>tam dolu; taşma sayacı yok</td><td>tam dolu</td></tr>
+    <tr><td>konu</td><td colspan="5">her karede okunur, ama bir kez: ekranlı düzenlerde ekranın kendisinde (sitenin sayaç ekranı), yalnız kamerada stilin sayaç kartında. Paylaşılan ekran irticalen sekmesi değilse stil konuyu kendisi yazar.</td></tr>
+    <tr><td>kamera / ekran</td><td colspan="4">yerleri kayıt boyunca sabit; hiçbir öğe yüzün ya da ekranın üstüne binmez</td><td>kamera yerinde kalır; ekranın (ya da sayaç kartının) yerine son kart yükselir: logo, "konu gelir, söz sende.", adres</td></tr>
+  </table>`));
+  s.appendChild(el('ul', 'rules', `
+    <li><b>Kapanış kartı süre dolunca gelir, durdurunca değil.</b> Kaydın sonuna saniye eklenemeyeceği için son kart "süre."den 3 sn sonra ekranın yerine yükselir ve kişi durdurana kadar kalır. Kişi süre bittikten sonra da konuşabilir; yüzü görünmeye devam eder. Kayıt ne zaman durdurulursa durdurulsun son kare adresi taşır.</li>
+    <li><b>Sayaç bir kez gösterilir.</b> Ekranlı düzenlerde dev rakamlar zaten ekranda (sitenin sayaç ekranı); stil yalnız ince ilerleyişi çizer. Yalnız kamera düzeninde ekran olmadığı için sayaç kartı stilin kendisi tarafından çizilir.</li>
+    <li><b>Dikeyde güvenli alan:</b> yazı, logo ve kartlar x 120–960, y 120–1660 içinde; alttaki 260 px boş (platform yazıları). Zemin kenara taşabilir.</li>
+    <li><b>Kişinin kendi ekranda gördüğü "kayıt" işareti ve ayna önizleme videoya girmez;</b> dosyada görüntü aynalanmaz.</li>`));
+  return s;
+}
+
+function buildStyle(id) {
+  const st = STYLES[id], s = el('section'); s.id = id;
+  s.appendChild(el('h2', null, st.name + '<span class="dot">.</span>'));
+  s.appendChild(el('p', 'why', `<b>His:</b> ${st.his} ${st.why}`));
+  s.appendChild(el('p', 'meta', st.meta));
+  s.appendChild(el('div', 'strip-title', `<h3>düzenler</h3><span>konuşma sürerken, 1:15 (ikinci adım). Kayıt modu düzeni seçer.</span>`));
+  const ov = el('div', 'overview');
+  OVERVIEW.forEach(v => ov.appendChild(fig(render(id, v.mode, v.orient, 75, v.w, { ui: v.ui, foreign: v.foreign }), v.cap + (v.ui ? ' <i>(gri: platform arayüzü, kesikli: güvenli alan)</i>' : ''), v.w)));
+  s.appendChild(ov);
+  STRIPS.forEach(sp => {
+    s.appendChild(el('div', 'strip-title', `<h3>${sp.title}</h3><span>${sp.note}</span>`));
+    const strip = el('div', 'strip');
+    const fw = sp.orient === 'h' ? 300 : 164;
+    BEATS.forEach(b => {
+      const beat = el('div', 'beat');
+      beat.appendChild(el('div', 'beat-title', `${b.title} <i>· ${b.range}</i>`));
+      const fr = el('div', 'frames');
+      b.frames.forEach(([t, cap]) => {
+        let c = cap; if (sp.mode === 'cam') c = c.replace('ekranın yerine', 'sayaç kartının yerine');
+        fr.appendChild(fig(render(id, sp.mode, sp.orient, t, fw), `<b>${tlabel(t, b.frames.length > 1)}</b> · ${c} · <i>${st.his7[b.id]}</i>`, fw));
+      });
+      beat.appendChild(fr); strip.appendChild(beat);
+    });
+    s.appendChild(strip);
+  });
+  return s;
+}
+
+function buildPreview() {
+  const s = el('section'); s.id = 'onizleme';
+  s.appendChild(el('h2', null, 'ayarlarda küçük önizleme<span class="dot">.</span>'));
+  s.appendChild(el('p', 'why', 'Stil seçilirken yanında, seçilen oranda küçük bir canlı karo döner: kaydın bütün hikâyesi 4 saniyelik bir döngüye sıkıştırılır. Karo, kayıtta kullanılacak çizim işleviyle aynı; ayrı bir görsel dosya yok. Kamera açılmaz (izin istemek için erken); yerine siluet kullanılır. "Hareketi azalt" açıksa yalnız 2. kare durağan gösterilir.'));
+  const wrapEl = el('div', 'settings');
+  wrapEl.appendChild(el('div', 'mock', `
+    <div class="row"><div class="lbl">kendini kaydet</div><div class="opts"><span>kapalı</span><span>kamera</span><span>ekran</span><span class="on">kamera + ekran</span></div></div>
+    <div class="row"><div class="lbl">video</div><div class="opts"><span>ayrı dosyalar</span><span class="on">tek video</span></div><div class="hint">kamera ve ekran tek videoda, seçtiğin stille.</div></div>
+    <div class="row"><div class="lbl">stil</div><div class="opts"><span class="on">kâğıt</span><span>balon</span><span>gece</span><span>ızgara</span></div></div>
+    <div class="row"><div class="lbl">oran</div><div class="opts"><span class="on">yatay</span><span>dikey</span></div><div class="hint">dikey: Shorts ve Reels için.</div></div>`));
+  const col = el('div');
+  const pv = [[0.2, 'açılış', '0,0–0,6 sn'], [75, 'konuşma: sayaç hızla dolar, adım değişir', '0,6–2,4 sn'], [180.5, '"süre."', '2,4–3,0 sn'], [196, 'kapanış kartı', '3,0–4,0 sn, sonra başa']];
+  ORDER.forEach(id => {
+    col.appendChild(el('div', 'strip-title', `<h3>${STYLES[id].name}</h3><span>yatay karo 200 px, dikey karo 90 px (gerçek boyut)</span>`));
+    const r = el('div', 'frames'); r.style.marginTop = '10px'; r.style.gap = '16px'; r.style.flexWrap = 'wrap';
+    pv.forEach(([t, cap, when]) => r.appendChild(fig(render(id, 'both', 'h', t, 200), `<b>${when}</b> · ${cap}`, 200)));
+    r.appendChild(fig(render(id, 'both', 'v', 75, 90), '<b>dikey</b>', 90));
+    col.appendChild(r);
+  });
+  wrapEl.appendChild(col);
+  s.appendChild(wrapEl);
+  s.appendChild(el('p', 'note', 'Geçişler karo içinde de kayıttaki gibi: etiket yükselir, sayaç dolar, son kart aşağıdan gelir. Karo stil ve oran değişince yeni stile solarak geçer (200 ms); döngü yalnız ayarlar penceresi açıkken ve karo görünürken çalışır.'));
+  return s;
+}
+
+async function main() {
+  const q = new URLSearchParams(location.search), only = q.get('stil');
+  const faces = ["700 60px Newsreader", "600 40px Newsreader", "500 40px Newsreader", "italic 400 30px Newsreader", "400 30px Newsreader",
+    "700 40px Figtree", "800 40px Figtree", "600 40px Figtree", "500 40px Figtree",
+    "500 40px 'Space Grotesk'", "600 40px 'Space Grotesk'", "700 40px 'Space Grotesk'", "500 20px 'IBM Plex Mono'", "600 20px 'IBM Plex Mono'",
+    "900 60px 'Big Shoulders Display'", "700 40px 'Instrument Sans'", "600 40px 'Instrument Sans'", "500 40px 'Instrument Sans'"];
+  await Promise.all(faces.map(f => document.fonts.load(f, 'ığüşöçİ süre 0123')));
+  await document.fonts.ready;
+  const content = document.getElementById('content'); content.innerHTML = '';
+  const toc = document.getElementById('toc');
+  if (q.get('kare')) {   // tek kare incelemesi: ?kare=stil,mod,oran,saniye,genişlik[,ui]
+    const [sid, m, o, t, w, ui] = q.get('kare').split(',');
+    document.body.innerHTML = ''; document.body.style.margin = '0';
+    const img = render(sid, m, o, +t, +w, { ui: ui === 'ui' }); img.style.display = 'block'; document.body.appendChild(img);
+    document.documentElement.dataset.ready = '1'; return;
+  }
+  const ids = only ? [only] : ORDER;
+  if (!only || only === 'ortak') { content.appendChild(buildCommon()); toc.innerHTML += '<a href="#ortak">her stilde aynı olanlar</a>'; }
+  for (const id of ids) {
+    if (!STYLES[id]) continue;
+    content.appendChild(buildStyle(id)); toc.innerHTML += `<a href="#${id}">${STYLES[id].name}</a>`;
+    await new Promise(r => setTimeout(r, 0));
+  }
+  if (!only || only === 'onizleme') { content.appendChild(buildPreview()); toc.innerHTML += '<a href="#onizleme">ayarlar önizlemesi</a>'; }
+  if (only === 'ortak') document.getElementById('top').style.display = 'block';
+  document.documentElement.dataset.h = document.documentElement.scrollHeight;
+  document.documentElement.dataset.ready = '1';
+}
+main();
+</script>
+</body>
+</html>

@@ -85,11 +85,11 @@ export function loadSettings(storage: StorageLike | undefined = defaultStorage()
   } catch {
     hideClock = false;
   }
-  let record: Settings['record'] = 'off';
+  let record: Settings['record'] = 'camera';
   try {
     record = normalizeRecordMode(storage?.getItem(KEY_RECORD));
   } catch {
-    record = 'off';
+    record = 'camera';
   }
   let recordFormat: Settings['recordFormat'] = 'template';
   try {

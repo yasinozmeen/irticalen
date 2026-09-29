@@ -1,0 +1,115 @@
+/* ---------- Sliding underline + scoped view transition for the mode switch and the rich view's
+   category index. The underline is a real element (.switch-ink) so it can travel between words;
+   it sits exactly where the old `text-underline-offset: 0.32em` underline did (Newsreader's ascent
+   is 0.74em → 0.74em + 0.32em, measured against the text-decoration version at 100px). ---------- */
+
+.mode-switch.inked button[aria-checked='true'],
+.index-link.inked[aria-selected='true'] {
+  text-decoration: none;
+}
+
+.switch-label {
+  position: relative;
+}
+
+.switch-ink {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 1.06em;
+  height: 3px;
+  background: var(--ink);
+  pointer-events: none;
+}
+
+/* Names exist only while a switch transition runs (html.vt-switch — see runViewTransition's
+   `scope`); always-on names would float these above a sheet or dialog in every other transition. */
+.vt-switch .mode-ink {
+  view-transition-name: mode-ink;
+}
+
+.vt-switch .index-ink {
+  view-transition-name: var(--ixi);
+  view-transition-class: ink;
+}
+
+.vt-switch .index-list > li {
+  view-transition-name: var(--ix);
+  view-transition-class: ix;
+}
+
+.vt-switch .mode-blurb {
+  view-transition-name: mode-blurb;
+}
+
+.vt-switch .plan {
+  view-transition-name: speech-plan;
+}
+
+.vt-switch .action-row {
+  view-transition-name: action-row;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(mode-ink),
+  ::view-transition-group(*.ix),
+  ::view-transition-group(mode-blurb),
+  ::view-transition-group(speech-plan),
+  ::view-transition-group(action-row) {
+    animation-duration: 260ms;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  /* The ink bar keeps its 3px height while its width follows the word under it. */
+  ::view-transition-old(mode-ink),
+  ::view-transition-new(mode-ink) {
+    height: 100%;
+  }
+
+  /* Category index: each entry's underline is its own element (one name per entry), so the old one
+     is wiped out to the right and the new one drawn in from the left once its entry has settled. */
+  ::view-transition-group(*.ink) {
+    animation-duration: 260ms;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  ::view-transition-old(*.ink):only-child {
+    transform-origin: right center;
+    animation: vt-ink-wipe 150ms ease-in both;
+  }
+
+  ::view-transition-new(*.ink):only-child {
+    transform-origin: left center;
+    animation: vt-ink-draw 220ms cubic-bezier(0.3, 0.7, 0.2, 1) 110ms both;
+  }
+
+  /* A block that changes height (an entry losing its sample line, the blurb, the outline) shrinks
+     without its fading old text spilling over the block below. */
+  ::view-transition-group(*.ix),
+  ::view-transition-group(mode-blurb),
+  ::view-transition-group(speech-plan) {
+    overflow: clip;
+  }
+
+  /* Switching mode swaps the whole list (categories ↔ fields): the old entries sink away, the new
+     ones rise in — the same motion the dialogs use. */
+  ::view-transition-old(*.ix):only-child {
+    animation: vt-sink-out 180ms ease-in both;
+  }
+
+  ::view-transition-new(*.ix):only-child {
+    animation: vt-rise-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1) 60ms both;
+  }
+}
+
+@keyframes vt-ink-wipe {
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes vt-ink-draw {
+  from {
+    transform: scaleX(0);
+  }
+}

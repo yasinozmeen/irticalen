@@ -1,9 +1,13 @@
 import type { RecordAspect, StyleDefinition } from '../types';
+import { balon } from './balon';
+import { gece } from './gece';
+import { izgara } from './izgara';
 import { kagit } from './kagit';
 
-/** Every registered style, in the order Settings offers them. Add a new style by writing its file
- * next to `kagit.ts` (see the contract in `../types`'s `StyleDefinition` doc) and listing it here. */
-export const COMPOSITE_STYLES: readonly StyleDefinition[] = [kagit];
+/** Every registered style, in the order Settings offers them; the first is the default. Add a new
+ * style by writing its file next to `kagit.ts` (see the contract in `../types`'s `StyleDefinition`
+ * doc, and `./kit` for the shared drawing kit) and listing it here. */
+export const COMPOSITE_STYLES: readonly StyleDefinition[] = [kagit, balon, gece, izgara];
 
 const DEFAULT_STYLE_ID = COMPOSITE_STYLES[0].id;
 

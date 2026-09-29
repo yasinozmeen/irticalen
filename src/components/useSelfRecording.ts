@@ -18,7 +18,13 @@ import {
   type RecordingCapabilities,
   type RecordingVariant,
 } from '../lib/recorder';
-import { CompositorEngine, compositeModeFor, type CompositeMode, type StyleDefinition } from '../lib/compositor';
+import {
+  CompositorEngine,
+  compositeModeFor,
+  type CompositeMode,
+  type CompositorAppState,
+  type StyleDefinition,
+} from '../lib/compositor';
 
 export interface RecordingFile {
   url: string;
@@ -71,7 +77,9 @@ function useRecordingSlot(variant: RecordingVariant) {
   const mimeRef = useRef('');
   const keepRef = useRef(false);
   const fileRef = useRef<RecordingFile | null>(null);
-  const topicRef = useRef('');
+  // Read live at `finish()` time (stop), not captured at `start()` time — a recording can start
+  // before a topic has landed and the topic can change mid-session (see CLAUDE.md's task notes).
+  const getTopicRef = useRef<() => string>(() => '');
   const localeRef = useRef<Locale>('tr');
   const mountedRef = useRef(true);
 
@@ -105,7 +113,12 @@ function useRecordingSlot(variant: RecordingVariant) {
       try {
         const blob = new Blob(chunks, mime ? { type: mime } : undefined);
         const url = URL.createObjectURL(blob);
-        const name = buildRecordingFileName({ topic: topicRef.current, locale: localeRef.current, mimeType: mime, variant });
+        const name = buildRecordingFileName({
+          topic: getTopicRef.current(),
+          locale: localeRef.current,
+          mimeType: mime,
+          variant,
+        });
         fileRef.current = { url, name };
         if (mountedRef.current) setState({ status: 'stopped', file: fileRef.current });
       } catch {
@@ -117,9 +130,10 @@ function useRecordingSlot(variant: RecordingVariant) {
   };
 
   /** Starts recording an already-acquired stream. `watchTrackEnd` finalizes (kept) if the visitor
-   * stops sharing/permission via the browser's own UI (the video track's `ended` event). */
-  const startWithStream = (stream: MediaStream, topic: string, locale: Locale, watchTrackEnd: boolean): boolean => {
-    topicRef.current = topic;
+   * stops sharing/permission via the browser's own UI (the video track's `ended` event). `getTopic`
+   * is read only once, at `finish()` time — see `getTopicRef`. */
+  const startWithStream = (stream: MediaStream, getTopic: () => string, locale: Locale, watchTrackEnd: boolean): boolean => {
+    getTopicRef.current = getTopic;
     localeRef.current = locale;
     const mimeType = pickSupportedMimeType(VIDEO_MIME_CANDIDATES, (type) => MediaRecorder.isTypeSupported(type));
     if (!mimeType) {
@@ -236,10 +250,10 @@ interface TemplateStartParams {
   mode: CompositeMode;
   style: StyleDefinition;
   aspect: RecordAspect;
-  topic: string;
   locale: Locale;
-  totalSec: number;
-  getElapsedSec: () => number;
+  /** Forwarded straight to the `CompositorEngine` — see `CompositorAppState`. Also read (for its
+   * `.topic`) once the file is finalized, to name it. */
+  getAppState: () => CompositorAppState;
 }
 
 /** The 'template'-format counterpart of `useRecordingSlot`: a single `CompositorEngine` session
@@ -253,7 +267,9 @@ function useTemplateRecording() {
 
   const engineRef = useRef<CompositorEngine | null>(null);
   const fileRef = useRef<RecordingFile | null>(null);
-  const topicRef = useRef('');
+  // Read live at `onFinished` time (for its `.topic`), not captured once at `start()` — see
+  // `TemplateStartParams`'s doc.
+  const getAppStateRef = useRef<(() => CompositorAppState) | null>(null);
   const localeRef = useRef<Locale>('tr');
   const mountedRef = useRef(true);
 
@@ -268,7 +284,7 @@ function useTemplateRecording() {
   }, []);
 
   const start = async (params: TemplateStartParams): Promise<void> => {
-    topicRef.current = params.topic;
+    getAppStateRef.current = params.getAppState;
     localeRef.current = params.locale;
     if (mountedRef.current) {
       setScreenFailed(false);
@@ -294,7 +310,8 @@ function useTemplateRecording() {
         onFinished: ({ blob, mimeType }) => {
           try {
             const url = URL.createObjectURL(blob);
-            const name = buildCompositeFileName({ topic: topicRef.current, locale: localeRef.current, mimeType });
+            const topic = getAppStateRef.current?.().topic ?? '';
+            const name = buildCompositeFileName({ topic, locale: localeRef.current, mimeType });
             fileRef.current = { url, name };
             if (mountedRef.current) {
               setFile(fileRef.current);
@@ -312,13 +329,11 @@ function useTemplateRecording() {
       mode: params.mode,
       aspect: params.aspect,
       style: params.style,
-      topic: params.topic,
       locale: params.locale,
-      totalSec: params.totalSec,
       cameraStream: acquired.cameraStream,
       screenStream: acquired.screenStream,
       audioStream: acquired.audioStream,
-      getElapsedSec: params.getElapsedSec,
+      getAppState: params.getAppState,
     });
     if (ok && mountedRef.current) setStatus('active');
   };
@@ -357,12 +372,10 @@ export interface StartOptions {
   format: RecordFormat;
   style: StyleDefinition;
   aspect: RecordAspect;
-  topic: string;
   locale: Locale;
-  /** Speech timer's total length (seconds) — only used by the 'template' path's progress line. */
-  totalSec: number;
-  /** Only used by the 'template' path — read live every draw tick. */
-  getElapsedSec: () => number;
+  /** Live app-session state — read every draw tick by the 'template' path (see `CompositorAppState`);
+   * only its `.topic` is read (once, at stop) by the 'raw' path, to name the file(s). */
+  getAppState: () => CompositorAppState;
 }
 
 export interface SelfRecordingApi {
@@ -444,14 +457,14 @@ export function useSelfRecording(): SelfRecordingApi {
         mode: compositeMode,
         style: options.style,
         aspect: options.aspect,
-        topic: options.topic,
         locale: options.locale,
-        totalSec: options.totalSec,
-        getElapsedSec: options.getElapsedSec,
+        getAppState: options.getAppState,
       });
       // A session started after this one (a fast re-start) must not have its state clobbered by this
       // one settling late — mirrors the same guard the 'raw' path uses below.
-      if (token !== sessionTokenRef.current) template.hardStop();
+      // A discarding stop, not `hardStop`: the switch was flicked off while the permission prompt was
+      // still open, so the 'active' status this start just set must go back to idle too.
+      if (token !== sessionTokenRef.current) template.stop(false);
       return;
     }
 
@@ -466,6 +479,9 @@ export function useSelfRecording(): SelfRecordingApi {
     setMode(effective);
     const token = (sessionTokenRef.current += 1);
     const stale = (): boolean => token !== sessionTokenRef.current;
+    // 'raw' format has no per-tick Frame to draw a topic into — only the filename needs it, read
+    // live at stop time (a recording can start before a topic has landed).
+    const getTopic = (): string => options.getAppState().topic ?? '';
 
     if (plan.camera) {
       navigator.mediaDevices
@@ -475,7 +491,7 @@ export function useSelfRecording(): SelfRecordingApi {
             stopMediaStream(stream);
             return;
           }
-          cameraSlot.startWithStream(stream, options.topic, options.locale, false);
+          cameraSlot.startWithStream(stream, getTopic, options.locale, false);
         })
         .catch(() => {
           if (!stale()) cameraSlot.markFailed();
@@ -501,7 +517,7 @@ export function useSelfRecording(): SelfRecordingApi {
         }
         if (plan.screenOnly) {
           // 'both': its own file, no mic (the camera file already carries the mic audio).
-          screenSlot.startWithStream(screenStream, options.topic, options.locale, true);
+          screenSlot.startWithStream(screenStream, getTopic, options.locale, true);
           return;
         }
         // 'screen' mode: merge in the mic once it resolves — screen alone would have no audio.
@@ -518,7 +534,7 @@ export function useSelfRecording(): SelfRecordingApi {
               ...screenStream.getVideoTracks(),
               ...(micStream ? micStream.getAudioTracks() : []),
             ]);
-            screenSlot.startWithStream(combined, options.topic, options.locale, true);
+            screenSlot.startWithStream(combined, getTopic, options.locale, true);
           });
       });
   };

@@ -43,12 +43,15 @@ import {
   getStyle,
   resolveAspectForStyle,
   RICH_VIEW_MIN_WIDTH,
+  type CompositorAppState,
+  type FrameStage,
   type SessionMarks,
   type Countdown,
   type ReleaseWakeLock,
   type Settings,
   type DayLog,
 } from '../lib';
+import { formatClock, speechArcStep } from '../lib/timer';
 import type { ShareChannel } from './SharePanel';
 import type { Category, Mode, RecordAspect, RecordFormat, RecordMode } from '../lib/types';
 import { useSelfRecording } from './useSelfRecording';
@@ -61,6 +64,8 @@ import { SpeechPlan } from './SpeechPlan';
 import { TopicReel, type TopicReelHandle } from './TopicReel';
 import { TimerOverlay } from './TimerOverlay';
 import { SettingsDialog } from './SettingsDialog';
+import { RecordingLive, RecordingSwitch } from './RecordingSwitch';
+import { RecordingPreview } from './RecordingPreview';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Logo } from './Logo';
 import { StreakSheet } from './StreakSheet';
@@ -87,7 +92,7 @@ function AppContent({ locale }: Props) {
     researchSec: DEFAULT_RESEARCH_SEC,
     muted: false,
     hideClock: false,
-    record: 'off',
+    record: 'camera',
     recordFormat: 'template',
     recordStyle: normalizeStyleId(undefined),
     recordAspect: 'wide',
@@ -109,6 +114,14 @@ function AppContent({ locale }: Props) {
   const elapsedSecRef = useRef(0);
   elapsedSecRef.current = elapsedSec;
   const [timerTotalSec, setTimerTotalSec] = useState(0);
+  // Read by the recording engine's per-tick `getAppState` callback — same "ref mirrors state" pattern
+  // as `elapsedSecRef` just above.
+  const timerTotalSecRef = useRef(0);
+  timerTotalSecRef.current = timerTotalSec;
+  // The planned speech length, for a recording's frames before the speech timer runs (the timer
+  // state above holds the RESEARCH timer's numbers during research, and zeros before any timer).
+  const speechSecRef = useRef(DEFAULT_SPEECH_SEC);
+  speechSecRef.current = settings.speechSec;
   // Research stages: the clock moves the stage forward; "sonraki bölüm" can only jump ahead of it.
   const [researchStage, setResearchStage] = useState(0);
   // The stage already decided on — set synchronously, because the state itself only lands once the
@@ -125,12 +138,30 @@ function AppContent({ locale }: Props) {
   // Read inside timer callbacks, which close over an older render.
   const recordingActiveRef = useRef(false);
   recordingActiveRef.current = recording.active;
+  // True from the moment the main-screen switch is flicked on until the engine/streams have actually
+  // settled (permission prompt, negotiation) — lets the switch itself flip instantly on click (the
+  // permission prompt is the "kayıt o an başlar" feedback) while `recording.active` catches up a beat
+  // later. Reset once `start()` settles either way (success or failure).
+  const [recordingPending, setRecordingPending] = useState(false);
   // Safety cap: a forgotten recording stops (and is kept) after 30 minutes so memory cannot run out.
   useEffect(() => {
     if (!recording.active) return;
     const cap = setTimeout(() => recording.stop(true), RECORDING_CAP_MS);
     return () => clearTimeout(cap);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recording.active]);
+  // The main-screen switch's own mm:ss readout — independent of the speech timer (see CLAUDE.md's
+  // task notes: recording can run before/after/without a speech session).
+  const [recordingElapsedSec, setRecordingElapsedSec] = useState(0);
+  useEffect(() => {
+    if (!recording.active) {
+      setRecordingElapsedSec(0);
+      return;
+    }
+    const startedAt = Date.now();
+    setRecordingElapsedSec(0);
+    const id = setInterval(() => setRecordingElapsedSec(Math.floor((Date.now() - startedAt) / 1000)), 500);
+    return () => clearInterval(id);
   }, [recording.active]);
   const soundRef = useRef(createSoundEngine());
   const countdownRef = useRef<Countdown | null>(null);
@@ -546,33 +577,67 @@ function AppContent({ locale }: Props) {
     }
   };
 
-  // Shared by both places a speech-timer session can begin (`handleStart` directly into speech,
-  // `handleReadyToSpeak` after a research phase) — resolves the saved style/aspect against the
-  // browser's capabilities and hands the composite engine a live read of the running timer.
-  const startRecording = (topic: string): Promise<void> =>
-    recording.start({
-      mode: settings.record,
-      format: settings.recordFormat,
-      style: getStyle(settings.recordStyle),
-      aspect: resolveAspectForStyle(getStyle(settings.recordStyle), settings.recordAspect),
-      topic,
-      locale,
-      totalSec: settings.speechSec,
-      getElapsedSec: () => elapsedSecRef.current,
-    });
+  // Everything a `Frame` (and, for 'raw' format, just the eventual filename) needs about the live
+  // session — read fresh every draw tick / at stop time, never captured once. `stateRef`/
+  // `elapsedSecRef`/`timerTotalSecRef` all mirror state a render behind, same pattern used throughout
+  // this file. `state.phase`'s own values ('research'/'ready'/'speech'/'done') line up 1:1 with
+  // `FrameStage` — only 'idle' needs splitting (no topic yet vs. landed) and a spin overrides both.
+  const getRecordingAppState = (): CompositorAppState => {
+    const s = stateRef.current;
+    let stage: FrameStage;
+    if (s.spinning) stage = 'spinning';
+    else if (s.phase === 'idle') stage = s.topic === null ? 'idle' : 'landed';
+    else stage = s.phase;
+    // `Frame.elapsedSec/totalSec` are the SPEECH timer's: 0 / planned length until it starts.
+    const speechRunning = stage === 'speech' || stage === 'done';
+    const elapsed = speechRunning ? elapsedSecRef.current : 0;
+    const total = speechRunning ? timerTotalSecRef.current : speechSecRef.current;
+    return {
+      stage,
+      // Lowercase, like every topic on the site ("Konu küçük harf").
+      topic: s.topic === null ? null : s.topic.toLocaleLowerCase(locale),
+      sessionMode: s.mode,
+      elapsedSec: elapsed,
+      totalSec: total,
+      arcStep: speechArcStep(elapsed, total),
+    };
+  };
 
-  const handleStart = async (): Promise<void> => {
+  // Turns the main-screen "kayıt" switch on: recording is now independent of the speech timer — it
+  // can start before a topic has even landed and keeps running across research/ready/speech/done (see
+  // CLAUDE.md's task notes). MUST be called directly from the click handler with no prior `await`:
+  // getDisplayMedia/getUserMedia (inside `recording.start`) only work inside the user gesture that
+  // triggered them on Safari/Firefox.
+  const startSelfRecording = (): void => {
+    if (recording.active || recordingPending) return;
+    // A previous session's finished recording (if not yet downloaded) is gone once a new one starts.
+    recording.discardDownload();
+    setRecordingPending(true);
+    void recording
+      .start({
+        mode: settings.record,
+        format: settings.recordFormat,
+        style: getStyle(settings.recordStyle),
+        aspect: resolveAspectForStyle(getStyle(settings.recordStyle), settings.recordAspect),
+        locale,
+        getAppState: getRecordingAppState,
+      })
+      .then(() => setRecordingPending(false));
+  };
+
+  const handleRecordingToggle = (): void => {
+    if (recording.active || recordingPending) {
+      recording.stop(true);
+      setRecordingPending(false);
+      return;
+    }
+    startSelfRecording();
+  };
+
+  const handleStart = (): void => {
     if (isLocked(state) || state.topic === null) return;
     soundRef.current.warmUp();
     const nextPhase = state.mode === 'deep-research' ? 'research' : 'speech';
-    const topic = state.topic;
-    // A previous session's finished recording (if not yet downloaded) is gone once a new one starts.
-    recording.discardDownload();
-    // Only the speech timer records — never the research timer (see CLAUDE.md task spec #3). A
-    // screen-share pick, if any, must resolve before the clock starts — camera/mic never block it
-    // ('raw' format) or, for 'template' format, every requested source is awaited (see
-    // `acquireTemplateStreams` in `useSelfRecording.ts`).
-    if (nextPhase === 'speech') await startRecording(topic);
     // Opening the timer hands the topic word's view-transition name from the big landed display to
     // `.timer-topic` — the dispatch is the swap moment the transition captures.
     void runViewTransition(() => {
@@ -614,12 +679,10 @@ function AppContent({ locale }: Props) {
     }
   };
 
-  const handleReadyToSpeak = async (): Promise<void> => {
+  const handleReadyToSpeak = (): void => {
     if (state.phase !== 'ready') return;
     const topic = state.topic;
     const mode = state.mode;
-    // Same rule as handleStart.
-    await startRecording(topic ?? '');
     dispatch({ type: 'READY_TO_SPEAK' });
     if (marksRef.current) marksRef.current.speechAt = Date.now();
     beginCountdown(settings.speechSec);
@@ -647,9 +710,9 @@ function AppContent({ locale }: Props) {
     }
     stopCountdown();
     releaseWakeLock();
-    // Closed before the natural finish: the recording so far (if any) is stopped and discarded, not
-    // offered for download — only a full run to the end produces a file (task spec #7).
-    recording.stop(false);
+    // Recording is independent of the speech session now (see CLAUDE.md's task notes): closing early
+    // no longer discards it — it just keeps running, controlled only by the main-screen switch, the
+    // overlay's own "kaydı durdur", Escape once 'done', the 30-minute cap, or pagehide.
     setSharePanelOpen(false);
     // Closing hands the topic word's view-transition name back from `.timer-topic` to the big
     // landed display it came from.
@@ -929,14 +992,68 @@ function AppContent({ locale }: Props) {
     <p class="mode-blurb">{state.mode === 'off-the-cuff' ? dict.modes.offTheCuffBlurb : dict.modes.deepResearchBlurb}</p>
   );
 
-  const recordNoteNode = settings.record !== 'off' && recording.available && state.topic !== null && (
-    <p class="record-note">
-      {settings.record === 'camera'
-        ? dict.record.noteCamera
-        : settings.record === 'screen'
-          ? dict.record.noteScreen
-          : dict.record.noteBoth}
-    </p>
+  // The main-screen "kayıt" switch — always visible near the wheel/start button, independent of the
+  // speech timer (see CLAUDE.md's task notes). Hidden entirely when the browser can't record at all
+  // (`recording.available` false) rather than showing a switch that can never turn on. Session-only:
+  // it starts 'kapalı' on every visit, so no persisted state is read here.
+  const recordingSwitchNode = recording.available && (
+    <RecordingSwitch
+      on={recording.active || recordingPending}
+      pending={recordingPending && !recording.active}
+      elapsedLabel={recording.active ? formatClock(recordingElapsedSec) : null}
+      dict={dict}
+      onToggle={handleRecordingToggle}
+    />
+  );
+  // Minimalist layout: the switch alone, beside the category picker (no extra line on a phone).
+  const recordingSwitchCompactNode = recording.available && (
+    <RecordingSwitch
+      on={recording.active || recordingPending}
+      pending={recordingPending && !recording.active}
+      elapsedLabel={null}
+      dict={dict}
+      onToggle={handleRecordingToggle}
+      compact
+    />
+  );
+  const recordingOn = recording.active || recordingPending;
+
+  const recordingStartFailedMainNode = recording.startFailed && !sessionOpen && (
+    <p class="record-note">{dict.record.startFailed}</p>
+  );
+
+  // Stopped from the main screen (switch/"durdur", not the timer overlay): the finished file's
+  // download link(s) show right here, under the switch — the overlay's own copy of this (see
+  // `TimerOverlay`) only ever appears while a session is actually open.
+  const mainRecordDownloadNode = !sessionOpen &&
+    (recording.compositeFile || recording.cameraFile || recording.screenFile) && (
+      <div class="record-download-inline">
+        <div class="record-download-inline-links">
+          {recording.compositeFile && (
+            <a class="btn btn-secondary" href={recording.compositeFile.url} download={recording.compositeFile.name}>
+              {dict.record.downloadRecording}
+            </a>
+          )}
+          {recording.cameraFile && (
+            <a class="btn btn-secondary" href={recording.cameraFile.url} download={recording.cameraFile.name}>
+              {dict.record.downloadCamera}
+            </a>
+          )}
+          {recording.screenFile && (
+            <a class="btn btn-secondary" href={recording.screenFile.url} download={recording.screenFile.name}>
+              {dict.record.downloadScreen}
+            </a>
+          )}
+        </div>
+        <span class="record-download-inline-note">{dict.record.downloadNote}</span>
+      </div>
+    );
+
+  // Rich (open-book) view only: a small live self-view in the right page's own top corner — the
+  // minimalist layout has no spare vertical budget (it must stay scroll-free even for the longest
+  // topic, see CLAUDE.md), so it shows no preview at all there.
+  const recordingPreviewRichNode = recording.active && recording.previewStream && (
+    <RecordingPreview stream={recording.previewStream} className="record-preview-corner" />
   );
 
   const actionRowNode = (
@@ -1019,9 +1136,12 @@ function AppContent({ locale }: Props) {
               </dl>
             </aside>
             <main class="page-right">
+              {recordingPreviewRichNode}
               {topicReelNode}
               {modeBlurbNode}
-              {recordNoteNode}
+              {recordingSwitchNode}
+              {recordingStartFailedMainNode}
+              {mainRecordDownloadNode}
               <SpeechPlan
                 mode={state.mode}
                 dict={dict}
@@ -1037,12 +1157,32 @@ function AppContent({ locale }: Props) {
               {modeSwitchNode}
               {/* Same component in both modes, at the same position — only its options/value/handler
                   change, so switching modes never mounts/unmounts it (no "pat" pop-in/out). */}
-              {categorySelectNode}
+              <div class="controls-sub">
+                {categorySelectNode}
+                {recordingSwitchCompactNode}
+              </div>
             </div>
 
             {topicReelNode}
-            {modeBlurbNode}
-            {recordNoteNode}
+            {/* The page must stay scroll-free on a phone even for the longest topic: while there is
+                recording news (live readout, a failure, the finished file) it takes the blurb's
+                line instead of adding lines of its own. */}
+            {recordingOn || recordingStartFailedMainNode || mainRecordDownloadNode ? (
+              <div class="record-status">
+                {recordingOn && (
+                  <RecordingLive
+                    pending={recordingPending && !recording.active}
+                    elapsedLabel={recording.active ? formatClock(recordingElapsedSec) : null}
+                    dict={dict}
+                    onStop={handleRecordingToggle}
+                  />
+                )}
+                {recordingStartFailedMainNode}
+                {mainRecordDownloadNode}
+              </div>
+            ) : (
+              modeBlurbNode
+            )}
             {actionRowNode}
           </>
         )}

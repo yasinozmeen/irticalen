@@ -1,9 +1,9 @@
 import type { Locale } from '../types';
 import { VIDEO_MIME_CANDIDATES, pickSupportedMimeType, stopMediaStream } from '../recorder';
-import { speechArcStep } from '../timer';
-import { computeFramePhase, outroFinished } from './frame';
+import { computeFramePhase, outroFinished, scaleMicRms, smoothMicLevel } from './frame';
 import { coverCrop, outputSizeForAspect } from './layout';
-import type { CompositeMode, Frame, Rect, RecordAspect, StyleDefinition } from './types';
+import { ensureStyleFonts } from './fonts';
+import type { CompositeMode, Frame, FrameStage, Rect, RecordAspect, StyleDefinition } from './types';
 
 /**
  * The composite ('template' format) recording engine: draws camera/screen video onto a canvas every
@@ -62,6 +62,16 @@ export interface EngineRecorder {
   onstop: (() => void) | null;
 }
 
+/** A live mic-level reader backing `Frame.micLevel` — see `onTick`'s use of `scaleMicRms`/
+ * `smoothMicLevel`. Wraps a real `AnalyserNode` in production; injectable/fakeable in tests. */
+export interface EngineAudioAnalyser {
+  /** Instantaneous RMS (root-mean-square) of the current audio buffer — unbounded above, 0 for
+   * silence. Called once per tick; `scaleMicRms` does the 0..1 scaling. */
+  read(): number;
+  /** Tears down the underlying `AudioContext`/`AnalyserNode`. Idempotent, never throws. */
+  close(): void;
+}
+
 export interface CompositorEngineDeps {
   createVideo: () => EngineVideoElement;
   createCanvas: (width: number, height: number) => EngineCanvas;
@@ -72,27 +82,41 @@ export interface CompositorEngineDeps {
    * test environment the rest of this class is otherwise exercised in. */
   createMediaStream: (tracks: MediaStreamTrack[]) => MediaStream;
   isTypeSupported: (type: string) => boolean;
-  /** Resolves once (or best-effort — never rejects) the drawing font is ready, awaited before the
-   * first frame is drawn so the opening/intro card never shows a fallback font. */
-  loadFont: () => Promise<void>;
+  /** Resolves once (or best-effort — never rejects) the style's drawing fonts are ready, awaited
+   * before the first frame is drawn so the opening/intro card never shows a fallback font. */
+  loadFont: (style: StyleDefinition) => Promise<void>;
   now: () => number;
+  /** Builds the `Frame.micLevel` source from the recorded audio stream, or `null` when no analyser
+   * could be created (e.g. no Web Audio support) — `micLevel` then simply stays 0 (see `onTick`). */
+  createAudioAnalyser: (stream: MediaStream) => EngineAudioAnalyser | null;
+}
+
+/** Live read, once per tick, of everything about the *app's* session a `Frame` needs but the engine
+ * has no state of its own for (see `types.ts`'s `Frame` doc) — `topic` may be `null` (a recording can
+ * start before a topic has landed) and can change mid-recording if the speaker spins again; `stage`
+ * feeds `computeFramePhase`'s pre/speech/overtime split alongside the recording's own intro/outro. */
+export interface CompositorAppState {
+  stage: FrameStage;
+  topic: Frame['topic'];
+  sessionMode: Frame['sessionMode'];
+  elapsedSec: Frame['elapsedSec'];
+  totalSec: Frame['totalSec'];
+  arcStep: Frame['arcStep'];
 }
 
 export interface CompositorStartParams {
   mode: CompositeMode;
   aspect: RecordAspect;
   style: StyleDefinition;
-  topic: string;
   locale: Locale;
-  /** Speech timer's total length (seconds) — drives `overtime` and the progress line. */
-  totalSec: number;
   cameraStream?: MediaStream;
   screenStream?: MediaStream;
   /** The audio to record: the camera stream's own mic track for 'camera'/'both', or a separately
-   * acquired mic-only stream for 'screen' (which has no audio of its own). Omit for no audio track. */
+   * acquired mic-only stream for 'screen' (which has no audio of its own). Omit for no audio track —
+   * `micLevel` then stays 0 every tick. */
   audioStream?: MediaStream;
   /** Read live every tick — state updates lag a render, same pattern as the rest of the app. */
-  getElapsedSec: () => number;
+  getAppState: () => CompositorAppState;
 }
 
 export interface CompositorCallbacks {
@@ -121,15 +145,68 @@ function defaultCompositorDeps(): CompositorEngineDeps {
         return false;
       }
     },
-    loadFont: async () => {
+    loadFont: async (style) => {
       try {
         const fontDocument = document as Document & { fonts?: { load(font: string): Promise<unknown> } };
-        if (fontDocument.fonts) await fontDocument.fonts.load('600 64px Newsreader');
+        // Newsreader is the site's own font (already on the page); a style's extra families come from
+        // Google Fonts. Usually already fetched by the settings preview — the short timeout only
+        // matters on a slow network, where a recording starting with a fallback font beats one that
+        // starts seconds late.
+        await Promise.all([
+          fontDocument.fonts ? fontDocument.fonts.load('600 64px Newsreader') : Promise.resolve(),
+          ensureStyleFonts(style, { timeoutMs: 2500 }),
+        ]);
       } catch {
         // best-effort — drawing proceeds with fallback font metrics
       }
     },
     now: () => Date.now(),
+    createAudioAnalyser: (stream) => {
+      try {
+        if (stream.getAudioTracks().length === 0) return null;
+        const AudioContextCtor = (
+          window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }
+        ).AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!AudioContextCtor) return null;
+        const audioContext = new AudioContextCtor();
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 512;
+        source.connect(analyser);
+        const buffer = new Float32Array(analyser.fftSize);
+        let closed = false;
+        return {
+          read: () => {
+            if (closed) return 0;
+            analyser.getFloatTimeDomainData(buffer);
+            let sumSquares = 0;
+            for (let i = 0; i < buffer.length; i++) sumSquares += buffer[i] * buffer[i];
+            return Math.sqrt(sumSquares / buffer.length);
+          },
+          close: () => {
+            if (closed) return;
+            closed = true;
+            try {
+              source.disconnect();
+            } catch {
+              // best-effort
+            }
+            try {
+              analyser.disconnect();
+            } catch {
+              // best-effort
+            }
+            try {
+              void audioContext.close();
+            } catch {
+              // best-effort
+            }
+          },
+        };
+      } catch {
+        return null;
+      }
+    },
   };
 }
 
@@ -179,6 +256,8 @@ export class CompositorEngine {
   private canvasStream: MediaStream | null = null;
   private chunks: Blob[] = [];
   private mimeType = '';
+  private micAnalyser: EngineAudioAnalyser | null = null;
+  private micLevel = 0;
 
   private params: CompositorStartParams | null = null;
   private startedAtMs = 0;
@@ -206,7 +285,7 @@ export class CompositorEngine {
       if (!mimeType) throw new Error('no-supported-mime-type');
       this.mimeType = mimeType;
 
-      await this.deps.loadFont();
+      await this.deps.loadFont(params.style);
 
       const output = outputSizeForAspect(params.aspect);
       const canvas = this.deps.createCanvas(output.w, output.h);
@@ -235,6 +314,9 @@ export class CompositorEngine {
       this.canvasStream = canvasStream;
       const audioTracks = params.audioStream ? params.audioStream.getAudioTracks() : [];
       const outputStream = this.deps.createMediaStream([...canvasStream.getVideoTracks(), ...audioTracks]);
+
+      this.micLevel = 0;
+      this.micAnalyser = params.audioStream ? this.deps.createAudioAnalyser(params.audioStream) : null;
 
       const recorder = this.deps.createRecorder(outputStream, mimeType);
       this.chunks = [];
@@ -325,6 +407,15 @@ export class CompositorEngine {
       this.screenVideo.srcObject = null;
       this.screenVideo = null;
     }
+    if (this.micAnalyser) {
+      try {
+        this.micAnalyser.close();
+      } catch {
+        // best-effort
+      }
+      this.micAnalyser = null;
+    }
+    this.micLevel = 0;
     this.ctx = null;
     this.params = null;
     this.outroStartedMs = null;
@@ -418,18 +509,32 @@ export class CompositorEngine {
     const drawStart = this.deps.now();
     const recordingElapsedMs = drawStart - this.startedAtMs;
     const outroElapsedMs = this.outroStartedMs !== null ? drawStart - this.outroStartedMs : null;
-    const elapsedSec = params.getElapsedSec();
-    const totalSec = params.totalSec;
-    const phase = computeFramePhase({ recordingElapsedMs, elapsedSec, totalSec, outroElapsedMs });
+    const appState = params.getAppState();
+    const phase = computeFramePhase({ recordingElapsedMs, stage: appState.stage, outroElapsedMs });
+
+    if (this.micAnalyser) {
+      let instant = 0;
+      try {
+        instant = scaleMicRms(this.micAnalyser.read());
+      } catch {
+        instant = 0;
+      }
+      this.micLevel = smoothMicLevel(this.micLevel, instant);
+    } else {
+      this.micLevel = 0;
+    }
 
     const frame: Frame = {
       t: recordingElapsedMs,
-      topic: params.topic,
+      topic: appState.topic,
       locale: params.locale,
       phase,
-      elapsedSec,
-      totalSec,
-      arcStep: speechArcStep(elapsedSec, totalSec),
+      stage: appState.stage,
+      sessionMode: appState.sessionMode,
+      elapsedSec: appState.elapsedSec,
+      totalSec: appState.totalSec,
+      arcStep: appState.arcStep,
+      micLevel: this.micLevel,
       mode: params.mode,
       aspect: params.aspect,
     };

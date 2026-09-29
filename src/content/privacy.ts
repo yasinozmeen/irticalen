@@ -61,7 +61,7 @@ export const privacy: Record<Locale, PrivacyContent> = {
         h2: 'Yalnız tarayıcında kalanlar',
         paragraphs: [
           'Ayarların (süreler, ses, süreyi gizleme), daha önce gördüğün konular (tekrar gelmesin diye), araştırmalı modda seçtiğin alan, pratik serin (hangi gün konuştuğun) ve diğer dile geçiş ipucunu bir kez gördüğün bilgisi. Bunlar bu tarayıcıda durur, bize gönderilmez. Tarayıcının site verilerini silersen hepsi gider.',
-          '"Kendini kaydet" açarsan kamera ve/veya ekran kaydı yalnız cihazında tutulur; hiçbir yere gönderilmez ve sayfadan ayrılınca silinir. "Şablonlu" biçimi seçersen kamera ve ekran görüntüsünün tek dosyada birleştirilmesi de yalnız cihazında, tarayıcında yapılır — bu birleştirme için de hiçbir şey bir yere gönderilmez.',
+          '"Kendini kaydet" anahtarını açarsan kamera ve/veya ekran kaydı başlar; bu, konuşma sayacından bağımsızdır — istediğin an açar, istediğin an durdurursun, sayaç açılıp kapansa bile kayıt sürer. Kayıt yalnız cihazında tutulur; hiçbir yere gönderilmez ve sayfadan ayrılınca silinir. "Şablonlu" biçimi seçersen kamera ve ekran görüntüsünün tek dosyada birleştirilmesi de yalnız cihazında, tarayıcında yapılır — bu birleştirme için de hiçbir şey bir yere gönderilmez.',
         ],
       },
       {
@@ -126,7 +126,7 @@ export const privacy: Record<Locale, PrivacyContent> = {
         h2: 'What stays in your browser only',
         paragraphs: [
           'Your settings (timer lengths, sound, hiding the clock), the topics you have already seen (so they do not repeat), the field you picked in research mode, your practice streak (which days you spoke), and whether you have already seen the other-language hint once. These stay in this browser and are never sent to us. Clearing the site’s data in your browser removes them.',
-          'If you turn on "record yourself", the camera and/or screen recording is kept only on your device; it is never sent anywhere and is deleted once you leave the page. If you pick the "template" format, combining the camera and screen into a single file also happens only on your device, in your browser — nothing is sent anywhere for that either.',
+          'Turning on the "record yourself" switch starts the camera and/or screen recording — independently of the speech timer, so you turn it on and off whenever you like and it keeps running even if the timer opens and closes. It is kept only on your device; it is never sent anywhere and is deleted once you leave the page. If you pick the "template" format, combining the camera and screen into a single file also happens only on your device, in your browser — nothing is sent anywhere for that either.',
         ],
       },
       {
