@@ -889,7 +889,7 @@ a {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.3rem;
+  gap: 0.6rem;
 }
 
 .timer-record-download-links,
@@ -1014,25 +1014,48 @@ a {
   justify-content: flex-start;
 }
 
-/* Süreyi gizle: rakam ve cetvel mürekkebi dağılmış gibi bulanıklaşır; dokununca geri gelir. */
+/* Süreyi gizle: rakam ve cetvel mürekkebi dağılmış gibi bulanıklaşır; dokununca geri gelir.
+   `filter: blur` DEĞİL: iPhone Safari bulanıklığı öğenin kutusunda keser, rakamların etrafında sert
+   kenarlı bir dikdörtgen kalıyordu (2026-09-29, simülatörde görüldü). Rakam yerine yalnız yumuşak
+   gölgesi kalır; cetvel kâğıtla örtülür — ikisinin de kenarı yoktur. */
 .timer-ring {
-  transition: filter 0.4s ease-out, opacity 0.4s ease-out;
+  position: relative;
+}
+
+.timer-ring::after {
+  content: '';
+  position: absolute;
+  left: -0.5rem;
+  right: -0.5rem;
+  bottom: -0.25rem;
+  height: 1.1rem;
+  background: var(--paper-tex), var(--paper);
+  background-size: 389px 389px, 557px 557px, auto;
+  background-position: 0 0, 131px 73px, 0 0;
+  background-attachment: fixed;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease-out;
 }
 
 .timer-overlay.is-clock-hidden .timer-ring {
-  filter: blur(6px);
-  opacity: 0.55;
   cursor: pointer;
   user-select: none;
 }
 
+.timer-overlay.is-clock-hidden .timer-ring::after {
+  opacity: 0.85;
+}
+
 /* Rakam büyüdükçe bulanıklık da büyür (em): masaüstündeki dev rakam da okunmaz. */
 .timer-clock {
-  transition: filter 0.4s ease-out;
+  text-shadow: 0 0 0 transparent;
+  transition: color 0.4s ease-out, text-shadow 0.4s ease-out;
 }
 
 .timer-overlay.is-clock-hidden .timer-clock {
-  filter: blur(0.14em);
+  color: transparent;
+  text-shadow: 0 0 0.16em rgba(29, 26, 22, 0.7);
 }
 
 .clock-toggle {
@@ -1294,6 +1317,94 @@ a {
 
 .share-panel-back {
   margin-left: auto;
+}
+
+/* "diğer": the copy extras unfold under the actions — height eases open, nothing pops in. */
+.share-panel-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.share-panel-more-mark {
+  transition: transform 200ms ease-out;
+}
+
+.share-panel-more.is-open .share-panel-more-mark {
+  transform: rotate(180deg);
+}
+
+.share-panel-extras {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin-top: -1.1rem;
+  transition:
+    grid-template-rows 240ms ease-out,
+    opacity 200ms ease-out,
+    margin-top 240ms ease-out;
+}
+
+.share-panel-extras.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 0;
+}
+
+.share-panel-extras-inner {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem 1.5rem;
+  align-items: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .share-panel-more-mark,
+  .share-panel-extras {
+    transition: none;
+  }
+}
+
+/* ---------- "kaydı izle": the take plays back in the same dialog ---------- */
+
+.watch-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.1rem;
+  width: 100%;
+  max-width: 520px;
+}
+
+.watch-panel-video {
+  display: block;
+  max-width: 100%;
+  max-height: min(64svh, 40rem);
+  width: auto;
+  height: auto;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+.watch-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  align-items: center;
+  width: 100%;
+}
+
+.watch-panel-back {
+  margin-left: auto;
+}
+
+.watch-panel-note {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--pencil);
+  text-transform: lowercase;
 }
 
 .share-panel-body {
@@ -2752,6 +2863,10 @@ a.btn-primary:hover {
   view-transition-name: share-panel;
 }
 
+.watch-panel {
+  view-transition-name: watch-panel;
+}
+
 /* Between pages: the logo stays put, and the "neden yaptım?" link grows into that page's headline. */
 /* Only while navigating between pages (class set from Base.astro's pageswap/pagereveal hooks):
    inside a page these would float above the timer or a sheet for the length of a transition. */
@@ -2794,12 +2909,14 @@ a.btn-primary:hover {
   }
 
   ::view-transition-new(settings-dialog):only-child,
-  ::view-transition-new(share-panel):only-child {
+  ::view-transition-new(share-panel):only-child,
+  ::view-transition-new(watch-panel):only-child {
     animation: vt-rise-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 
   ::view-transition-old(settings-dialog):only-child,
-  ::view-transition-old(share-panel):only-child {
+  ::view-transition-old(share-panel):only-child,
+  ::view-transition-old(watch-panel):only-child {
     animation: vt-sink-out 220ms ease-in both;
   }
 }

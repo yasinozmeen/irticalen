@@ -1,5 +1,7 @@
-import { RecordingShareButton } from './RecordingShareButton';
-import { useEffect, useRef } from 'preact/hooks';
+import { canShareVideoFiles } from './RecordingShareButton';
+import { RecordingWatchPanel } from './RecordingWatchPanel';
+import { runViewTransition } from '../lib/viewTransition';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Phase, Mode } from '../lib/types';
 import type { ResearchStage } from '../lib/researchStages';
 import { formatClock, speechArcStep } from '../lib/timer';
@@ -53,6 +55,8 @@ interface Props {
   recordingScreenFile: { url: string; name: string } | null;
   /** 'template' format only — the single composited file. */
   recordingCompositeFile: { url: string; name: string } | null;
+  /** Development copies only (never the live site): end the speech now instead of waiting it out. */
+  onFinishEarly?: () => void;
 }
 
 const STAGE_INDEX: Record<ResearchStage, number> = { gather: 0, shape: 1, warm: 2 };
@@ -105,6 +109,7 @@ export function TimerOverlay({
   recordingCameraFile,
   recordingScreenFile,
   recordingCompositeFile,
+  onFinishEarly,
 }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const open = phase !== 'idle';
@@ -137,6 +142,25 @@ export function TimerOverlay({
 
   const progress = totalSec > 0 ? Math.min(1, elapsedSec / totalSec) : 0;
   const isDone = phase === 'done';
+  // A phone's share sheet also saves to Files, so it replaces the download link there.
+  const shareInsteadOfDownload = useMemo(canShareVideoFiles, []);
+  // "kaydı izle" swaps the dialog's content in place, like the share panel.
+  const [watchOpen, setWatchOpen] = useState(false);
+  const watchTriggerRef = useRef<HTMLButtonElement>(null);
+  const watchable = isDone && !sharePanelOpen && recordingCompositeFile !== null;
+  const showWatch = watchOpen && watchable;
+  useEffect(() => {
+    if (!isDone) setWatchOpen(false);
+  }, [isDone]);
+  const openWatch = (): void => {
+    void runViewTransition(() => setWatchOpen(true));
+  };
+  const closeWatch = (): void => {
+    void runViewTransition(
+      () => setWatchOpen(false),
+      () => watchTriggerRef.current?.focus({ preventScroll: true }),
+    );
+  };
   const statusKey = STATUS_BY_PHASE[phase];
   const isResearch = phase === 'research';
   const stage = researchStages[researchStage] ?? 'gather';
@@ -173,6 +197,13 @@ export function TimerOverlay({
           recordingScreenFile={recordingScreenFile}
           onBack={onShareBack}
           onTrack={onShareTrack}
+        />
+      ) : showWatch && recordingCompositeFile ? (
+        <RecordingWatchPanel
+          file={recordingCompositeFile}
+          dict={dict}
+          shareInsteadOfDownload={shareInsteadOfDownload}
+          onBack={closeWatch}
         />
       ) : (
         <>
@@ -282,12 +313,12 @@ export function TimerOverlay({
           {isDone && (recordingCameraFile || recordingScreenFile || recordingCompositeFile) && (
             <div class="timer-record-download timer-rise" style={{ animationDelay: '190ms' } as Record<string, string>}>
               <div class="timer-record-download-links">
+                {/* Watch first; keeping/sending the video lives on the watch screen itself. */}
                 {recordingCompositeFile && (
-                  <a class="btn btn-secondary" href={recordingCompositeFile.url} download={recordingCompositeFile.name}>
-                    {dict.record.downloadRecording}
-                  </a>
+                  <button ref={watchTriggerRef} type="button" class="btn btn-primary" onClick={openWatch}>
+                    {dict.record.watchRecording}
+                  </button>
                 )}
-                {recordingCompositeFile && <RecordingShareButton file={recordingCompositeFile} dict={dict} />}
                 {recordingCameraFile && (
                   <a class="btn btn-secondary" href={recordingCameraFile.url} download={recordingCameraFile.name}>
                     {dict.record.downloadCamera}
@@ -379,6 +410,11 @@ export function TimerOverlay({
               </button>
             ) : (
               <>
+                {phase === 'speech' && onFinishEarly && (
+                  <button type="button" class="btn btn-secondary" onClick={onFinishEarly}>
+                    {dict.timer.finishEarly}
+                  </button>
+                )}
                 {isDone && (
                   <button ref={shareTriggerRef} type="button" class="btn btn-secondary" onClick={onShareOpen}>
                     {dict.timer.share}

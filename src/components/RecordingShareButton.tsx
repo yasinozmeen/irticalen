@@ -5,6 +5,8 @@ import type { RecordingFile } from './useSelfRecording';
 interface Props {
   file: RecordingFile;
   dict: Dictionary;
+  /** The one filled ink button of the screen (the watch panel) instead of an underlined link. */
+  primary?: boolean;
 }
 
 type ShareNavigator = Navigator & {
@@ -13,12 +15,27 @@ type ShareNavigator = Navigator & {
 };
 
 /**
+ * Whether this browser can hand a video file to the share sheet — checked synchronously so the page
+ * can decide between "kaydı paylaş" and "kaydı indir" without the buttons swapping a moment later.
+ */
+export function canShareVideoFiles(): boolean {
+  try {
+    const nav = navigator as ShareNavigator;
+    if (typeof nav.share !== 'function' || typeof nav.canShare !== 'function') return false;
+    return nav.canShare({ files: [new File([''], 'irticalen.mp4', { type: 'video/mp4' })] });
+  } catch {
+    return false;
+  }
+}
+
+/**
  * "kaydı paylaş": the phone's share sheet with the finished video — on an iPhone "Videoyu Kaydet"
  * puts it straight into Photos (a plain download lands in Files/iCloud), and it can go to any app.
- * Shown only where the browser can share files. The File is prepared as soon as the recording exists:
+ * Used instead of the download link on a phone (the sheet offers saving to Files too) — see
+ * `canShareVideoFiles`. The File is prepared as soon as the recording exists:
  * `navigator.share` must run inside the tap itself, with no await before it, or iOS refuses it.
  */
-export function RecordingShareButton({ file, dict }: Props) {
+export function RecordingShareButton({ file, dict, primary }: Props) {
   const [shareable, setShareable] = useState<File | null>(null);
   const [failed, setFailed] = useState(false);
   const aliveRef = useRef(true);
@@ -41,9 +58,8 @@ export function RecordingShareButton({ file, dict }: Props) {
     };
   }, [file.url, file.name]);
 
-  if (!shareable) return null;
-
   const onShare = (): void => {
+    if (!shareable) return;
     const nav = navigator as ShareNavigator;
     setFailed(false);
     nav.share?.({ files: [shareable] }).catch((error: unknown) => {
@@ -54,7 +70,8 @@ export function RecordingShareButton({ file, dict }: Props) {
 
   return (
     <>
-      <button type="button" class="btn btn-secondary" onClick={onShare}>
+      {/* Disabled only for the moment the file is being prepared (a local blob — near instant). */}
+      <button type="button" class={`btn ${primary ? 'btn-primary' : 'btn-secondary'}`} onClick={onShare} disabled={!shareable}>
         {dict.record.shareRecording}
       </button>
       {failed && <span class="record-download-inline-note">{dict.record.shareFailed}</span>}

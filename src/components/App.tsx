@@ -69,7 +69,8 @@ import { TimerOverlay } from './TimerOverlay';
 import { SettingsDialog } from './SettingsDialog';
 import { RecordingLive, RecordingSwitch } from './RecordingSwitch';
 import { RecordingPreview } from './RecordingPreview';
-import { RecordingShareButton } from './RecordingShareButton';
+import { RecordingShareButton, canShareVideoFiles } from './RecordingShareButton';
+import { isDevHost } from '../lib/devHost';
 import { ErrorBoundary } from './ErrorBoundary';
 import { RecDebugPanel } from './RecDebugPanel';
 import { installFakeCameraIfAsked, recLog } from '../lib/recDebug';
@@ -432,6 +433,12 @@ function AppContent({ locale }: Props) {
     },
     [],
   );
+
+  // Development copies only: ends the running countdown as if time had run out (same sounds,
+  // tracking, streak and share flow) — no waiting out a full minute while testing.
+  const handleFinishEarly = (): void => {
+    countdownRef.current?.finishNow();
+  };
 
   const stopCountdown = (): void => {
     countdownRef.current?.stop();
@@ -1069,6 +1076,9 @@ function AppContent({ locale }: Props) {
     />
   );
   const recordingOn = recording.active || recordingPending;
+  // A phone's share sheet also saves to Files, so it replaces the download link there.
+  const shareInsteadOfDownload = useMemo(canShareVideoFiles, []);
+  const devHost = useMemo(() => isDevHost(), []);
 
   const recordingStartFailedMainNode = recording.startFailed && !sessionOpen && (
     <p class="record-note">{dict.record.startFailed}</p>
@@ -1081,12 +1091,14 @@ function AppContent({ locale }: Props) {
     (recording.compositeFile || recording.cameraFile || recording.screenFile) && (
       <div class="record-download-inline">
         <div class="record-download-inline-links">
-          {recording.compositeFile && (
-            <a class="btn btn-secondary" href={recording.compositeFile.url} download={recording.compositeFile.name}>
-              {dict.record.downloadRecording}
-            </a>
-          )}
-          {recording.compositeFile && <RecordingShareButton file={recording.compositeFile} dict={dict} />}
+          {recording.compositeFile &&
+            (shareInsteadOfDownload ? (
+              <RecordingShareButton file={recording.compositeFile} dict={dict} />
+            ) : (
+              <a class="btn btn-secondary" href={recording.compositeFile.url} download={recording.compositeFile.name}>
+                {dict.record.downloadRecording}
+              </a>
+            ))}
           {recording.cameraFile && (
             <a class="btn btn-secondary" href={recording.cameraFile.url} download={recording.cameraFile.name}>
               {dict.record.downloadCamera}
@@ -1253,6 +1265,7 @@ function AppContent({ locale }: Props) {
         onDoneResearching={handleDoneResearching}
         onReadyToSpeak={handleReadyToSpeak}
         onClose={handleClose}
+        onFinishEarly={devHost ? handleFinishEarly : undefined}
         onShareOpen={handleShareOpen}
         onStopRecording={handleStopRecording}
         sharePanelOpen={sharePanelOpen}

@@ -74,6 +74,46 @@ describe('createCountdown', () => {
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
+  it('finishNow() süre dolmuş gibi bitirir: 0 tick, onDone tam bir kez, sonra sessiz', () => {
+    const clock = fakeClock(0);
+    const onTick = vi.fn();
+    const onDone = vi.fn();
+    const countdown = createCountdown({
+      seconds: 60,
+      onTick,
+      onDone,
+      now: clock.now,
+      setIntervalFn: clock.setIntervalFn,
+      clearIntervalFn: clock.clearIntervalFn,
+    });
+    clock.advance(5000);
+    countdown.finishNow();
+    expect(onTick).toHaveBeenLastCalledWith(0);
+    expect(onDone).toHaveBeenCalledTimes(1);
+    expect(clock.clearIntervalFn).toHaveBeenCalled();
+    const ticks = onTick.mock.calls.length;
+    countdown.finishNow();
+    clock.advance(60000);
+    expect(onDone).toHaveBeenCalledTimes(1);
+    expect(onTick).toHaveBeenCalledTimes(ticks);
+  });
+
+  it('stop() sonrası finishNow() hiçbir şey yapmaz', () => {
+    const clock = fakeClock(0);
+    const onDone = vi.fn();
+    const countdown = createCountdown({
+      seconds: 60,
+      onTick: vi.fn(),
+      onDone,
+      now: clock.now,
+      setIntervalFn: clock.setIntervalFn,
+      clearIntervalFn: clock.clearIntervalFn,
+    });
+    countdown.stop();
+    countdown.finishNow();
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
   it('stop() sonrası hiçbir callback gelmez', () => {
     const clock = fakeClock(0);
     const onTick = vi.fn();

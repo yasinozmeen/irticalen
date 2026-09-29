@@ -1,6 +1,8 @@
 /** Handle for stopping the countdown. */
 export interface Countdown {
   stop(): void;
+  /** Ends the countdown right now, exactly as if time had run out (0 tick, then onDone once). */
+  finishNow(): void;
 }
 
 export interface CreateCountdownOptions {
@@ -64,6 +66,16 @@ export function createCountdown(options: CreateCountdownOptions): Countdown {
       if (stopped) return;
       stopped = true;
       clearIntervalFn(intervalId);
+    },
+    finishNow(): void {
+      if (stopped || done) return;
+      done = true;
+      clearIntervalFn(intervalId);
+      if (lastRemaining !== 0) {
+        lastRemaining = 0;
+        onTick(0);
+      }
+      onDone();
     },
   };
 }

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { xIntentUrl, whatsappUrl } from '../lib/share';
 import type { Dictionary } from '../i18n';
 
 export type ShareChannel = 'x' | 'whatsapp' | 'copy_link' | 'copy_image' | 'download_image' | 'native' | 'youtube';
@@ -53,6 +52,7 @@ export function SharePanel({
     }
   });
 
+  const [moreOpen, setMoreOpen] = useState(false);
   const mountedRef = useRef(true);
   const primaryRef = useRef<HTMLButtonElement>(null);
 
@@ -64,24 +64,6 @@ export function SharePanel({
       if (copyTimeoutRef.current !== null) clearTimeout(copyTimeoutRef.current);
     };
   }, []);
-
-  const handleX = (): void => {
-    onTrack('x');
-    try {
-      window.open(xIntentUrl(text, url), '_blank', 'noopener');
-    } catch {
-      // best-effort
-    }
-  };
-
-  const handleWhatsapp = (): void => {
-    onTrack('whatsapp');
-    try {
-      window.open(whatsappUrl(text, url), '_blank', 'noopener');
-    } catch {
-      // best-effort
-    }
-  };
 
   const handleCopyLink = async (): Promise<void> => {
     onTrack('copy_link');
@@ -157,30 +139,50 @@ export function SharePanel({
       <div class="share-panel-body">
         <p class="share-panel-text">{text}</p>
 
+        {/* One share button — the device's own sheet already lists X, WhatsApp and the rest.
+            Where there is no such sheet, copying the link takes its place. The copy extras stay
+            folded under "diğer" so the screen keeps a single clear action. */}
         <div class="share-panel-actions">
-          <button ref={primaryRef} type="button" class="btn btn-primary" onClick={handleX}>
-            {dict.share.x}
-          </button>
-          <button type="button" class="btn btn-secondary" onClick={handleWhatsapp}>
-            {dict.share.whatsapp}
-          </button>
-          <button type="button" class="btn btn-secondary" onClick={() => void handleYoutube()}>
-            {youtubeState === 'done' ? dict.share.youtubeDone : youtubeState === 'failed' ? dict.share.copyLinkFailed : dict.share.youtube}
-          </button>
-          <button type="button" class="btn btn-secondary" onClick={() => void handleCopyLink()}>
-            {copyState === 'done' ? dict.share.copyLinkDone : copyState === 'failed' ? dict.share.copyLinkFailed : dict.share.copyLink}
-          </button>
-          <button type="button" class="btn btn-secondary" onClick={() => void handleImageAction()}>
-            {imageCopySupported ? dict.share.copyImage : dict.share.downloadImage}
-          </button>
-          {nativeSupported && (
-            <button type="button" class="btn btn-secondary" onClick={handleNative}>
-              {dict.share.more}
+          {nativeSupported ? (
+            <button ref={primaryRef} type="button" class="btn btn-primary" onClick={handleNative}>
+              {dict.share.native}
+            </button>
+          ) : (
+            <button ref={primaryRef} type="button" class="btn btn-primary" onClick={() => void handleCopyLink()}>
+              {copyState === 'done' ? dict.share.copyLinkDone : copyState === 'failed' ? dict.share.copyLinkFailed : dict.share.copyLink}
             </button>
           )}
+          <button
+            type="button"
+            class={`btn btn-secondary share-panel-more${moreOpen ? ' is-open' : ''}`}
+            aria-expanded={moreOpen}
+            aria-controls="share-panel-extras"
+            onClick={() => setMoreOpen((open) => !open)}
+          >
+            {dict.share.moreToggle}
+            <svg class="share-panel-more-mark" viewBox="0 0 10 6" width="10" height="6" aria-hidden="true">
+              <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" />
+            </svg>
+          </button>
           <button type="button" class="btn btn-secondary share-panel-back" onClick={onBack}>
             {dict.share.back}
           </button>
+        </div>
+
+        <div id="share-panel-extras" class={`share-panel-extras${moreOpen ? ' is-open' : ''}`} inert={!moreOpen}>
+          <div class="share-panel-extras-inner">
+            {nativeSupported && (
+              <button type="button" class="btn btn-secondary" onClick={() => void handleCopyLink()}>
+                {copyState === 'done' ? dict.share.copyLinkDone : copyState === 'failed' ? dict.share.copyLinkFailed : dict.share.copyLink}
+              </button>
+            )}
+            <button type="button" class="btn btn-secondary" onClick={() => void handleImageAction()}>
+              {imageCopySupported ? dict.share.copyImage : dict.share.downloadImage}
+            </button>
+            <button type="button" class="btn btn-secondary" onClick={() => void handleYoutube()}>
+              {youtubeState === 'done' ? dict.share.youtubeDone : youtubeState === 'failed' ? dict.share.copyLinkFailed : dict.share.youtube}
+            </button>
+          </div>
         </div>
 
         {youtubeState === 'done' && <p class="share-panel-hint timer-rise">{dict.share.youtubeHint}</p>}
