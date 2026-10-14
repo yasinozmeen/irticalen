@@ -14,9 +14,9 @@
     "check": "astro check"
   },
   "dependencies": {
-    "@astrojs/preact": "^6.0.5",
+    "@astrojs/preact": "^6.0.6",
     "@astrojs/sitemap": "^3.7.4",
-    "astro": "^7.3.5",
+    "astro": "^7.3.8",
     "preact": "^10.29.8"
   },
   "allowScripts": {
@@ -25,9 +25,9 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@resvg/resvg-js": "^2.6.2",
-    "jsdom": "^30.1.1",
-    "satori": "^0.33.5",
+    "jsdom": "^30.1.2",
+    "satori": "^0.47.1",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.3"
   }
 }
